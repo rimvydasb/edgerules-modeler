@@ -245,6 +245,14 @@ export function Shell({
         return undefined;
     };
 
+    // A new service from the add panel of the workbook picker, opened in the Flow view.
+    const createService = (name: string): string | undefined => {
+        const result = session.engine.set(name, CREATE_OPTIONS.services[0]!.template());
+        if (isPortableError(result)) return result.message;
+        navigate({path: name, view: 'flow'});
+        return undefined;
+    };
+
     // The crumb of the Flow view that opened the root path, unless the root path is inside it and has its crumb.
     const originCrumb = useMemo(() => {
         if (origin === undefined || origin.path !== root) return undefined;
@@ -345,6 +353,7 @@ export function Shell({
                                 onSelect={(workbook) => navigate({path: workbook, view: 'flow'})}
                                 onSelectService={(service) => navigate({path: service, view: 'flow'})}
                                 onCreate={readOnly ? undefined : createWorkbook}
+                                onCreateService={readOnly ? undefined : createService}
                             />
                         )}
                         {view === 'flow' && workbooks.length === 0 && (

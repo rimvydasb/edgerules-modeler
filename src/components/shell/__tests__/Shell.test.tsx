@@ -230,12 +230,12 @@ describe('Shell project explorer', () => {
         await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
         const services = screen.getByRole('region', {name: 'Service Methods'});
 
-        // Only the `service` declaration has a panel.
+        // Only the `service` declaration has a panel, next to the add panel.
         expect(
             within(services)
                 .getAllByRole('button')
                 .map((panel) => panel.getAttribute('aria-label')),
-        ).toEqual(['quote(...)']);
+        ).toEqual(['quote(...)', 'New service']);
         expect(within(services).getByText('1 argument')).toBeInTheDocument();
         await user.click(within(services).getByRole('button', {name: 'quote(...)'}));
         expect(breadcrumbItems()).toEqual(['Model', 'quote(...)']);
@@ -265,11 +265,28 @@ describe('Shell project explorer', () => {
         expect(screen.getByRole('radio', {name: 'Flow'})).toHaveAttribute('aria-checked', 'true');
     });
 
+    it('creates a service from the add panel of the workbook picker and opens its flow', async () => {
+        const {session} = await openFixtureProject({model: {dsl: WORKBOOK_MODEL}});
+        const user = userEvent.setup();
+        await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+
+        const services = screen.getByRole('region', {name: 'Service Methods'});
+        await user.click(within(services).getByRole('button', {name: 'New service'}));
+        const name = await screen.findByRole('textbox', {name: 'Name'});
+        await user.clear(name);
+        await user.type(name, 'pricing');
+        await user.click(screen.getByRole('button', {name: 'Create'}));
+        expect(session.engine.toPortable()['pricing']).toMatchObject({'@kind': 'service'});
+        expect(breadcrumbItems()).toEqual(['Model', 'pricing(...)']);
+        expect(screen.getByRole('radio', {name: 'Flow'})).toHaveAttribute('aria-checked', 'true');
+    });
+
     it('offers no add panel in the workbook picker when read-only', async () => {
         const {session} = await openFixtureProject({model: {dsl: WORKBOOK_MODEL}});
         await renderShell({defaultPath: '*', defaultView: 'flow', readOnly: true}, session);
         expect(screen.getByTestId('shell-workbook-picker')).toBeInTheDocument();
         expect(screen.queryByRole('button', {name: 'New workbook'})).toBeNull();
+        expect(screen.queryByRole('button', {name: 'New service'})).toBeNull();
     });
 
     it('lists no workbook for a model that declares none', async () => {

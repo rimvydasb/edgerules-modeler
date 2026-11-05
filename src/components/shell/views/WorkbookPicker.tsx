@@ -28,10 +28,25 @@ export interface WorkbookPickerProps {
     onSelectService: (service: string) => void;
     // Creates a workbook of the name; an error message, or undefined on success. Without it there is no add panel.
     onCreate?: (name: string) => string | undefined;
-    taken: ReadonlySet<string>; // the root names a new workbook must not take
+    // Creates a service of the name; an error message, or undefined on success. Without it there is no add panel.
+    onCreateService?: (name: string) => string | undefined;
+    taken: ReadonlySet<string>; // the root names a new workbook or service must not take
 }
 
-const WORKBOOK_OPTION = CREATE_OPTIONS.workbooks[0]!;
+const CREATE = {workbook: CREATE_OPTIONS.workbooks[0]!, service: CREATE_OPTIONS.services[0]!};
+type Creating = keyof typeof CREATE;
+
+/** The panel that creates a new entity: a dashed outline and a plus. */
+function AddPanel({label, onClick, testId}: {label: string; onClick: () => void; testId: string}): ReactElement {
+    return (
+        <button type="button" className={classes.workbookAdd} onClick={onClick} aria-label={label} data-testid={testId}>
+            <span className={classes.workbookAddIcon}>
+                <IconPlus aria-hidden="true" size={24} />
+            </span>
+            {label}
+        </button>
+    );
+}
 
 function count(value: number, noun: string): string {
     return `${value} ${noun}${value === 1 ? '' : 's'}`;
@@ -95,7 +110,7 @@ function Panel({
 /**
  * The Flow view of the model root when the model has workbooks: one panel per workbook with its name, its field name,
  * its description and its node counts, and a panel that creates a new workbook. A click opens its flow. Below, one
- * panel per `service` declaration of the model; a click opens it.
+ * panel per `service` declaration of the model, and a panel that creates a new service; a click opens it.
  */
 export function WorkbookPicker({
     workbooks,
@@ -103,9 +118,11 @@ export function WorkbookPicker({
     onSelect,
     onSelectService,
     onCreate,
+    onCreateService,
     taken,
 }: WorkbookPickerProps): ReactElement {
-    const [creating, setCreating] = useState(false);
+    const [creating, setCreating] = useState<Creating | undefined>();
+    const create = creating === 'workbook' ? onCreate : creating === 'service' ? onCreateService : undefined;
     return (
         <div className={classes.workbooks} data-testid="shell-workbook-picker">
             <section className={classes.workbookGroup} aria-label="Workbooks">
@@ -126,22 +143,15 @@ export function WorkbookPicker({
                         />
                     ))}
                     {onCreate && (
-                        <button
-                            type="button"
-                            className={classes.workbookAdd}
-                            onClick={() => setCreating(true)}
-                            aria-label="New workbook"
-                            data-testid="shell-workbook-add"
-                        >
-                            <span className={classes.workbookAddIcon}>
-                                <IconPlus aria-hidden="true" size={24} />
-                            </span>
-                            New workbook
-                        </button>
+                        <AddPanel
+                            label="New workbook"
+                            onClick={() => setCreating('workbook')}
+                            testId="shell-workbook-add"
+                        />
                     )}
                 </div>
             </section>
-            {services.length > 0 && (
+            {(services.length > 0 || onCreateService) && (
                 <section className={classes.workbookGroup} aria-label="Service Methods">
                     <h2 className={classes.workbookGroupTitle}>Service Methods</h2>
                     <div className={classes.workbookPanels}>
@@ -158,17 +168,24 @@ export function WorkbookPicker({
                                 testId={`shell-service-${service.path}`}
                             />
                         ))}
+                        {onCreateService && (
+                            <AddPanel
+                                label="New service"
+                                onClick={() => setCreating('service')}
+                                testId="shell-service-add"
+                            />
+                        )}
                     </div>
                 </section>
             )}
-            {creating && onCreate && (
+            {creating && create && (
                 <CreateDialog
-                    option={WORKBOOK_OPTION}
+                    option={CREATE[creating]}
                     taken={taken}
-                    onCancel={() => setCreating(false)}
+                    onCancel={() => setCreating(undefined)}
                     onCreate={(name) => {
-                        const error = onCreate(name);
-                        if (error === undefined) setCreating(false);
+                        const error = create(name);
+                        if (error === undefined) setCreating(undefined);
                         return error;
                     }}
                 />
