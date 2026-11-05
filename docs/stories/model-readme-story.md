@@ -122,11 +122,13 @@ flowchart LR
 ### Markdown viewer
 
 `MarkdownView` renders a README in the Shell, and in other components such as the Examples Library. It uses
-`react-markdown` with `remark-gfm`, as optional peer dependencies.
+`@tanstack/markdown` (`parser`, `react` and the `autolinks` extension), as an optional peer dependency.
 
 | Concern        | Rule                                                                                                  |
 | -------------- | ----------------------------------------------------------------------------------------------------- |
 | Safety         | Raw HTML is dropped. URL schemes other than `https`, `mailto`, `model` and relative paths are removed |
+| Raw HTML       | The parser recognizes raw HTML; `MarkdownView` removes it from the document before it renders         |
+| Autolinks      | A bare `https` URL becomes a link                                                                     |
 | Relative URLs  | `resolveUrl(relative)` rewrites relative images and links, for example to a commit-pinned file URL    |
 | Model links    | `[monthlyPayment](model:monthlyPayment)` calls `onModelLink(path)`; the Shell opens that path         |
 | Code blocks    | `edgerules` fences use the static highlighter of `code-editor/language/highlight.ts`                  |
@@ -223,8 +225,8 @@ interface ShellProps {
 
 - `project-session`: `README.md` is a project slice (`ProjectBundle.readme`). `PROJECT_FORMAT_VERSION` becomes 3; the
   migration from 2 generates the README.
-- New component `markdown-view`: public API `MarkdownView`. Optional peers `react-markdown` and `remark-gfm`. It has no
-  component dependency; it MAY import `code-editor/language/` files.
+- New component `markdown-view`: public API `MarkdownView`. Optional peer `@tanstack/markdown`. It has no component
+  dependency; it MAY import `code-editor/language/` files.
 - `code-editor`: `language` prop. Optional peer `@codemirror/lang-markdown`.
 - `project-explorer`: Documents section with `document` entries, from the `documents` prop.
 - `shell`: document root paths (`doc:` prefix) with the `preview` and `code` views; README panel in the
@@ -258,32 +260,32 @@ interface ShellProps {
 
 **Phase 1: README slice in `project-session`**
 
-- [ ] Ensure project compiles and existing tests are passing
-- [ ] Add `ProjectBundle.readme` and `ProjectBundleInput.readme`
-- [ ] Generate the README in `ProjectFactory.createBundle` when the input has none
-- [ ] Add the format 2 to 3 migration to `parseProjectBundle`
-- [ ] Add the `readme` slice store to `ProjectSession`, and store the README in `LocalProjectRepository`
-- [ ] Add the README to `exportBundle`
-- [ ] Add tests for the code of this phase
+- [x] Ensure project compiles and existing tests are passing
+- [x] Add `ProjectBundle.readme` and `ProjectBundleInput.readme`
+- [x] Generate the README in `ProjectFactory.createBundle` when the input has none
+- [x] Add the format 2 to 3 migration to `parseProjectBundle`
+- [x] Add the `readme` slice store to `ProjectSession`, and store the README in `LocalProjectRepository`
+- [x] Add the README to `exportBundle`
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including a migration test: a format 2 bundle opens with a generated README
-- [ ] `npm test` passes, including a session test: a README edit and a model edit save as one revision
-- [ ] `npm test` passes, including a factory test: a new project without a README gets `# <name>` and its description
+- [x] `npm test` passes, including a migration test: a format 2 bundle opens with a generated README
+- [x] `npm test` passes, including a session test: a README edit and a model edit save as one revision
+- [x] `npm test` passes, including a factory test: a new project without a README gets `# <name>` and its description
 
 **Phase 2: Markdown viewer**
 
-- [ ] Add `markdown-view` with `react-markdown` and `remark-gfm` as optional peers
-- [ ] Implement URL rewrite, scheme filter, `model:` links and `edgerules` code highlighting
-- [ ] Add the `language` prop to `CodeEditor` with `@codemirror/lang-markdown`
-- [ ] Add Storybook stories for `MarkdownView` and the Markdown `CodeEditor`
-- [ ] Add tests for the code of this phase
+- [x] Add `markdown-view` with `@tanstack/markdown` as an optional peer
+- [x] Implement URL rewrite, scheme filter, `model:` links and `edgerules` code highlighting
+- [x] Add the `language` prop to `CodeEditor` with `@codemirror/lang-markdown`
+- [x] Add Storybook stories for `MarkdownView` and the Markdown `CodeEditor`
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `MarkdownView.test.tsx`: raw HTML and `javascript:` links do not render
-- [ ] `npm run depcruise` passes with the new component
+- [x] `npm test` passes, including `MarkdownView.test.tsx`: raw HTML and `javascript:` links do not render
+- [x] `npm run depcruise` passes with the new component
 
 **Phase 3: README in the Shell and the Project Explorer**
 

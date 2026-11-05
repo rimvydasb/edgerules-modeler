@@ -52,6 +52,8 @@ describe('ProjectSession — open', () => {
         ).toEqual(['Young']);
         expect(session.flow.getLayout('*').positions).toEqual({decision: {x: 1, y: 2}});
         expect(session.getSlice('tests')).toEqual(RISK_TESTS);
+        expect(session.readme.exportDocument()).toBe('# Loans\n');
+        expect(session.getSlice('readme')).toBe('# Loans\n');
     });
 });
 
@@ -360,6 +362,38 @@ describe('ProjectSession — save', () => {
 
         expect(phases[0]).toBe('saving');
         expect(session.getSnapshot()).toMatchObject({phase: 'ready', dirtySlices: ['documentation', 'flow']});
+    });
+
+    it('saves a README edit and a model edit as one revision', async () => {
+        const {session, repository, locator} = await openFixtureProject();
+        const listener = vi.fn();
+        session.readme.subscribe(listener);
+
+        session.readme.setMarkdown('# Loans\n\nRisk by [age](model:applicant.age).\n');
+        session.readme.setMarkdown('# Loans\n\nRisk by [age](model:applicant.age).\n'); // equal text is no change
+        session.engine.set('unused', {'@kind': 'expression', expression: '8'});
+        expect(listener).toHaveBeenCalledTimes(1);
+        expect(session.getSnapshot().dirtySlices).toEqual(['model', 'readme']);
+
+        const result = await session.save();
+
+        expect(result.revision).toBe('2');
+        expect(session.getSnapshot().dirtySlices).toEqual([]);
+        const stored = await repository.load(locator);
+        expect(stored.revision).toBe('2');
+        expect(stored.bundle.readme).toBe('# Loans\n\nRisk by [age](model:applicant.age).\n');
+        expect(stored.bundle.model).toContain('unused: 8');
+    });
+
+    it('rolls the README back with a failed transaction', async () => {
+        const {session} = await openFixtureProject({readme: '# Authored\n'});
+        const result = session.transaction(() => {
+            session.readme.setMarkdown('# Changed\n');
+            throw new Error('stop');
+        });
+        expect(result.ok).toBe(false);
+        expect(session.getSlice('readme')).toBe('# Authored\n');
+        expect(session.getSnapshot().dirtySlices).toEqual([]);
     });
 
     it('enters the conflict phase when the stored revision moved on', async () => {

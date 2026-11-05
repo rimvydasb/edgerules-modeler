@@ -28,6 +28,11 @@ export interface ProjectTestsStore extends SliceStore<TestSuitesDocument> {
     forSubject(subjectId: TestSubjectId): TestCasesService;
 }
 
+// The Markdown of `README.md`. Not keyed by model path, so a rename does not change it.
+export interface ReadmeStore extends Omit<SliceStore<string>, 'renamePath'> {
+    setMarkdown(markdown: string): void; // equal text is no change
+}
+
 // Flow canvas presentation data: positions, output nodes and chart nodes, one layout per flow root ('*', a context
 // path or a function path). `renamePath` moves the root keys, the position keys and the output and chart sources.
 export interface FlowMetadataStore extends SliceStore<FlowMetadataDocument> {

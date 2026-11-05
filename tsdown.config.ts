@@ -67,6 +67,7 @@ export default defineConfig({
         index: 'src/index.ts',
         'components/code-editor/index': 'src/components/code-editor/index.ts',
         'components/code-editor-cell/index': 'src/components/code-editor-cell/index.ts',
+        'components/markdown-view/index': 'src/components/markdown-view/index.ts',
         'components/project-explorer/index': 'src/components/project-explorer/index.ts',
         'components/decision-table/index': 'src/components/decision-table/index.ts',
         'components/boxed-editor/index': 'src/components/boxed-editor/index.ts',

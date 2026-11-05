@@ -3,6 +3,7 @@ import type {Meta, StoryObj} from '@storybook/react-vite';
 import {init, MutableDecisionService} from '@edgerules/web/mutable';
 import {CodeEditor} from '../../../src/components/code-editor';
 import {INVALID_MODEL_DSL, VALID_MODEL_DSL} from '../../../src/components/code-editor/testing/model.dsl';
+import {SAMPLE_README} from '../../../src/components/markdown-view/testing/sampleReadme';
 
 async function buildService() {
     await init();
@@ -53,4 +54,14 @@ export const WithSyntaxError: Story = {
             initialValue={INVALID_MODEL_DSL}
         />
     ),
+};
+
+function StatefulMarkdownEditor({initialValue}: {initialValue: string}): ReactElement {
+    const [value, setValue] = useState(initialValue);
+    return <CodeEditor language="markdown" value={value} onChange={setValue} />;
+}
+
+// Markdown source with highlighting; `edgerules` fences are highlighted as DSL. No service, no diagnostics.
+export const Markdown: Story = {
+    render: () => <StatefulMarkdownEditor initialValue={SAMPLE_README} />,
 };

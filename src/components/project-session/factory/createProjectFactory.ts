@@ -6,6 +6,7 @@ import {
     emptyDocumentation,
     emptyFlow,
     emptyTests,
+    generateReadme,
     type DocumentationDocument,
     type FlowMetadataDocument,
     type ModelMetadata,
@@ -26,6 +27,7 @@ export interface ProjectBundleInput {
     documentation?: DocumentationDocument;
     tests?: TestSuitesDocument;
     flow?: FlowMetadataDocument;
+    readme?: string; // Markdown of `README.md`; defaults to a README generated from `name` and `description`
 }
 
 // Turns a model and optional slices into a new `ProjectBundle` with a fresh `projectId`. Persisting it is the
@@ -86,6 +88,7 @@ export function createProjectFactory({engine}: ProjectFactoryOptions): ProjectFa
                 documentation: input.documentation ?? emptyDocumentation(),
                 tests: input.tests ?? emptyTests(),
                 flow: input.flow ?? emptyFlow(),
+                readme: input.readme ?? generateReadme(input.name, input.description),
             });
         },
     };

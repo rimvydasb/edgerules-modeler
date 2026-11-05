@@ -36,4 +36,4 @@ export type {
     ProjectSlice,
     ProjectSliceSnapshots,
 } from './session/types';
-export type {DocumentationStore, FlowMetadataStore, ProjectTestsStore, SliceStore} from './stores/types';
+export type {DocumentationStore, FlowMetadataStore, ProjectTestsStore, ReadmeStore, SliceStore} from './stores/types';

@@ -72,6 +72,15 @@ describe('LocalProjectRepository', () => {
         expect(await repository.findByName('Unknown')).toBeUndefined();
     });
 
+    it('stores the README and exports it with the bundle', async () => {
+        const repository = createLocalProjectRepository({dbName: uniqueDbName()});
+        const locator = repository.locatorFor('p');
+        const bundle = {...contractBundle(), readme: '# Stored\n\n- [x] kept\n'};
+        const created = await repository.create(locator, bundle);
+        await repository.save(locator, {...bundle, readme: '# Saved\n'}, created.revision);
+        expect((await repository.load(locator)).bundle.readme).toBe('# Saved\n');
+    });
+
     it('keeps projects of two databases apart', async () => {
         const first = createLocalProjectRepository({dbName: uniqueDbName()});
         const second = createLocalProjectRepository({dbName: uniqueDbName()});

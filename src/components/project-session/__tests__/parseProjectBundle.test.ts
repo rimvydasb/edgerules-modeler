@@ -46,6 +46,7 @@ describe('parseProjectBundle', () => {
         bundle.tests.subjects['*'].rows[0].section = 'outputs';
         bundle.tests.subjects['*'].cases[0].inputs = [];
         bundle.flow.layouts['*'].positions.b = {x: 'left', y: 0};
+        bundle.readme = null;
         expect(issuesOf(() => parseProjectBundle(bundle))).toEqual([
             'manifest.kind: expected "EdgeRulesProject"',
             'manifest.name: expected a non-empty string',
@@ -54,6 +55,7 @@ describe('parseProjectBundle', () => {
             'tests.subjects.*.cases[0].inputs: expected an object',
             'tests.subjects.*.rows[0].section: expected a test section',
             'flow.layouts.*.positions.b.x: expected a number',
+            'readme: expected a string',
         ]);
     });
 
@@ -104,10 +106,21 @@ describe('parseProjectBundle', () => {
         v1.flow = {schemaVersion: 1, layout: {positions: {b: {x: 10, y: 20}}, outputs: []}};
         const migrated = parseProjectBundle(v1);
         expect(migrated.manifest.formatVersion).toBe(PROJECT_FORMAT_VERSION);
+        expect(migrated.readme).toBe('# Contract project\n');
         expect(migrated.flow).toEqual({
             schemaVersion: 2,
             layouts: {'*': {positions: {b: {x: 10, y: 20}}, outputs: []}},
         });
+    });
+
+    it('opens a format 2 bundle with a README generated from its name and description', () => {
+        const {readme: _readme, ...v2} = contractBundle('Loans') as unknown as Record<string, any>;
+        v2.manifest.formatVersion = 2;
+        v2.manifest.description = 'Credit decisions';
+        const migrated = parseProjectBundle(v2);
+        expect(migrated.manifest.formatVersion).toBe(3);
+        expect(migrated.readme).toBe('# Loans\n\nCredit decisions\n');
+        expect(v2).not.toHaveProperty('readme'); // the input is not touched
     });
 
     it('reports a gap in the migration chain', () => {

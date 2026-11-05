@@ -16,7 +16,7 @@ describe('ProjectFactory.createBundle', () => {
         expect(bundle).toEqual({
             manifest: {
                 kind: 'EdgeRulesProject',
-                formatVersion: 2,
+                formatVersion: 3,
                 projectId: expect.stringMatching(/^[0-9a-f-]{36}$/),
                 name: 'Loans',
                 description: 'Credit',
@@ -27,7 +27,20 @@ describe('ProjectFactory.createBundle', () => {
             documentation: {schemaVersion: 1, byPath: {}},
             tests: {schemaVersion: 1, subjects: {}},
             flow: {schemaVersion: 2, layouts: {}},
+            readme: '# Loans\n\nCredit\n',
         });
+    });
+
+    it('generates the README from the name and description when the input has none', () => {
+        expect(factory.createBundle({name: 'Loans', model: {dsl: '{ a: 1 }'}}).readme).toBe('# Loans\n');
+        expect(
+            factory.createBundle({name: 'Loans', description: 'Credit decisions', model: {dsl: '{ a: 1 }'}}).readme,
+        ).toBe('# Loans\n\nCredit decisions\n');
+        const authored = '# Loans\n\nSee [decision](model:decision).\n';
+        expect(
+            factory.createBundle({name: 'Loans', description: 'Credit', model: {dsl: '{ a: 1 }'}, readme: authored})
+                .readme,
+        ).toBe(authored);
     });
 
     it('gives every bundle its own projectId', () => {

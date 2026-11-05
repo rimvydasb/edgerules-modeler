@@ -10,9 +10,9 @@ import type {
 } from '../bundle/types';
 import type {ProjectEngine} from '../engine/types';
 import type {ProjectError} from '../errors';
-import type {DocumentationStore, FlowMetadataStore, ProjectTestsStore} from '../stores/types';
+import type {DocumentationStore, FlowMetadataStore, ProjectTestsStore, ReadmeStore} from '../stores/types';
 
-export type ProjectSlice = 'model' | 'documentation' | 'tests' | 'flow';
+export type ProjectSlice = 'model' | 'documentation' | 'tests' | 'flow' | 'readme';
 
 // 'ready' covers both clean and dirty; `dirtySlices` tells them apart.
 export type ProjectSessionPhase = 'ready' | 'saving' | 'conflict' | 'closed';
@@ -44,6 +44,7 @@ export interface ProjectSliceSnapshots {
     documentation: DocumentationDocument;
     tests: TestSuitesDocument;
     flow: FlowMetadataDocument;
+    readme: string; // Markdown of `README.md`
 }
 
 export type ProjectCommand =
@@ -59,7 +60,7 @@ export type CommandResult = {ok: true} | {ok: false; error: ProjectError};
 
 /**
  * One open project: its engine, its slice stores, and their save state. Editors get the facades (`engine`,
- * `documentation`, `tests.forSubject(…)`, `flow`) and never the repository.
+ * `documentation`, `tests.forSubject(…)`, `flow`, `readme`) and never the repository.
  */
 export interface ProjectSession {
     readonly projectId: string;
@@ -69,6 +70,7 @@ export interface ProjectSession {
     readonly documentation: DocumentationStore;
     readonly tests: ProjectTestsStore;
     readonly flow: FlowMetadataStore;
+    readonly readme: ReadmeStore;
 
     getSnapshot(): ProjectSessionSnapshot;
     getSlice<K extends ProjectSlice>(slice: K): ProjectSliceSnapshots[K];

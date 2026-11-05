@@ -1,7 +1,7 @@
 import type {TestSubjectId, TestSuite} from '../../test-cases-service';
 import type {FlowLayout} from '#lib/flowLayout';
 
-export const PROJECT_FORMAT_VERSION = 2;
+export const PROJECT_FORMAT_VERSION = 3;
 export const PROJECT_MANIFEST_FILE = 'edgerules.project.json';
 export const DEFAULT_MODEL_SOURCE = 'model/main.edge';
 
@@ -56,6 +56,7 @@ export interface ProjectBundle {
     documentation: DocumentationDocument;
     tests: TestSuitesDocument;
     flow: FlowMetadataDocument;
+    readme: string; // Markdown of `README.md`, the long description of the project
 }
 
 export interface ProjectDescriptor {
@@ -88,6 +89,12 @@ export function emptyTests(): TestSuitesDocument {
 
 export function emptyFlow(): FlowMetadataDocument {
     return {schemaVersion: 2, layouts: {}};
+}
+
+// The README of a project that has no authored one: its name as the title, then its description.
+export function generateReadme(name: string, description?: string): string {
+    const text = description?.trim();
+    return text ? `# ${name}\n\n${text}\n` : `# ${name}\n`;
 }
 
 export function describeProject(bundle: ProjectBundle, locator: ProjectLocator, revision: string): ProjectDescriptor {
