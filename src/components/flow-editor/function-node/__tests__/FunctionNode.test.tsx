@@ -98,7 +98,7 @@ describe('FunctionNode', () => {
     it('shows an error message on the pin row of a rejected binding', async () => {
         const {service} = renderNode('decision');
         service.bindArgument('decision', 'segment', 'applicant.age');
-        expect(await screen.findByRole('alert')).toHaveTextContent(/type mismatch/);
+        expect(await screen.findByRole('alert')).toHaveTextContent(/argument 'segment' expects string, found number/);
     });
 });
 

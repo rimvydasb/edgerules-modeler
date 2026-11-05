@@ -1,18 +1,16 @@
 import {describe, expect, it} from 'vitest';
 import type {PortableContext} from '@edgerules/portable';
 import {MutableDecisionService} from '@edgerules/node/mutable';
-import {buildSections, collectServicePaths, isIdentifier, methodKind} from '../tree-model';
+import {buildSections, isIdentifier, methodKind} from '../tree-model';
 import {uniqueName} from '../create-templates';
 import {MODEL_DSL} from '../testing/model.dsl';
 
 function sections(code: string, testSubjects: string[] = []) {
     const service = MutableDecisionService.fromCode(code);
-    const model = service.get('*') as PortableContext;
     return buildSections(
-        model,
+        service.get('*') as PortableContext,
         service.get('*', 'TYPE_DEFINITIONS') as PortableContext,
         testSubjects,
-        collectServicePaths(service, model),
     );
 }
 
@@ -101,8 +99,8 @@ describe('methodKind', () => {
     it('tells functions, services and rulesets apart, and is undefined for anything else', () => {
         expect(methodKind({'@kind': 'function-schema'})).toBe('function');
         expect(methodKind({'@kind': 'service'})).toBe('service');
-        // The linked schema view reports a service as a function schema: its path tells it apart.
-        expect(methodKind({'@kind': 'function-schema'}, true)).toBe('service');
+        expect(methodKind({'@kind': 'service-schema'})).toBe('service');
+        expect(methodKind({'@kind': 'derivations-schema'})).toBe('function');
         expect(methodKind({'@kind': 'derivations'})).toBe('function');
         expect(methodKind({'@kind': 'ruleset-schema'})).toBe('ruleset');
         expect(methodKind({'@kind': 'context'})).toBeUndefined();

@@ -74,7 +74,9 @@ test.describe('a function opened from the Project Explorer', () => {
     test('rejects a retype that breaks the body visibly', async ({page}) => {
         await retypeHeader(page, 'applicantRecord', 'applicationDate', 'string');
         await expect(page.getByLabel('Change type of applicationDate')).toHaveAttribute('aria-invalid', 'true');
-        await expect(page.getByTestId('row-applicantRecord').getByRole('alert')).toContainText('type mismatch');
+        await expect(page.getByTestId('row-applicantRecord').getByRole('alert')).toContainText(
+            "argument 'applicationDate' expects string, found date",
+        );
     });
 
     test('rejects an argument its callers do not supply visibly', async ({page}) => {

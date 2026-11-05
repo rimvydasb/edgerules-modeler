@@ -41,6 +41,9 @@ function hasOnlyTypedParameters(parameters: unknown): boolean {
 
 const SCHEMA_KINDS: Record<string, CallableKind> = {
     'function-schema': 'function',
+    'derivations-schema': 'function',
+    'decisions-schema': 'function',
+    'service-schema': 'function',
     'ruleset-schema': 'ruleset',
     'loop-schema': 'loop',
 };

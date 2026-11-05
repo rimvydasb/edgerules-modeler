@@ -82,11 +82,11 @@ describe('ProjectExplorer sections', () => {
         const getSpy = vi.spyOn(service, 'get');
         const user = userEvent.setup();
         render(<ProjectExplorer service={service} />);
-        // The model, its types, and the function definitions of the root and of `nested`, which tell the services apart.
-        expect(getSpy).toHaveBeenCalledTimes(4);
+        // The model and its types.
+        expect(getSpy).toHaveBeenCalledTimes(2);
 
         await user.click(screen.getByText('loanBook'));
-        expect(getSpy).toHaveBeenCalledTimes(4);
+        expect(getSpy).toHaveBeenCalledTimes(2);
     });
 
     it('re-reads the model when the revision changes, keeping the sections expanded', () => {
@@ -171,7 +171,7 @@ describe('ProjectExplorer create', () => {
     it.each([
         ['Types', undefined, 'NewType', {'@kind': 'type-definition'}, 'type'],
         ['Methods', 'Function', 'newFunction', {'@kind': 'function-schema'}, 'function'],
-        ['Service Methods', undefined, 'newService', {'@kind': 'function-schema'}, 'service'],
+        ['Service Methods', undefined, 'newService', {'@kind': 'service-schema'}, 'service'],
         ['Methods', 'Ruleset', 'newRuleset', {'@kind': 'ruleset-schema'}, 'ruleset'],
         ['Variables', 'Value', 'newValue', {'@kind': 'expression', type: 'number'}, 'variable'],
         ['Variables', 'Context', 'newContext', {'@kind': 'context'}, 'context'],

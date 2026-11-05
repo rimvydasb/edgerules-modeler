@@ -139,7 +139,7 @@ describe('FlowEditorService binding errors', () => {
         // The engine keeps the `@node` annotation of a rejected write; the arguments are restored.
         expect(portable().payment).toMatchObject({'@arguments': (before as {'@arguments': unknown})['@arguments']});
         expect(service.getFunctionNode('payment').error).toMatchObject({parameter: 'amount'});
-        expect(service.getFunctionNode('payment').error?.message).toContain('type mismatch');
+        expect(service.getFunctionNode('payment').error?.message).toContain("argument 'amount' expects number, found string");
     });
 
     it('removes a new field whose last binding is mistyped and keeps the draft', () => {
@@ -718,14 +718,11 @@ describe('FlowEditorService list inputs', () => {
         const {service} = listService();
         const model = service.getListInputNode('people');
         expect(model).toMatchObject({field: 'people', label: 'People', type: 'object[]'});
-        // The engine returns the inferred item fields in name order, not in the authored order.
-        expect(model.itemFields).toEqual(
-            expect.arrayContaining([
-                {name: 'id', type: 'string'},
-                {name: 'age', type: 'number'},
-            ]),
-        );
-        expect(model.itemFields).toHaveLength(2);
+        // The inferred item fields keep the authored order of the first item.
+        expect(model.itemFields).toEqual([
+            {name: 'id', type: 'string'},
+            {name: 'age', type: 'number'},
+        ]);
         expect(service.getListInputNode('total')).toEqual({field: 'total', type: 'any[]', itemFields: []});
     });
 

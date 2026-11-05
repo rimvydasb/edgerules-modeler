@@ -44,25 +44,30 @@ function isRecord(node: unknown): node is Record<string, unknown> {
     return node !== null && typeof node === 'object' && !Array.isArray(node);
 }
 
-// Widened to `string | undefined`: the engine's default filter returns `'function-schema'` and `'ruleset-schema'`
-// for callables (see API_SPEC.md), shapes that are not part of the declared `PortableNode` union.
+// Widened to `string | undefined`: the engine's default filter returns schema kinds (`'function-schema'`,
+// `'service-schema'`, `'ruleset-schema'`, …) for callables (see API_SPEC.md), shapes that are not part of the declared
+// `PortableNode` union.
 function kindOf(node: Record<string, unknown>): string | undefined {
     return node['@kind'] as string | undefined;
 }
 
-// The `@kind` of a function: a `func`, an external function, or a layer view. A `service` is a method too, listed apart.
-const FUNCTION_KINDS = new Set(['function', 'function-schema', 'external-function', 'derivations', 'decisions']);
+// The `@kind` of a function: a `func`, an external function, or a layer view, in the authored or the schema view.
+const FUNCTION_KINDS = new Set([
+    'function',
+    'function-schema',
+    'external-function',
+    'derivations',
+    'derivations-schema',
+    'decisions',
+    'decisions-schema',
+]);
 
-/**
- * The method kind of a callable field, or undefined when the field is not callable. A `service` declaration is
- * `@kind: 'service'` in an authored view; the linked schema view reports it as `'function-schema'`, so `isService`
- * tells it apart there (see `collectServicePaths`).
- */
-export function methodKind(node: unknown, isService = false): 'function' | 'service' | 'ruleset' | undefined {
+/** The method kind of a callable field, or undefined when the field is not callable. A `service` is listed apart. */
+export function methodKind(node: unknown): 'function' | 'service' | 'ruleset' | undefined {
     if (!isRecord(node)) return undefined;
     const kind = kindOf(node);
-    if (kind === 'service') return 'service';
-    if (kind !== undefined && FUNCTION_KINDS.has(kind)) return isService ? 'service' : 'function';
+    if (kind === 'service' || kind === 'service-schema') return 'service';
+    if (kind !== undefined && FUNCTION_KINDS.has(kind)) return 'function';
     if (kind === 'ruleset' || kind === 'ruleset-schema') return 'ruleset';
     return undefined;
 }
@@ -103,11 +108,10 @@ function collectMethods(
     context: Record<string, unknown>,
     methods: ExplorerEntry[],
     services: ExplorerEntry[],
-    servicePaths: ReadonlySet<string>,
 ): void {
     for (const [name, node] of fields(context)) {
         const path = joinPath(contextPath, name);
-        const kind = methodKind(node, servicePaths.has(path));
+        const kind = methodKind(node);
         if (kind) {
             const untypedArguments = untypedParameters(node);
             (kind === 'service' ? services : methods).push({
@@ -116,34 +120,8 @@ function collectMethods(
                 label: methodLabel(path, node as Record<string, unknown>),
                 ...(untypedArguments.length > 0 && {untypedArguments}),
             });
-        } else if (isContext(node)) collectMethods(path, node, methods, services, servicePaths);
+        } else if (isContext(node)) collectMethods(path, node, methods, services);
     }
-}
-
-/** Structural subset of the engine service that `collectServicePaths` reads. */
-interface FunctionDefinitionSource {
-    get(path: string, filter: 'FUNCTION_DEFINITIONS'): unknown;
-}
-
-/**
- * The paths of every `service` declaration of `model`, at any context depth. The linked `get()` view reports a service
- * as `'function-schema'`; the `FUNCTION_DEFINITIONS` view of each context keeps `@kind: 'service'`.
- */
-export function collectServicePaths(source: FunctionDefinitionSource, model: unknown): Set<string> {
-    const paths = new Set<string>();
-    const visit = (contextPath: string, context: Record<string, unknown>) => {
-        const definitions = source.get(contextPath === '' ? ROOT_FETCH_PATH : contextPath, 'FUNCTION_DEFINITIONS');
-        if (isRecord(definitions) && definitions['@kind'] !== 'error') {
-            for (const [name, node] of fields(definitions)) {
-                if (isRecord(node) && kindOf(node) === 'service') paths.add(joinPath(contextPath, name));
-            }
-        }
-        for (const [name, node] of fields(context)) {
-            if (isContext(node)) visit(joinPath(contextPath, name), node);
-        }
-    };
-    if (isRecord(model)) visit('', model);
-    return paths;
 }
 
 // Every field of a workbook, annotated or not, in model order. A node annotation picks the kind of its row; without one,
@@ -184,8 +162,7 @@ function byLabel(a: ExplorerEntry, b: ExplorerEntry): number {
  * - **Types**: the type definitions of the root.
  * - **Methods**: every function and ruleset, also inside contexts, by qualified path: `path(...)` when it has
  *   arguments, `path()` when it has none.
- * - **Services**: every `service` declaration, labelled like a method. `servicePaths` names the services of a linked
- *   schema view, where a service reads as a `'function-schema'` (see `collectServicePaths`).
+ * - **Services**: every `service` declaration, labelled like a method.
  * - **Variables**: every other root field, contexts included.
  * - **Workbooks**: every root `workbook` declaration, labelled with its `@Name`, with its nodes as children. A model
  *   without a `workbook` declaration lists none.
@@ -195,7 +172,6 @@ export function buildSections(
     model: PortableContext,
     types: PortableContext | undefined,
     testSubjects: readonly string[],
-    servicePaths: ReadonlySet<string> = new Set(),
 ): ExplorerSections {
     const sections: ExplorerSections = {
         types: [],
@@ -209,7 +185,7 @@ export function buildSections(
     for (const [name] of types ? fields(types) : []) {
         sections.types.push({kind: 'type', path: name, label: name});
     }
-    collectMethods('', model as Record<string, unknown>, sections.methods, sections.services, servicePaths);
+    collectMethods('', model as Record<string, unknown>, sections.methods, sections.services);
     for (const [name, node] of fields(model)) {
         if (methodKind(node)) continue;
         if (isWorkbook(node)) {

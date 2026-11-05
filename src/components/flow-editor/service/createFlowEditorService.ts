@@ -1,7 +1,7 @@
 import type {PortableError, PortableNode, PortableRootContext} from '@edgerules/portable';
 import {listCallables, type CallableSource} from '#lib/callables';
 import {setWithLinkCheck, type LinkCheckService} from '#lib/linkCheck';
-import {isPortableError} from '#lib/portable';
+import {argumentMismatchOf, isPortableError} from '#lib/portable';
 import {
     addArgument as addFunctionArgument,
     addConditionColumn,
@@ -639,7 +639,10 @@ export function createFlowEditorService(
             const args = {...state.args, [parameter]: bindingPath(field, sourcePath)};
             const error = commit(field, {...state, args});
             if (error) {
-                errors.set(field, {parameter, message: error.message});
+                // An `E115` error names the mistyped argument; another error is put on the argument just bound.
+                const mismatch = argumentMismatchOf(error);
+                const named = mismatch && (mismatch.field === undefined || mismatch.field === field);
+                errors.set(field, {parameter: named ? mismatch.argument : parameter, message: error.message});
                 notify();
                 return error;
             }

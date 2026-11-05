@@ -31,7 +31,6 @@ import {CreateDialog} from './CreateDialog';
 import {KindIcon, type IconKind} from './icons';
 import {
     buildSections,
-    collectServicePaths,
     ROOT_FETCH_PATH,
     type ExplorerEntry,
     type ExplorerEntryKind,
@@ -213,15 +212,11 @@ export function ProjectExplorer({
 }: ProjectExplorerProps): ReactElement {
     // A create bumps it, so a host without a `revision` sees the new entity too.
     const [created, setCreated] = useState(0);
-    const {model, types, servicePaths} = useMemo(
-        () => {
-            const model = service.get(ROOT_FETCH_PATH);
-            return {
-                model,
-                types: service.get(ROOT_FETCH_PATH, 'TYPE_DEFINITIONS'),
-                servicePaths: isPortableError(model) ? undefined : collectServicePaths(service, model),
-            };
-        },
+    const {model, types} = useMemo(
+        () => ({
+            model: service.get(ROOT_FETCH_PATH),
+            types: service.get(ROOT_FETCH_PATH, 'TYPE_DEFINITIONS'),
+        }),
         // `revision` and `created` stand for model changes the service does not report.
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [service, revision, created],
@@ -234,9 +229,8 @@ export function ProjectExplorer({
                       model as PortableContext,
                       isPortableError(types) ? undefined : (types as PortableContext),
                       testSubjects,
-                      servicePaths,
                   ),
-        [model, types, testSubjects, servicePaths],
+        [model, types, testSubjects],
     );
 
     const [query, setQuery] = useState('');
