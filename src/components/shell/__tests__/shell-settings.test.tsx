@@ -12,15 +12,14 @@ import type {ShellProps} from '../shell-types';
 const MODEL = `{
     func riskScore(income: number): { score: income / 100 }
     applicant: { income: 5000 }
-    @Workbook(name: "Loan book")
-    loanBook: {
+    @Name("Loan book")
+    workbook loanBook: {
         @InputNode
         input: { income: 5000 }
         @FunctionNode
         decision: riskScore(income: input.income)
     }
-    @Workbook
-    otherBook: {
+    workbook otherBook: {
         @InputNode
         input: { income: 100 }
     }
@@ -53,11 +52,16 @@ async function saveSettings(user: ReturnType<typeof userEvent.setup>, values: Re
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 }
 
+// The annotation line above the `workbook <field>:` declaration, or undefined when it has none.
 function workbookLine(session: ProjectSession, field: string): string | undefined {
     return session.engine
         .exportDsl()
         .split('\n')
-        .map((line, index, lines) => (lines[index + 1]?.trim().startsWith(`${field}:`) ? line.trim() : undefined))
+        .map((line, index, lines) =>
+            lines[index + 1]?.trim().startsWith(`workbook ${field}:`) && line.trim().startsWith('@')
+                ? line.trim()
+                : undefined,
+        )
         .find((line) => line !== undefined);
 }
 
@@ -102,7 +106,7 @@ describe('Shell settings', () => {
         expect(session.getSnapshot().localVersion).toBe(before);
     });
 
-    it('renames a workbook through the name of its annotation, without a version field', async () => {
+    it('renames a workbook through its @Name, without a version field', async () => {
         const user = userEvent.setup();
         const session = await renderShell({defaultPath: 'loanBook'});
 
@@ -112,23 +116,23 @@ describe('Shell settings', () => {
         expect(within(dialog).queryByLabelText('Version', {exact: false})).not.toBeInTheDocument();
         await saveSettings(user, {Name: 'Mortgage book', Description: 'The mortgages'});
 
-        expect(workbookLine(session, 'loanBook')).toBe('@Workbook(name: "Mortgage book")');
+        expect(workbookLine(session, 'loanBook')).toBe('@Name("Mortgage book")');
         expect(session.documentation.getDescription('loanBook')).toBe('The mortgages');
         // The field keeps its name and its nodes.
         expect(session.engine.toPortable()).toMatchObject({loanBook: {'@node-name': 'Mortgage book', input: {}}});
     });
 
-    it('names an unnamed workbook, and an empty name removes the annotation name', async () => {
+    it('names an unnamed workbook with @Name, and an empty name removes it', async () => {
         const user = userEvent.setup();
         const session = await renderShell({defaultPath: 'otherBook'});
 
         await user.click(screen.getByRole('button', {name: 'Workbook settings'}));
         await saveSettings(user, {Name: 'Other'});
-        expect(workbookLine(session, 'otherBook')).toBe('@Workbook(name: "Other")');
+        expect(workbookLine(session, 'otherBook')).toBe('@Name("Other")');
 
         await user.click(screen.getByRole('button', {name: 'Workbook settings'}));
         await saveSettings(user, {Name: ''});
-        expect(workbookLine(session, 'otherBook')).toBe('@Workbook');
+        expect(workbookLine(session, 'otherBook')).toBeUndefined();
     });
 
     it('offers the settings of an annotated node', async () => {

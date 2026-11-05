@@ -59,6 +59,14 @@ export function lastPathName(path: string): string | undefined {
     return path.slice(dot + 1);
 }
 
+// The `@kind` of a callable whose body is a context or an expression: a `func`, a layer view or a `service`.
+const FUNCTION_DEFINITION_KINDS = new Set(['function', 'service', 'derivations', 'decisions']);
+
+/** A `func`, `derivations`, `decisions` or `service` definition: a `@parameters` / `@body` callable. */
+export function isFunctionDefinition(value: unknown): value is Record<string, unknown> {
+    return isRecord(value) && typeof value['@kind'] === 'string' && FUNCTION_DEFINITION_KINDS.has(value['@kind']);
+}
+
 function tokenizePath(path: string): Array<string | number> {
     if (path === '*' || path === '') return [];
     const tokens: Array<string | number> = [];
@@ -76,7 +84,7 @@ function portableChild(value: unknown, token: string | number): unknown {
     }
     if (!isRecord(value)) return undefined;
 
-    if (value['@kind'] === 'function' && token !== '*') {
+    if (isFunctionDefinition(value) && token !== '*') {
         return portableChild(value['@body'], token);
     }
     if (value['@kind'] === 'ruleset') {

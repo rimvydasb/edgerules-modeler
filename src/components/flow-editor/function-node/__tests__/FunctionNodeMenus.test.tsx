@@ -95,7 +95,6 @@ describe('node menu', () => {
             'Open in decision table editor',
             'Open tests',
             'View as code',
-            'Remove from flow',
             'Delete',
         ]);
         expect(within(menu).getByText('This node')).toBeInTheDocument();
@@ -170,14 +169,6 @@ describe('node menu', () => {
         await open();
         fireEvent.click(screen.getByRole('menuitem', {name: 'Remove description'}));
         expect(documentation.getDescription('decision')).toBeUndefined();
-    });
-
-    it('removes the node from the flow and keeps the field', async () => {
-        const {service, mutable} = renderNode('decision');
-        await open();
-        fireEvent.click(screen.getByRole('menuitem', {name: 'Remove from flow'}));
-        expect((mutable.toPortable() as unknown as Record<string, unknown>).decision).toBeDefined();
-        expect(service.getFunctionNode('decision').callee?.path).toBe('risk');
     });
 });
 

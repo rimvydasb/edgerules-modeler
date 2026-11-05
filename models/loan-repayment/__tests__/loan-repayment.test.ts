@@ -42,7 +42,7 @@ describe('loan repayment model', () => {
         const {session} = await openFixtureProject(LOAN_REPAYMENT_PROJECT);
         expect(session.getSlice('tests').subjects).toHaveProperty('loanRepayment');
         expect(Object.keys(session.getSlice('flow').layouts)).toEqual(['mortgageBook', 'termComparisonBook']);
-        expect(session.engine.getCode('loanRepayment')).toContain('@Service');
+        expect(session.engine.getCode('loanRepayment')).toMatch(/^service /);
     });
 
     it('describes only paths the model has', () => {

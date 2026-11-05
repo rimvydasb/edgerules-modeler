@@ -4,7 +4,7 @@ import {renderShellHost, SHELL_HOST_ARG_TYPES, ShellHost} from '../support/Shell
 import {openStoryProject} from '../support/storyProject';
 
 // The loan origination project of models/loan-origination in the Shell: applicant and application records, a
-// scorecard, policy rules, pricing and decision tables, a `@Service`, two workbooks with charts, and tests. Each story
+// scorecard, policy rules, pricing and decision tables, a `service`, two workbooks with charts, and tests. Each story
 // opens one entity of it; the controls open any other path or view.
 const meta: Meta<typeof ShellHost> = {
     title: 'Models/Loan Origination',

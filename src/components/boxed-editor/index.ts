@@ -3,6 +3,7 @@ export {createBoxedEditorService} from './service/createBoxedEditorService';
 export type {
     BoxedEditorService,
     BoxedRowData,
+    BoxedDeclarationKeyword,
     BoxedRowKind,
     BoxedTableRowData,
     SignatureParameter,

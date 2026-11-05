@@ -37,7 +37,7 @@ const RETURN_EXPRESSION_ROW = 'return';
 const PATH = /^[A-Za-z_][A-Za-z0-9_]*(\[\d+\]|\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 
 /**
- * The EdgeRules ReturnNode: the `return` field of a `@Service`, annotated `@ReturnNode` or not, as what the service
+ * The EdgeRules ReturnNode: the `return` field of a `service`, annotated `@ReturnNode` or not, as what the service
  * returns. A context shows one row per field, each with an input pin and its expression; a wire into the last row adds
  * the wired value as a new field. An expression shows one row with its text; its input pin takes one wire per field
  * it reads, and the wires follow the text. The node shows no computed value. Every change is link-checked: a field

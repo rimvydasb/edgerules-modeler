@@ -1,16 +1,18 @@
 import {describe, expect, it} from 'vitest';
 import type {PortableContext} from '@edgerules/portable';
 import {MutableDecisionService} from '@edgerules/node/mutable';
-import {buildSections, isIdentifier, methodKind} from '../tree-model';
+import {buildSections, collectServicePaths, isIdentifier, methodKind} from '../tree-model';
 import {uniqueName} from '../create-templates';
 import {MODEL_DSL} from '../testing/model.dsl';
 
 function sections(code: string, testSubjects: string[] = []) {
     const service = MutableDecisionService.fromCode(code);
+    const model = service.get('*') as PortableContext;
     return buildSections(
-        service.get('*') as PortableContext,
+        model,
         service.get('*', 'TYPE_DEFINITIONS') as PortableContext,
         testSubjects,
+        collectServicePaths(service, model),
     );
 }
 
@@ -38,52 +40,59 @@ describe('buildSections', () => {
         ]);
     });
 
-    it('lists the Flow Component nodes of a workbook as its children', () => {
+    it('lists every field of a workbook as its children, annotated or not, in model order', () => {
         const [workbook] = sections(MODEL_DSL).workbooks;
 
         expect(workbook).toMatchObject({kind: 'workbook', path: 'loanBook'});
-        // `helper` has no node annotation: it is not a node.
         expect(workbook!.children!.map((entry) => [entry.kind, entry.path])).toEqual([
             ['input-node', 'loanBook.applicant'],
             ['function-node', 'loanBook.decision'],
             ['output-node', 'loanBook.result'],
+            ['node', 'loanBook.helper'],
+        ]);
+    });
+
+    it('picks the kind of an unannotated workbook field from its value', () => {
+        const [workbook] = sections(
+            '{ func f(x: number): x\n workbook book: { hole: <number>; rec: { a: 1 }; call: f(1); v: 2 } }',
+        ).workbooks;
+        expect(workbook!.children!.map((entry) => [entry.kind, entry.label])).toEqual([
+            ['input-node', 'hole'],
+            ['input-node', 'rec'],
+            ['function-node', 'call'],
+            ['node', 'v'],
         ]);
     });
 
     it('lists a service inside a context as a service method by its qualified path', () => {
-        const result = sections('{ nested: { @Service\n func deep(): 1 } }');
+        const result = sections('{ nested: { service deep(): { return: 1 } } }');
         expect(result.services.map((entry) => entry.label)).toEqual(['nested.deep()']);
         expect(result.methods).toEqual([]);
     });
 
     it('does not list a callable of a workbook as a method', () => {
-        const result = sections('{ @Workbook book: { func local(): 1 } }');
+        const result = sections('{ workbook book: { func local(): 1 } }');
         expect(result.methods).toEqual([]);
         expect(result.workbooks.map((entry) => entry.path)).toEqual(['book']);
     });
 
-    it('treats the model root as the workbook when no context has @Workbook but the root has nodes', () => {
+    it('lists no workbook when the model declares none, and keeps its annotated nodes as variables', () => {
         const result = sections(
             '{ @InputNode applicant: { age: 21 }\n @FunctionNode risk: applicant.age * 2\n limit: 10 }',
         );
 
-        expect(result.workbooks).toEqual([
-            {
-                kind: 'workbook',
-                path: '*',
-                label: 'Model',
-                children: [
-                    {kind: 'input-node', path: 'applicant', label: 'applicant'},
-                    {kind: 'function-node', path: 'risk', label: 'risk'},
-                ],
-            },
-        ]);
-        expect(result.variables.map((entry) => entry.path)).toEqual(['limit']);
+        expect(result.workbooks).toEqual([]);
+        expect(result.variables.map((entry) => entry.path)).toEqual(['applicant', 'limit', 'risk']);
     });
 
-    it('does not treat the model root as a workbook when a context has @Workbook', () => {
-        const result = sections('{ @InputNode applicant: { age: 21 }\n @Workbook book: { @InputNode x: { a: 1 } } }');
-        expect(result.workbooks.map((entry) => entry.path)).toEqual(['book']);
+    it('lists every workbook declaration, labelled with its @Name', () => {
+        const result = sections(
+            '{ @InputNode applicant: { age: 21 }\n @Name("Main book")\n workbook book: { @InputNode x: { a: 1 } }\n workbook other: { y: 1 } }',
+        );
+        expect(result.workbooks.map((entry) => [entry.path, entry.label])).toEqual([
+            ['book', 'Main book'],
+            ['other', 'other'],
+        ]);
         expect(result.variables.map((entry) => entry.path)).toEqual(['applicant']);
     });
 });
@@ -91,7 +100,10 @@ describe('buildSections', () => {
 describe('methodKind', () => {
     it('tells functions, services and rulesets apart, and is undefined for anything else', () => {
         expect(methodKind({'@kind': 'function-schema'})).toBe('function');
-        expect(methodKind({'@kind': 'function', '@node': 'Service'})).toBe('service');
+        expect(methodKind({'@kind': 'service'})).toBe('service');
+        // The linked schema view reports a service as a function schema: its path tells it apart.
+        expect(methodKind({'@kind': 'function-schema'}, true)).toBe('service');
+        expect(methodKind({'@kind': 'derivations'})).toBe('function');
         expect(methodKind({'@kind': 'ruleset-schema'})).toBe('ruleset');
         expect(methodKind({'@kind': 'context'})).toBeUndefined();
         expect(methodKind(5)).toBeUndefined();

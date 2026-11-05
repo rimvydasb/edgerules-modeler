@@ -26,16 +26,14 @@ const SAMPLE_MODEL = `{
 const PROJECT_MODEL = `{
   type Customer: { name: <string>; income: <number, 0> }
   func riskScore(income: number): { score: income / 100 }
-  @Service
-  func processApplication(income: number): { result: riskScore(income).score }
+  service processApplication(income: number): { result: riskScore(income).score }
   ruleset band(age: number): {
     hitPolicy: "first-match"
     rules: [{ when: { age: < 30 }, then: { level: "young" } }]
     default: { level: "none" }
   }
   limit: 1000
-  @Workbook
-  loanBook: {
+  workbook loanBook: {
     @InputNode(name: "Applicant")
     applicant: { income: 5000 }
     @FunctionNode

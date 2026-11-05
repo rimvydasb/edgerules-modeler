@@ -16,9 +16,14 @@ function pathKind(node: unknown): ShellPathKind {
     if (!isRecord(node)) return 'field';
     switch (node['@kind']) {
         case 'context':
-            return node['@node'] === 'Workbook' ? 'workbook' : 'context';
+            return 'context';
+        case 'workbook':
+            return 'workbook';
+        case 'service':
+            return 'service';
         case 'function':
-            return node['@node'] === 'Service' ? 'service' : 'function';
+        case 'derivations':
+        case 'decisions':
         case 'external-function':
             return 'function';
         case 'ruleset':
@@ -68,16 +73,16 @@ export type ShellRootKind = 'model' | ShellPathKind;
 /**
  * The views of each root path kind; the view switch, the view fallback and the Project Explorer routing all read it.
  * - Code and Boxed show every entity.
- * - Flow is the canvas of the Flow Component nodes of a context: the model, a workbook or another context, and of
- *   the body of a service, with its parameters and its result. Another function, a ruleset, a type and a plain field
- *   have no nodes.
+ * - Flow is the canvas of every field of a `workbook`, and of the body of a `service`, with its parameters and its
+ *   result. The Flow view of the model is the workbook picker: only a model that declares a workbook has it (see
+ *   `rootViews`). Another context, a function, a ruleset, a type and a plain field have no Flow view.
  * - Tests are the tests of a callable: the model, a function, a service or a ruleset. A function is a test subject only
  *   when every argument has a type (see `untypedParameters`).
  */
 export const ROOT_VIEWS: Record<ShellRootKind, readonly ShellView[]> = {
     model: ['code', 'boxed', 'flow', 'tests'],
     workbook: ['code', 'boxed', 'flow'],
-    context: ['code', 'boxed', 'flow'],
+    context: ['code', 'boxed'],
     function: ['code', 'boxed', 'tests'],
     service: ['code', 'boxed', 'flow', 'tests'],
     ruleset: ['code', 'boxed', 'tests'],
@@ -89,9 +94,11 @@ export function rootKind(segments: ShellPathSegment[]): ShellRootKind {
     return segments.at(-1)?.kind ?? 'model';
 }
 
-/** The views of a root path, from `ROOT_VIEWS`. */
-export function rootViews(segments: ShellPathSegment[]): readonly ShellView[] {
-    return ROOT_VIEWS[rootKind(segments)];
+/** The views of a root path, from `ROOT_VIEWS`; the model has no Flow view when it declares no workbook. */
+export function rootViews(segments: ShellPathSegment[], model: unknown): readonly ShellView[] {
+    const views = ROOT_VIEWS[rootKind(segments)];
+    if (segments.length > 0 || modelWorkbooks(model).length > 0) return views;
+    return views.filter((view) => view !== 'flow');
 }
 
 /** The names of the workbooks that are direct fields of the model. */
@@ -113,9 +120,12 @@ export function workbookNodeCounts(model: unknown, name: string): {inputs: numbe
     return counts;
 }
 
-/** The annotation of an entity: `@Workbook(name: "Mortgage")` is `{node: 'Workbook', name: 'Mortgage'}`. */
+/**
+ * The annotation of an entity: `@InputNode(name: "Applicant")` is `{node: 'InputNode', name: 'Applicant'}`, and the
+ * label-only `@Name("Main Workbook")` is `{name: 'Main Workbook'}`.
+ */
 export interface ShellAnnotation {
-    node: string;
+    node?: string;
     name?: string;
 }
 
@@ -124,8 +134,18 @@ export function annotationAt(model: unknown, path: string): ShellAnnotation | un
     if (path === '*') return undefined;
     let node = model;
     for (const name of path.split('.')) node = isRecord(node) ? node[name] : undefined;
-    if (!isRecord(node) || typeof node['@node'] !== 'string') return undefined;
-    return {node: node['@node'], ...(typeof node['@node-name'] === 'string' && {name: node['@node-name']})};
+    if (!isRecord(node)) return undefined;
+    const kind = typeof node['@node'] === 'string' ? node['@node'] : undefined;
+    const label = typeof node['@node-name'] === 'string' ? node['@node-name'] : undefined;
+    if (kind === undefined && label === undefined) return undefined;
+    return {...(kind !== undefined && {node: kind}), ...(label !== undefined && {name: label})};
+}
+
+/** True when the root path has settings: the model, a workbook, a service and every annotated entity. */
+export function hasRootSettings(model: unknown, path: string): boolean {
+    if (path === '*') return true;
+    const kind = rootPathSegments(model, path).at(-1)?.kind;
+    return kind === 'workbook' || kind === 'service' || annotationAt(model, path) !== undefined;
 }
 
 /** The model name of the `@model-name` of `model`, or 'Model'. */

@@ -8,7 +8,7 @@
  * - `policyRules` are the knockout rules of the credit policy, one record per rule.
  * - `pricingGrid` prices the grade and the loan-to-value; `affordability` stress-tests the payment.
  * - `decisionMatrix` combines the knockouts, the grade, the LTV and the DSTI into APPROVE, REFER or DECLINE.
- * - `loanOriginationDecision` is the `@Service`; `originationBook` and `capacityBook` are the workbooks.
+ * - `loanOriginationDecision` is the `service`; `originationBook` and `capacityBook` are the workbooks.
  */
 export const LOAN_ORIGINATION_DSL = `{
     type Applicant: { name: <string>; birthDate: <date>; employment: <string>; yearsEmployed: <number>; monthlyIncome: <number>; monthlyExpenses: <number>; monthlyDebtPayments: <number>; bureauScore: <number>; delinquencies: <number> }
@@ -136,8 +136,7 @@ export const LOAN_ORIGINATION_DSL = `{
         termYears: loan.termYears
         applicants: [mainApplicant, coApplicant]
     }
-    @Service
-    func loanOriginationDecision(application: Application): {
+    service loanOriginationDecision(application: Application): {
         record: applicationRecord(application)
         applicants: for applicant in record.applicantRecords return applicantDecision(applicant, application.termYears)
         householdScore: min(for applicant in applicants return applicant.scorecard.score)
@@ -171,8 +170,8 @@ export const LOAN_ORIGINATION_DSL = `{
         ]
     }
     sampleDecision: loanOriginationDecision(application: sampleApplication).decision.outcome
-    @Workbook(name: "Joint mortgage application")
-    originationBook: {
+    @Name("Joint mortgage application")
+    workbook originationBook: {
         @InputNode(name: "Loan terms")
         loan: { applicationDate: date("2026-10-01"); loanAmount: 240000; propertyValue: 320000; termYears: 25 }
         @InputNode(name: "Main applicant")
@@ -192,8 +191,8 @@ export const LOAN_ORIGINATION_DSL = `{
         @FunctionNode(name: "Origination decision")
         origination: loanOriginationDecision(application: application)
     }
-    @Workbook(name: "Borrowing capacity")
-    capacityBook: {
+    @Name("Borrowing capacity")
+    workbook capacityBook: {
         @InputNode(name: "Household")
         household: { monthlyIncome: 6800; monthlyDebtPayments: 250; rate: 0.0425 }
         @FunctionNode(name: "Borrowing capacity")

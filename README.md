@@ -20,10 +20,13 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
   - [x] FlowEditor canvas ([spec](docs/stories/completed/flow-editor-story.md#flow-editor-canvas)): node palette with
         drag or click to add, wires from the model, automatic layout, zoom, minimap. The host imports
         `@xyflow/react/dist/style.css`.
-  - [x] ObjectInputNode / ListInputNode / ValueInputNode / TermsNode
+  - [x] ObjectInputNode / ListInputNode / ValueInputNode
         ([spec](docs/stories/completed/flow-editor-story.md#flow-editor-objectinputnode),
         [list](docs/stories/completed/flow-editor-story.md#flow-editor-listinputnode))
-  - [x] FunctionNode / RulesetNode ([spec and story](docs/stories/completed/flow-editor-story.md))
+  - [x] FunctionNode: an invocation of a function or a ruleset
+        ([spec and story](docs/stories/completed/flow-editor-story.md))
+  - [x] The flow of a `service` or a `workbook` shows every element of it, annotated or not; a typed hole of a workbook
+        (`applicant: <Applicant>`) is a ParameterNode
   - [x] ExpressionNode ([story](docs/stories/service-flow.md)): every other expression of a workbook or service flow,
         one header row with a wire from each field it reads (`@variables`), so no wire skips a computed value
   - [x] OutputNode (shows the engine value of the wired result; no model writes)

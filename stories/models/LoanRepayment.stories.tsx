@@ -3,7 +3,7 @@ import {LOAN_REPAYMENT_PROJECT} from '../../models/loan-repayment';
 import {renderShellHost, SHELL_HOST_ARG_TYPES, ShellHost} from '../support/ShellHost';
 import {openStoryProject} from '../support/storyProject';
 
-// The loan repayment project of models/loan-repayment in the Shell: a decision table, functions, a `@Service`, two
+// The loan repayment project of models/loan-repayment in the Shell: a decision table, functions, a `service`, two
 // workbooks with charts, and tests. Each story opens one entity of it; the controls open any other path or view.
 const meta: Meta<typeof ShellHost> = {
     title: 'Models/Loan Repayment',

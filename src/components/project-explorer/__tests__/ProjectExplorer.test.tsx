@@ -71,20 +71,22 @@ describe('ProjectExplorer sections', () => {
         expect(screen.getByText('applicant')).toBeInTheDocument();
         expect(screen.getByText('decision')).toBeInTheDocument();
         expect(screen.getByText('result')).toBeInTheDocument();
-        expect(screen.queryByText('helper')).toBeNull();
+        // A field without a node annotation is listed too.
+        expect(screen.getByText('helper')).toBeInTheDocument();
         expect(screen.getByTestId('icon-input-node')).toBeInTheDocument();
         expect(screen.getByTestId('icon-output-node')).toBeInTheDocument();
     });
 
-    it('reads the model with two get() calls only, whatever is expanded', async () => {
+    it('reads the model once, whatever is expanded', async () => {
         const service = buildService();
         const getSpy = vi.spyOn(service, 'get');
         const user = userEvent.setup();
         render(<ProjectExplorer service={service} />);
-        expect(getSpy).toHaveBeenCalledTimes(2);
+        // The model, its types, and the function definitions of the root and of `nested`, which tell the services apart.
+        expect(getSpy).toHaveBeenCalledTimes(4);
 
         await user.click(screen.getByText('loanBook'));
-        expect(getSpy).toHaveBeenCalledTimes(2);
+        expect(getSpy).toHaveBeenCalledTimes(4);
     });
 
     it('re-reads the model when the revision changes, keeping the sections expanded', () => {
@@ -169,11 +171,11 @@ describe('ProjectExplorer create', () => {
     it.each([
         ['Types', undefined, 'NewType', {'@kind': 'type-definition'}, 'type'],
         ['Methods', 'Function', 'newFunction', {'@kind': 'function-schema'}, 'function'],
-        ['Service Methods', undefined, 'newService', {'@kind': 'function-schema', '@node': 'Service'}, 'service'],
+        ['Service Methods', undefined, 'newService', {'@kind': 'function-schema'}, 'service'],
         ['Methods', 'Ruleset', 'newRuleset', {'@kind': 'ruleset-schema'}, 'ruleset'],
         ['Variables', 'Value', 'newValue', {'@kind': 'expression', type: 'number'}, 'variable'],
         ['Variables', 'Context', 'newContext', {'@kind': 'context'}, 'context'],
-        ['Workbooks', undefined, 'newWorkbook', {'@kind': 'context', '@node': 'Workbook'}, 'workbook'],
+        ['Workbooks', undefined, 'newWorkbook', {'@kind': 'workbook'}, 'workbook'],
     ])('creates a new entity of %s %s and opens it', async (section, item, name, node, kind) => {
         const service = buildService('{ a: 1 }');
         const onOpen = vi.fn();
@@ -184,6 +186,7 @@ describe('ProjectExplorer create', () => {
 
         const filter = kind === 'type' ? 'TYPE_DEFINITIONS' : undefined;
         expect(service.get(name, filter)).toMatchObject(node);
+        if (kind === 'service') expect(service.toPortable()[name]).toMatchObject({'@kind': 'service'});
         expect(() => service.link()).not.toThrow();
         expect(onOpen).toHaveBeenCalledWith({kind, path: name});
         // The section expands and shows the new entry; a new ruleset has a `value` argument.

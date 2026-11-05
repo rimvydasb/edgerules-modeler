@@ -11,6 +11,7 @@ import {buildSections, CREATE_OPTIONS} from '../project-explorer/internal';
 import {useProjectSession, useProjectSlice, useProjectSnapshot} from '../project-session';
 import {
     annotationAt,
+    hasRootSettings,
     isRootPath,
     modelName,
     modelWorkbooks,
@@ -115,15 +116,26 @@ export function Shell({
     // The views of the root path; Tests only for a test subject. A view the root path does not have falls back to
     // the Boxed view, which every root path has.
     const views = useMemo(
-        () => rootViews(segments).filter((candidate) => candidate !== 'tests' || subjectPaths.has(root)),
-        [segments, subjectPaths, root],
+        () =>
+            rootViews(segments, session.engine.toPortable()).filter(
+                (candidate) => candidate !== 'tests' || subjectPaths.has(root),
+            ),
+        // `version` changes with every model change, which can add or remove the workbooks of the model.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [session, segments, subjectPaths, root, version],
     );
     const view = views.includes(requestedView) ? requestedView : 'boxed';
 
-    // The model name, and whether the root path has settings: the model and every annotated entity have.
-    const {rootLabel, hasSettings} = useMemo(() => {
+    // The model name, and whether the root path has settings: the model, a workbook, a service and every annotated
+    // entity have.
+    const {rootLabel, hasSettings, modelView} = useMemo(() => {
         const model = session.engine.toPortable();
-        return {rootLabel: modelName(model), hasSettings: root === '*' || annotationAt(model, root) !== undefined};
+        return {
+            rootLabel: modelName(model),
+            hasSettings: hasRootSettings(model, root),
+            // The model has a Flow view, its workbook picker, only when it declares a workbook.
+            modelView: (modelWorkbooks(model).length > 0 ? 'flow' : 'boxed') as ShellView,
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session, root, version]);
 
@@ -270,13 +282,16 @@ export function Shell({
                     segments={segments}
                     rootLabel={rootLabel}
                     origin={originCrumb}
-                    // The model name opens the Flow view of the model: its workbooks, and the crumb of the origin its
-                    // Flow view. Another crumb of the Tests view opens the model entity, not its tests.
+                    // The model name opens the Flow view of the model, its workbooks, or its Boxed view when it declares
+                    // none; the crumb of the origin opens its Flow view. Another crumb of the Tests view opens the
+                    // model entity, not its tests.
                     onNavigate={(next) =>
                         navigate(
-                            next === '*' || (origin?.path === root && next === origin.flow)
-                                ? {path: next, view: 'flow'}
-                                : {path: next, view: view === 'tests' ? 'boxed' : undefined},
+                            next === '*'
+                                ? {path: next, view: modelView}
+                                : origin?.path === root && next === origin.flow
+                                  ? {path: next, view: 'flow'}
+                                  : {path: next, view: view === 'tests' ? 'boxed' : undefined},
                         )
                     }
                     primaryView={primaryView}

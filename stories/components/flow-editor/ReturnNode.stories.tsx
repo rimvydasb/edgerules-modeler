@@ -69,8 +69,7 @@ export const ReadOnly: Story = {args: {readOnly: true}};
 export const Expression: Story = {
     args: {
         model: `{
-  @Service
-  func total(price: number, quantity: number): {
+  service total(price: number, quantity: number): {
     subtotal: price * quantity
     tax: subtotal * 0.2
     return: subtotal + tax

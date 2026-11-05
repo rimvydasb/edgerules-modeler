@@ -49,7 +49,7 @@ describe('ParameterNode', () => {
 
     it('changes the type in the summary line', async () => {
         const {service} = renderNode('f.a', {
-            model: '{ @Service func f(a: number): { r: 1 } }',
+            model: '{ service f(a: number): { r: 1 } }',
             root: 'f',
             service: 'parameter',
         });

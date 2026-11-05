@@ -14,7 +14,8 @@ function explorer(page: Page) {
 test('the Project Explorer lists every entity of the model', async ({page}) => {
     await openStory(page, 'models-loan-repayment--overview');
     const nav = explorer(page);
-    for (const entry of ['LoanRequest', 'Installment', 'samplePayment', 'mortgageBook', 'termComparisonBook']) {
+    // A workbook is listed by its `@Name`.
+    for (const entry of ['LoanRequest', 'Installment', 'samplePayment', 'Mortgage plan', '15 vs 30 years']) {
         await expect(nav.getByText(entry, {exact: true}), entry).toBeVisible(SLOW);
     }
     for (const method of ['pricingTier(...)', 'loanRepayment(...)', 'monthlyPayment(...)', 'yearlySummary(...)']) {

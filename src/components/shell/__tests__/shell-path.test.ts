@@ -6,8 +6,7 @@ const model = MutableDecisionService.fromCode(
     `{
     type Customer: { name: <string> }
     func riskScore(income: number): { score: income / 100 }
-    @Service
-    func quote(income: number): { score: riskScore(income).score }
+    service quote(income: number): { score: riskScore(income).score }
     ruleset band(age: number): {
         hitPolicy: "first-match"
         rules: [{ when: { age: < 30 }, then: { level: "young" } }]
@@ -19,8 +18,7 @@ const model = MutableDecisionService.fromCode(
         func calculateAge(year: number): { result: 2026 - year }
     }
     loans: [1, 2]
-    @Workbook
-    book: {
+    workbook book: {
         @FunctionNode
         score: riskScore(applicant.age)
     }
@@ -36,7 +34,7 @@ describe('rootPathSegments', () => {
         expect(rootPathSegments(model, '*')).toEqual([]);
     });
 
-    it('names a `@Service` function a service', () => {
+    it('names a `service` declaration a service', () => {
         expect(rootPathSegments(model, 'quote')).toEqual([{name: 'quote', path: 'quote', kind: 'service'}]);
     });
 
@@ -54,7 +52,8 @@ describe('rootPathSegments', () => {
 describe('rootViews', () => {
     it.each([
         ['*', ['code', 'boxed', 'flow', 'tests']],
-        ['applicant', ['code', 'boxed', 'flow']],
+        // A context has no Flow view: only a workbook and a service have.
+        ['applicant', ['code', 'boxed']],
         ['book', ['code', 'boxed', 'flow']],
         // A function has no nodes, so no Flow view; a service has its parameters, its body and its result.
         ['riskScore', ['code', 'boxed', 'tests']],
@@ -63,7 +62,12 @@ describe('rootViews', () => {
         ['Customer', ['code', 'boxed']],
         ['applicant.age', ['code', 'boxed']],
     ])('%s: %o', (path, views) => {
-        expect(rootViews(rootPathSegments(model, path))).toEqual(views);
+        expect(rootViews(rootPathSegments(model, path), model)).toEqual(views);
+    });
+
+    it('has no Flow view of the model when it declares no workbook', () => {
+        const plain = MutableDecisionService.fromCode('{ applicant: { age: 21 } }').toPortable();
+        expect(rootViews([], plain)).toEqual(['code', 'boxed', 'tests']);
     });
 });
 

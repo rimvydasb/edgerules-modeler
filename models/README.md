@@ -3,11 +3,11 @@
 Complete, realistic EdgeRules projects that the components are tested and demonstrated with. Each model is one project
 bundle: the DSL model and the documentation, tests and flow slices that a host stores next to it.
 
-| Model                                         | Shows                                                                                                                                                 |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [loan-repayment](loan-repayment/index.ts)     | Types, a decision table, functions, a `@Service`, two `@Workbook`s with charts, test suites                                                           |
-| [loan-origination](loan-origination/index.ts) | Records, a scorecard and three decision tables, policy rules, affordability, a `@Service`, two `@Workbook`s with charts, test suites over list inputs |
-| [client-outreach](client-outreach/index.ts)   | An `optimise` element (HiGHS MILP) over decision tables: which of 100 prospects to call, email or text in a day of two workers                        |
+| Model                                         | Shows                                                                                                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [loan-repayment](loan-repayment/index.ts)     | Types, a decision table, functions, a `service`, two `workbook`s with charts, test suites                                                           |
+| [loan-origination](loan-origination/index.ts) | Records, a scorecard and three decision tables, policy rules, affordability, a `service`, two `workbook`s with charts, test suites over list inputs |
+| [client-outreach](client-outreach/index.ts)   | An `optimise` element (HiGHS MILP) over decision tables: which of 100 prospects to call, email or text in a day of two workers                      |
 
 ## Layout of a Model
 
@@ -30,7 +30,7 @@ models/<model-name>/
   `openStoryProject(<MODEL>_PROJECT)`, one story per entity worth a look. Playwright specs of a model are in
   `e2e/models/<model-name>.spec.ts`.
 - Give the model a `name` and a `version` in `index.ts`, a description of the model (`'*'`) and of every workbook in
-  `documentation.ts`, and a `name` to every `@Workbook` annotation: the Shell shows them in the breadcrumb and in the
+  `documentation.ts`, and a `name` to every `workbook` (its `@Name`): the Shell shows them in the breadcrumb and in the
   workbook panels of the Flow view.
 - Keep values deterministic: tests and specs assert exact engine results.
 - A test row of a list element other than `[0]` (`applicants[1].name`) is `custom: true`. The schema derives only `[0]`,

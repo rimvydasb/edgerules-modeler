@@ -7,8 +7,8 @@ Each entry has a label:
 
 Delete a [VALID] entry when the engine fixes it.
 
-All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.1.2-alpha.202610300921`** on
-**2026-10-30** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
+All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.2-alpha.202611052059`** on
+**2026-11-05** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
 
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
 [VALID]) or **Why it is not a bug** (for [NOT A BUG]).
@@ -83,6 +83,30 @@ MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
 `builtins()`. It returns `PortableFunctionSchema`-shaped entries with named `@parameters`, optional/variadic markers per
 parameter (or one entry per overload), and `@return`. `get('*', 'ALL')` + `get('*', 'EXTERNAL_DEFINITIONS')` already
 cover user callables.
+
+## [VALID] The schema view of `get` reports a `service` as a `function-schema`
+
+**What is wrong:** `service` declarations have their own Portable `@kind: 'service'` since `0.2.0`. The authored view
+(`toPortable()`, `get(path + '.*')`, `get(context, 'FUNCTION_DEFINITIONS')`) keeps it. The default schema view of `get`
+(`FIELDS`, `ALL`) reports a service, a `derivations` view and a `decisions` view as `'function-schema'`, the same as a
+`func`. `FUNCTION_DEFINITIONS` keeps the kind, but it lists the direct entries of one context only. Verified on
+`@edgerules/node` `0.2.2-alpha.202611052059`.
+
+```ts
+const s = MutableDecisionService.fromCode(
+  '{ func helper(x: number): x * 2; lib: { service inner(x: number): { return: x } } }',
+);
+s.link();
+s.get('*', 'ALL').helper['@kind']; // 'function-schema'
+s.get('lib', 'ALL').inner['@kind']; // 'function-schema' — the service kind is lost
+s.get('lib', 'FUNCTION_DEFINITIONS').inner['@kind']; // 'service'
+```
+
+The Project Explorer lists services in their own section. It reads `get(context, 'FUNCTION_DEFINITIONS')` once per
+context to find them (`collectServicePaths` in `src/components/project-explorer/tree-model.ts`).
+
+**Expected behaviour:** the schema view keeps the declaration kind, for example `'@kind': 'function-schema'` with a
+`'@layer': 'service'` key, or a `'service-schema'` kind.
 
 ## [VALID] Argument type-mismatch link error names an internal node id, not the argument
 

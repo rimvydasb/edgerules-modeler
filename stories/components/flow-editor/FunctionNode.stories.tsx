@@ -43,10 +43,9 @@ interface Built {
     field: string;
 }
 
-function build(field: string | null, partial: boolean, wired: boolean): Built {
+function build(field: string | null, partial: boolean): Built {
     const mutable = MutableDecisionService.fromCode(SAMPLE_MODEL);
     const service = createFlowEditorService(mutable as never);
-    if (wired) service.addInputNode('applicant');
     const nodeField = field ?? service.createDraftNode();
     if (partial) {
         // A draft: a callee and one of three arguments; nothing is written to the model.
@@ -67,7 +66,7 @@ function Canvas({
     partial?: boolean;
     description?: string;
 }): ReactElement {
-    const {service, field: nodeField} = useMemo(() => build(field, partial, wired), [field, partial, wired]);
+    const {service, field: nodeField} = useMemo(() => build(field, partial), [field, partial]);
     const documentation = useMemo(() => {
         const service = createDocumentationService(`flow-story-${Math.random()}`);
         if (description) service.setDescription(nodeField, description);

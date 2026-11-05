@@ -28,7 +28,6 @@ const LOAN_MODEL = `{
 
 function loanService() {
     const service = createFlowEditorService(MutableDecisionService.fromCode(LOAN_MODEL) as never);
-    service.addInputNode('loan');
     // Writes the same invocations with @node: FunctionNode, keeping their bindings.
     service.setCallee('schedule', 'repayment');
     service.setCallee('cost', 'loanCost');

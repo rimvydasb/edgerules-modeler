@@ -31,6 +31,7 @@ import {CreateDialog} from './CreateDialog';
 import {KindIcon, type IconKind} from './icons';
 import {
     buildSections,
+    collectServicePaths,
     ROOT_FETCH_PATH,
     type ExplorerEntry,
     type ExplorerEntryKind,
@@ -193,7 +194,7 @@ interface PendingCreate {
 
 /**
  * The project tree: Types, Methods, Service Methods, Variables, Workbooks and Tests (docs/stories/project-explorer-redesign.md). It
- * reads the model with two `service.get` calls and reports the opened entry through `onOpen`; the host picks the
+ * reads the model with `service.get` calls and reports the opened entry through `onOpen`; the host picks the
  * editor. Each section header has an add button that creates a new entity with `service.set` and opens it.
  */
 export function ProjectExplorer({
@@ -212,11 +213,15 @@ export function ProjectExplorer({
 }: ProjectExplorerProps): ReactElement {
     // A create bumps it, so a host without a `revision` sees the new entity too.
     const [created, setCreated] = useState(0);
-    const {model, types} = useMemo(
-        () => ({
-            model: service.get(ROOT_FETCH_PATH),
-            types: service.get(ROOT_FETCH_PATH, 'TYPE_DEFINITIONS'),
-        }),
+    const {model, types, servicePaths} = useMemo(
+        () => {
+            const model = service.get(ROOT_FETCH_PATH);
+            return {
+                model,
+                types: service.get(ROOT_FETCH_PATH, 'TYPE_DEFINITIONS'),
+                servicePaths: isPortableError(model) ? undefined : collectServicePaths(service, model),
+            };
+        },
         // `revision` and `created` stand for model changes the service does not report.
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [service, revision, created],
@@ -229,8 +234,9 @@ export function ProjectExplorer({
                       model as PortableContext,
                       isPortableError(types) ? undefined : (types as PortableContext),
                       testSubjects,
+                      servicePaths,
                   ),
-        [model, types, testSubjects],
+        [model, types, testSubjects, servicePaths],
     );
 
     const [query, setQuery] = useState('');
@@ -308,9 +314,6 @@ export function ProjectExplorer({
             ...(sections?.variables ?? []),
             ...(sections?.workbooks ?? []),
         ])
-            names.add(entry.path);
-        // The nodes of the root workbook are root fields too.
-        for (const entry of sections?.workbooks.find((workbook) => workbook.path === ROOT_FETCH_PATH)?.children ?? [])
             names.add(entry.path);
         for (const entry of [...(sections?.methods ?? []), ...(sections?.services ?? [])])
             if (!entry.path.includes('.')) names.add(entry.path);

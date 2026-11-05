@@ -28,7 +28,6 @@ export function useCoreNode<Row extends {kind: string} = never>(field: string) {
         onDuplicate: () => void runCommand(() => service.duplicate(field)),
         onAddDescription: () => setEditing({kind: 'description'}),
         onRemoveDescription: () => documentation?.setDescription(field, ''),
-        onRemoveFromFlow: () => void runCommand(() => service.removeFromFlow(field)),
         onDelete: () => {
             const failed = runCommand(() => service.deleteField(field));
             if (!failed) documentation?.setDescription(field, '');

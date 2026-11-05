@@ -98,7 +98,7 @@ describe('loan origination model', () => {
         const {session} = await openFixtureProject(LOAN_ORIGINATION_PROJECT);
         expect(session.getSlice('tests').subjects).toHaveProperty('loanOriginationDecision');
         expect(Object.keys(session.getSlice('flow').layouts)).toEqual(['originationBook', 'capacityBook']);
-        expect(session.engine.getCode('loanOriginationDecision')).toContain('@Service');
+        expect(session.engine.getCode('loanOriginationDecision')).toMatch(/^service /);
     });
 
     it('describes only paths the model has', () => {

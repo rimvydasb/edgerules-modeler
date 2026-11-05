@@ -35,7 +35,7 @@ describe('ExpressionNode', () => {
         expect(document.querySelector('[data-handleid="in:*"]')).toHaveAttribute('title', 'tax reads rate');
     });
 
-    it('offers the node menu without Rename node and Remove from flow, and routes the host items', async () => {
+    it('offers the node menu without Rename node, and routes the host items', async () => {
         const onOpenNode = vi.fn<(target: FlowEditorOpenTarget) => void>();
         renderExpression('tax', {onOpenNode});
         fireEvent.click(screen.getByRole('button', {name: 'Node actions'}));

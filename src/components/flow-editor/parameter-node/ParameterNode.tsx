@@ -28,7 +28,7 @@ import type {ParameterNodeEditing, ParameterNodeType} from './types';
 export const PARAMETER_COLOR = KIND_COLORS.service;
 
 /**
- * The EdgeRules ParameterNode: one parameter of a `@Service`, drawn from its declared type, never from a value. A
+ * The EdgeRules ParameterNode: one parameter of a `service`, or a typed hole of a workbook (`applicant: <Applicant>`), drawn from its declared type, never from a value. A
  * record type has an output pin per field and one for the whole record; any other type has one pin. The title is the
  * parameter name: renaming it renames the parameter in the service body and at every call site.
  */

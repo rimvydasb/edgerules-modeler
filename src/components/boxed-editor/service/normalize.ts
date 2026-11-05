@@ -264,10 +264,20 @@ export function normalizeNode(name: string, path: string, node: PortableNode, sc
             };
         case 'function':
             return normalizeFunction(name, path, record);
+        case 'service':
+        case 'derivations':
+        case 'decisions':
+            return {...normalizeFunction(name, path, record), keyword: record['@kind']};
         case 'ruleset':
             return normalizeRuleset(name, path, record);
         case 'optimise':
             return normalizeOptimisation(name, path, record);
+        case 'workbook':
+            return {
+                ...rowBase('context', path, name),
+                keyword: 'workbook',
+                children: normalizeContextChildren(record, path, schema),
+            };
         case 'context':
         case undefined:
             return {

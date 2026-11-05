@@ -1,5 +1,5 @@
 import type {PortableNode} from '@edgerules/portable';
-import {SERVICE_ANNOTATION, WORKBOOK_ANNOTATION, type ExplorerEntryKind, type ExplorerSection} from './tree-model';
+import type {ExplorerEntryKind, ExplorerSection} from './tree-model';
 
 /** One "New …" item of a section menu. */
 export interface CreateOption {
@@ -12,8 +12,8 @@ export interface CreateOption {
 const EMPTY_BODY = {'@kind': 'context', result: 0};
 
 // The smallest valid entity of each kind; the user completes it in the opened editor.
-// A method is a function or a ruleset; a service is a function with `@Service`. Input, output and chart nodes exist
-// only inside a workbook, so no section offers them: the Flow Editor of the workbook creates them.
+// A method is a function or a ruleset; a service is a `service` declaration and a workbook a root `workbook`
+// declaration. Input, output and chart nodes exist only inside a workbook, so no section offers them: the Flow Editor of the workbook creates them.
 export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOption[]> = {
     types: [
         {
@@ -49,13 +49,7 @@ export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOpt
             kind: 'service',
             label: 'Service',
             defaultName: 'newService',
-            template: () =>
-                ({
-                    '@kind': 'function',
-                    '@node': SERVICE_ANNOTATION,
-                    '@parameters': {},
-                    '@body': EMPTY_BODY,
-                }) as PortableNode,
+            template: () => ({'@kind': 'service', '@parameters': {}, '@body': EMPTY_BODY}) as PortableNode,
         },
     ],
     variables: [
@@ -72,7 +66,7 @@ export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOpt
             kind: 'workbook',
             label: 'Workbook',
             defaultName: 'newWorkbook',
-            template: () => ({'@kind': 'context', '@node': WORKBOOK_ANNOTATION}) as PortableNode,
+            template: () => ({'@kind': 'workbook'}) as PortableNode,
         },
     ],
 };

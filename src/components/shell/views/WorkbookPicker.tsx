@@ -7,13 +7,13 @@ import * as classes from '../shell.module.css';
 /** One workbook of the model, as its panel shows it. */
 export interface WorkbookSummary {
     path: string; // the field name of the workbook
-    name?: string; // the `name` of its `@Workbook` annotation
+    name?: string; // its `@Name` label
     description?: string; // from the documentation store
     inputs: number; // its `@InputNode` fields
     functions: number; // its `@FunctionNode` fields
 }
 
-/** One `@Service` function of the model, as its panel shows it. */
+/** One `service` declaration of the model, as its panel shows it. */
 export interface ServiceSummary {
     path: string; // the fully qualified path of the function
     label: string; // `path(...)` when it has arguments, `path()` when it has none
@@ -95,7 +95,7 @@ function Panel({
 /**
  * The Flow view of the model root when the model has workbooks: one panel per workbook with its name, its field name,
  * its description and its node counts, and a panel that creates a new workbook. A click opens its flow. Below, one
- * panel per `@Service` function of the model; a click opens it.
+ * panel per `service` declaration of the model; a click opens it.
  */
 export function WorkbookPicker({
     workbooks,

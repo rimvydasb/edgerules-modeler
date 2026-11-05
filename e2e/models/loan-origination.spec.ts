@@ -21,8 +21,9 @@ test('the Project Explorer lists every entity of the model', async ({page}) => {
         'Application',
         'LoanTerms',
         'sampleDecision',
-        'originationBook',
-        'capacityBook',
+        // A workbook is listed by its `@Name`.
+        'Joint mortgage application',
+        'Borrowing capacity',
     ]) {
         await expect(nav.getByText(entry, {exact: true}), entry).toBeVisible(SLOW);
     }

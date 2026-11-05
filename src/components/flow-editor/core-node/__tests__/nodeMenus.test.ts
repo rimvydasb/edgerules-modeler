@@ -12,7 +12,6 @@ function context(overrides: Partial<CoreNodeMenuContext> = {}): CoreNodeMenuCont
         onDuplicate: vi.fn(),
         onAddDescription: vi.fn(),
         onRemoveDescription: vi.fn(),
-        onRemoveFromFlow: vi.fn(),
         onDelete: vi.fn(),
         ...overrides,
     };
@@ -24,14 +23,7 @@ const extra = (id: string) => ({id, label: id, onSelect: vi.fn()});
 describe('coreNodeMenuItems', () => {
     it('builds the "This node" and "Remove" groups', () => {
         const items = coreNodeMenuItems(context());
-        expect(ids(items)).toEqual([
-            'rename-node',
-            'rename-field',
-            'duplicate',
-            'add-description',
-            'remove-from-flow',
-            'delete',
-        ]);
+        expect(ids(items)).toEqual(['rename-node', 'rename-field', 'duplicate', 'add-description', 'delete']);
         expect(items.filter((item) => item.group !== undefined).map((item) => item.group)).toEqual([
             'This node',
             'Remove',
@@ -57,7 +49,6 @@ describe('coreNodeMenuItems', () => {
             'add-description',
             'open-editor',
             'view-code',
-            'remove-from-flow',
             'delete',
         ]);
         expect(items.find((item) => item.id === 'open-editor')?.group).toBe('Record');

@@ -4,7 +4,15 @@ import {isPortableError} from '#lib/portable';
 import type {BoxedEditorService, BoxedRowData} from '../boxed-editor-types';
 import {denormalize, denormalizeTypeField} from './denormalize';
 import {normalizeNode, normalizeRoot} from './normalize';
-import {authoredEntries, childPath, isRecord, lastPathName, parentPath, portableAtPath} from '#lib/portableUtils';
+import {
+    authoredEntries,
+    childPath,
+    isFunctionDefinition,
+    isRecord,
+    lastPathName,
+    parentPath,
+    portableAtPath,
+} from '#lib/portableUtils';
 import {createRowCache, type CachedRows} from './rowCache';
 
 type GetFilter = 'FIELDS' | 'TYPE_DEFINITIONS' | 'FUNCTION_DEFINITIONS' | 'EXTERNAL_DEFINITIONS' | 'ALL';
@@ -73,7 +81,7 @@ function materializeArrays(
     if (!isRecord(node) || !isRecord(schema)) return node;
     const nodeRecord = node as unknown as Record<string, unknown>;
     const result = {...nodeRecord};
-    if (nodeRecord['@kind'] === 'function' && isRecord(nodeRecord['@body'])) {
+    if (isFunctionDefinition(nodeRecord) && isRecord(nodeRecord['@body'])) {
         const definition = mutable.get(`${path}.*`, 'ALL');
         if (
             !isPortableError(definition) &&
@@ -175,7 +183,7 @@ function insertChild(
         rules.splice(Math.max(0, Math.min(index, rules.length)), 0, source);
         return {...record, '@rules': rules} as unknown as PortableNode;
     }
-    if (record['@kind'] === 'function') {
+    if (isFunctionDefinition(record)) {
         const body = isRecord(record['@body']) ? record['@body'] : {'@kind': 'context'};
         return {
             ...record,

@@ -65,7 +65,7 @@ test('the Flow view of the model shows a panel per workbook with its name and de
     await expect(page.locator('.react-flow__node[data-id="mortgageBook.yearly"]')).toBeVisible(SLOW);
 });
 
-test('the workbook settings rename the @Workbook annotation and edit the workbook description', async ({page}) => {
+test('the workbook settings rename the @Name of the workbook and edit the workbook description', async ({page}) => {
     await openStory(page, 'models-loan-repayment--mortgage-book');
     await page.getByRole('button', {name: 'Workbook settings'}).click(SLOW);
     const dialog = page.getByRole('dialog', {name: 'Workbook settings'});
@@ -73,7 +73,7 @@ test('the workbook settings rename the @Workbook annotation and edit the workboo
     await expect(dialog.getByRole('textbox', {name: 'Version'})).toHaveCount(0);
     await fill(page, {Name: 'Family home', Description: 'The mortgage of a family home'});
 
-    // The field keeps its name; the annotation gets the new one.
+    // The field keeps its name; its @Name gets the new one.
     await page.getByRole('radio', {name: 'Code'}).click();
     // The model name opens the workbook picker of the model; its code is in the Code view.
     await crumbs(page).getByRole('button', {name: 'Loan Repayment Planner'}).click();
@@ -81,8 +81,8 @@ test('the workbook settings rename the @Workbook annotation and edit the workboo
     // The workbooks are at the end of the model; CodeMirror renders the lines in view only.
     await page.locator('.cm-content').click();
     await page.keyboard.press(`${process.platform === 'darwin' ? 'Meta' : 'Control'}+End`);
-    await expect(page.locator('.cm-content')).toContainText('@Workbook(name: "Family home")');
-    await expect(page.locator('.cm-content')).toContainText('mortgageBook: {');
+    await expect(page.locator('.cm-content')).toContainText('@Name("Family home")');
+    await expect(page.locator('.cm-content')).toContainText('workbook mortgageBook: {');
 
     await crumbs(page).getByRole('button', {name: 'Loan Repayment Planner'}).click();
     const mortgage = page.getByTestId('shell-workbook-mortgageBook');

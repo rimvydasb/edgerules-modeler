@@ -140,7 +140,6 @@ export interface CoreNodeMenuContext {
     onDuplicate: () => void;
     onAddDescription: () => void;
     onRemoveDescription: () => void;
-    onRemoveFromFlow: () => void;
     onDelete: () => void;
 }
 

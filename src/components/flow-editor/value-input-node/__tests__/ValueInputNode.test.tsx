@@ -75,7 +75,7 @@ describe('ValueInputNode', () => {
         renderValue('age', {onOpenNode});
         fireEvent.click(screen.getByRole('button', {name: 'Node actions'}));
         await screen.findByRole('menu');
-        for (const name of ['Rename node', 'Rename field', 'Duplicate', 'Remove from flow', 'Delete']) {
+        for (const name of ['Rename node', 'Rename field', 'Duplicate', 'Delete']) {
             expect(screen.getByRole('menuitem', {name})).toBeInTheDocument();
         }
         fireEvent.click(screen.getByRole('menuitem', {name: 'Open in boxed editor'}));

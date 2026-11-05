@@ -9,11 +9,10 @@ import {SERVICE_MODEL} from '../../testing/serviceModel';
 import {FlowEditor} from '../FlowEditor';
 import type {FlowEditorProps, FlowLayout} from '../types';
 
-function renderEditor(props: Partial<FlowEditorProps> & {seeded?: boolean} = {}) {
-    const {seeded, ...rest} = props;
-    const service = createFlowEditorService(MutableDecisionService.fromCode(SAMPLE_MODEL));
+function renderEditor(props: Partial<FlowEditorProps> & {seeded?: boolean; model?: string} = {}) {
+    const {seeded, model = SAMPLE_MODEL, ...rest} = props;
+    const service = createFlowEditorService(MutableDecisionService.fromCode(model));
     if (seeded) {
-        service.addInputNode('applicant');
         service.setCallee('decision', 'risk');
     }
     render(
@@ -27,8 +26,8 @@ function renderEditor(props: Partial<FlowEditorProps> & {seeded?: boolean} = {})
 const palette = () => within(screen.getByRole('navigation', {name: 'Node palette'}));
 
 describe('FlowEditor', () => {
-    it('shows the empty state and the palette on a model without flow nodes', () => {
-        renderEditor();
+    it('shows the empty state and the palette on a model without fields', () => {
+        renderEditor({model: '{ func f(x: number): x }'});
         expect(screen.getByTestId('flow-editor-empty')).toHaveTextContent('This flow has no nodes yet');
         for (const group of ['Inputs', 'Invocations', 'Outputs', 'Charts']) {
             expect(palette().getByRole('region', {name: group})).toHaveTextContent(new RegExp(`^${group}`, 'i'));
@@ -56,10 +55,9 @@ describe('FlowEditor', () => {
     });
 
     it('adds a parameter to a service from the palette', async () => {
-        const service = createFlowEditorService(
-            MutableDecisionService.fromCode('{ @Service func f(a: number): { b: a } }'),
-            {root: 'f'},
-        );
+        const service = createFlowEditorService(MutableDecisionService.fromCode('{ service f(a: number): { b: a } }'), {
+            root: 'f',
+        });
         render(
             <div style={{width: 1000, height: 600}}>
                 <FlowEditor service={service} />
@@ -74,7 +72,7 @@ describe('FlowEditor', () => {
 
     it('shows a `return` expression of a service as its return node, wired from the fields it reads', async () => {
         const service = createFlowEditorService(
-            MutableDecisionService.fromCode('{ @Service func f(a: number): { b: a * 2; return: b + 1 } }'),
+            MutableDecisionService.fromCode('{ service f(a: number): { b: a * 2; return: b + 1 } }'),
             {root: 'f'},
         );
         render(
@@ -88,10 +86,9 @@ describe('FlowEditor', () => {
     });
 
     it('adds an expression to a service from the palette', async () => {
-        const service = createFlowEditorService(
-            MutableDecisionService.fromCode('{ @Service func f(a: number): { b: a } }'),
-            {root: 'f'},
-        );
+        const service = createFlowEditorService(MutableDecisionService.fromCode('{ service f(a: number): { b: a } }'), {
+            root: 'f',
+        });
         render(
             <div style={{width: 1000, height: 600}}>
                 <FlowEditor service={service} />
@@ -140,19 +137,6 @@ describe('FlowEditor', () => {
         expect(screen.getByTestId('expression-node-tax')).toHaveTextContent('tax');
     });
 
-    it('turns an expression node into a list input node when the palette adds the list as an input', async () => {
-        const service = createFlowEditorService(MutableDecisionService.fromCode('{ scores: [1, 2, 3] }'));
-        render(
-            <div style={{width: 1000, height: 600}}>
-                <FlowEditor service={service} />
-            </div>,
-        );
-        expect(await screen.findByTestId('expression-node-scores')).toBeInTheDocument();
-        fireEvent.click(palette().getByRole('button', {name: /scores/}));
-        expect(await screen.findByTestId('list-input-node-scores')).toBeInTheDocument();
-        expect(screen.queryByTestId('expression-node-scores')).toBeNull();
-    });
-
     it('reads the model again when the revision changes after a change made outside the editor', async () => {
         const engine = MutableDecisionService.fromCode(SAMPLE_MODEL);
         const service = createFlowEditorService(engine);
@@ -196,22 +180,22 @@ describe('FlowEditor', () => {
         const {service} = renderEditor();
         fireEvent.click(palette().getByRole('button', {name}));
         expect(await screen.findByTestId(testId)).toBeInTheDocument();
-        expect(service.listNodes()).toEqual([{field: testId.split('-').at(-1), kind}]);
+        expect(service.listNodes()).toContainEqual({field: testId.split('-').at(-1), kind});
     });
 
     it('Enter on an item adds it, as a click does', async () => {
         const {service} = renderEditor();
-        fireEvent.keyDown(palette().getByRole('button', {name: 'Add input application'}), {key: 'Enter'});
-        expect(await screen.findByTestId('object-input-node-application')).toBeInTheDocument();
-        expect(service.listNodes()).toEqual([{field: 'application', kind: 'object-input'}]);
-        expect(palette().queryByRole('button', {name: 'Add input application'})).toBeNull();
+        fireEvent.keyDown(palette().getByRole('button', {name: 'Add object input'}), {key: 'Enter'});
+        expect(await screen.findByTestId('object-input-node-input')).toBeInTheDocument();
+        expect(service.listNodes()).toContainEqual({field: 'input', kind: 'object-input'});
     });
 
     it('adds an output node without writing to the model', async () => {
         const {service} = renderEditor();
+        const before = service.listNodes();
         fireEvent.click(palette().getByRole('button', {name: 'Add output'}));
         expect(await screen.findByTestId('output-node-output')).toBeInTheDocument();
-        expect(service.listNodes()).toEqual([]);
+        expect(service.listNodes()).toEqual(before);
     });
 
     it('reports the layout after a node is added', async () => {
@@ -220,7 +204,9 @@ describe('FlowEditor', () => {
         fireEvent.click(palette().getByRole('button', {name: 'Add output'}));
         await waitFor(() =>
             expect(onLayoutChange).toHaveBeenLastCalledWith({
-                positions: {output: expect.objectContaining({x: expect.any(Number), y: expect.any(Number)})},
+                positions: expect.objectContaining({
+                    output: expect.objectContaining({x: expect.any(Number), y: expect.any(Number)}),
+                }),
                 outputs: [{id: 'output'}],
             }),
         );
@@ -323,9 +309,9 @@ describe('FlowEditor', () => {
     });
 
     it('hides the palette in read-only mode', () => {
-        renderEditor({readOnly: true});
+        renderEditor({readOnly: true, model: '{ func f(x: number): x }'});
         expect(screen.queryByRole('navigation', {name: 'Node palette'})).toBeNull();
-        expect(screen.getByTestId('flow-editor-empty')).toHaveTextContent('annotated for the flow');
+        expect(screen.getByTestId('flow-editor-empty')).toHaveTextContent('the workbook or the service has fields');
     });
 
     it('keeps the chart item on the rail', () => {
@@ -360,7 +346,6 @@ describe('FlowEditor charts', () => {
 
     function renderLoan(props: Partial<FlowEditorProps> = {}) {
         const service = createFlowEditorService(MutableDecisionService.fromCode(LOAN_MODEL));
-        service.addInputNode('loan');
         service.setCallee('schedule', 'repayment'); // writes @node: FunctionNode, keeping the bindings
         render(
             <div style={{width: 1200, height: 700}}>
@@ -373,9 +358,10 @@ describe('FlowEditor charts', () => {
     it('adds a chart node without writing to the model', async () => {
         const onLayoutChange = vi.fn();
         const {service} = renderEditor({onLayoutChange});
+        const before = service.listNodes();
         fireEvent.click(palette().getByRole('button', {name: 'Add chart'}));
         expect(await screen.findByTestId('chart-node-chart')).toHaveTextContent('Wire a list of records');
-        expect(service.listNodes()).toEqual([]);
+        expect(service.listNodes()).toEqual(before);
         await waitFor(() =>
             expect(onLayoutChange).toHaveBeenLastCalledWith(
                 expect.objectContaining({outputs: [], charts: [{id: 'chart'}]}),
@@ -421,6 +407,6 @@ describe('FlowEditor charts', () => {
         await waitFor(() => expect(screen.queryByTestId('chart-node-chart')).toBeNull());
         const layout = onLayoutChange.mock.lastCall?.[0] as FlowLayout;
         expect(layout).not.toHaveProperty('charts');
-        expect(Object.keys(layout.positions).sort()).toEqual(['loan', 'schedule']);
+        expect(Object.keys(layout.positions)).not.toContain('chart');
     });
 });

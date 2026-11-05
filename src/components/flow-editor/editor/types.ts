@@ -41,7 +41,6 @@ export type PaletteGroup = 'input' | 'function' | 'expression' | 'output' | 'cha
 /** What a palette item creates. */
 export type PaletteAction =
     | {kind: 'new-input'; input: 'object-input' | 'list-input' | 'value-input'} // a new record, list or single value
-    | {kind: 'input'; field: string} // annotate an existing record or list
     | {kind: 'function'} // a draft invocation; the user picks what it invokes on the node
     | {kind: 'output'}
     | {kind: 'chart'}

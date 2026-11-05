@@ -35,7 +35,14 @@ export interface BoxedRowData {
     children?: BoxedRowData[];
     /** `model` kind only — the root context's `@model-version` metadata (edited in the Shell settings). */
     modelVersion?: string;
+    /**
+     * The declaration keyword of a `function` row (`service`, `derivations`, `decisions`; a plain `func` has none) or of
+     * a `context` row (`workbook`). It keeps the `@kind` of the declaration when the row is written back.
+     */
+    keyword?: BoxedDeclarationKeyword;
 }
+
+export type BoxedDeclarationKeyword = 'service' | 'derivations' | 'decisions' | 'workbook';
 
 export interface BoxedTableRowData extends BoxedRowData {
     parameters?: SignatureParameter[];

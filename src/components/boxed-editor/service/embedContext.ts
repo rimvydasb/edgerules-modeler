@@ -1,6 +1,13 @@
 import type {PortableNode, PortableRootContext} from '@edgerules/portable';
 import type {CodeEditorEmbedContext} from '../../code-editor-cell';
-import {authoredEntries, childPath, formatPortableValue, indexedPath, isRecord} from '#lib/portableUtils';
+import {
+    authoredEntries,
+    childPath,
+    formatPortableValue,
+    indexedPath,
+    isFunctionDefinition,
+    isRecord,
+} from '#lib/portableUtils';
 
 const ACTIVE_CELL_MARKER = '__boxed_editor_active_cell__';
 
@@ -39,17 +46,19 @@ function contextText(node: Record<string, unknown>, path: string, activePath: st
                     typeof record['@return'] === 'string' ? record['@return'] : 'any'
                 }`;
             }
-            if (record['@kind'] === 'function') {
+            if (isFunctionDefinition(record)) {
                 const body = record['@body'];
                 const inline = !isRecord(body) || body['@kind'] === 'expression';
                 const bodyText = inline
                     ? nodeText(body as PortableNode, childPath(childP, 'result'), activePath)
                     : contextText(body as Record<string, unknown>, childP, activePath);
-                return `func ${name}(${parametersText(record['@parameters'])}): ${bodyText}`;
+                const keyword = record['@kind'] === 'function' ? 'func' : String(record['@kind']);
+                return `${keyword} ${name}(${parametersText(record['@parameters'])}): ${bodyText}`;
             }
             if (record['@kind'] === 'type-definition') {
                 return `type ${name}: ${typeDefinitionText(record, childP, activePath)}`;
             }
+            if (record['@kind'] === 'workbook') return `workbook ${name}: ${contextText(record, childP, activePath)}`;
         }
         return `${name}: ${nodeText(child as PortableNode, childP, activePath)}`;
     });

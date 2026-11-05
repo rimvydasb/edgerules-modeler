@@ -91,7 +91,7 @@ describe('client outreach model', () => {
         const {session} = await openFixtureProject(CLIENT_OUTREACH_PROJECT);
         expect(session.getSlice('tests').subjects).toHaveProperty('contactPlan');
         expect(Object.keys(session.getSlice('flow').layouts)).toEqual(['outreachBook']);
-        expect(session.engine.getCode('contactPlan')).toContain('@Service');
+        expect(session.engine.getCode('contactPlan')).toMatch(/^service /);
         expect(session.engine.requiresSolver()).toBe(true);
     });
 

@@ -82,7 +82,7 @@ function functionNode(row: BoxedTableRowData): PortableNode {
     const onlyResult =
         children.length === 1 && (children[0].kind === 'function-result' || children[0].name === 'result');
     return {
-        '@kind': 'function',
+        '@kind': row.keyword ?? 'function',
         '@parameters': parameters(row.parameters),
         '@body': onlyResult ? expression(children[0].value) : contextFromChildren(children),
     } as PortableNode;
@@ -172,7 +172,9 @@ export function denormalize(row: BoxedRowData): PortableNode {
                 '@model-name': row.name,
             } as PortableNode;
         case 'context':
-            return contextFromChildren(row.children);
+            return row.keyword === 'workbook'
+                ? ({...contextFromChildren(row.children), '@kind': 'workbook'} as unknown as PortableNode)
+                : contextFromChildren(row.children);
         case 'complexType':
             return typeDefinitionFromChildren(row.children);
         case 'list':

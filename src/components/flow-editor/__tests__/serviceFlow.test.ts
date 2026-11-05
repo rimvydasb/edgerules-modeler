@@ -64,10 +64,13 @@ describe('FlowEditorService of a service', () => {
         });
 
         it('adds a number parameter to a service without callers', () => {
-            const {service, mutable} = build(`{ @Service func f(a: number): { r: a } }`, 'f');
+            const {service, mutable} = build(`{ service f(a: number): { r: a } }`, 'f');
             expect(service.createParameter()).toBe('f.param');
             expect(service.listNodes().map((node) => node.field)).toContain('f.param');
-            expect(mutable.get('f')).toMatchObject({'@parameters': {a: 'number', param: 'number'}, '@node': 'Service'});
+            expect(mutable.toPortable().f).toMatchObject({
+                '@kind': 'service',
+                '@parameters': {a: 'number', param: 'number'},
+            });
         });
 
         it('refuses a new parameter that a caller does not pass', () => {
@@ -87,8 +90,8 @@ describe('FlowEditorService of a service', () => {
                 kind: 'path',
                 text: 'person.age',
             });
-            // The `@Service` annotation and the named argument of the caller follow.
-            expect(mutable.get('quote')).toMatchObject({'@node': 'Service'});
+            // The `service` kind and the named argument of the caller follow.
+            expect(mutable.toPortable().quote).toMatchObject({'@kind': 'service'});
             expect(mutable.getCode('offer')).toContain('quote(person:');
             expect(await mutable.execute('offer')).toBe(100);
         });
@@ -101,7 +104,7 @@ describe('FlowEditorService of a service', () => {
         });
 
         it('changes the type of a parameter, link-checked', () => {
-            const {service} = build(`{ @Service func f(a: number, b: number): { r: b } }`, 'f');
+            const {service} = build(`{ service f(a: number, b: number): { r: b } }`, 'f');
             expect(service.setParameterType('f.a', 'string')).toBeUndefined();
             expect(service.getParameterNode('f.a').type).toBe('string');
             // `b * 1` needs a number.
@@ -111,8 +114,7 @@ describe('FlowEditorService of a service', () => {
 
         it('deletes an unused parameter from the service and its calls; a used one stays', async () => {
             const model = `{
-  @Service
-  func f(a: number, unused: number): { r: a }
+  service f(a: number, unused: number): { r: a }
   @FunctionNode
   call: f(a: 1, unused: 2)
 }`;
@@ -121,11 +123,6 @@ describe('FlowEditorService of a service', () => {
             expect(service.deleteField('f.unused')).toBeUndefined();
             expect(mutable.getCode('call')).not.toContain('unused');
             expect(await mutable.execute('call')).toEqual({r: 1});
-        });
-
-        it('is always on the flow of its service', () => {
-            const {service} = build();
-            expect(service.removeFromFlow('quote.amount')).toMatchObject({'@kind': 'error'});
         });
     });
 
@@ -197,7 +194,6 @@ describe('FlowEditorService of a service', () => {
             expect(service.getReturnNode('quote.return').label).toBe('Offer');
             expect(service.setNodeName('quote.return', '')).toBeUndefined();
             expect(service.getReturnNode('quote.return').label).toBeUndefined();
-            expect(service.removeFromFlow('quote.return')).toMatchObject({'@kind': 'error'});
             expect(service.listNodes().map((node) => node.kind)).toContain('return');
             expect(body(mutable).return).toMatchObject({'@kind': 'context', score: {expression: 'score'}});
         });
@@ -205,8 +201,7 @@ describe('FlowEditorService of a service', () => {
         it('creates the return context with every value the service returns now, so callers keep linking', async () => {
             const model = `{
   func monthly(amount: number): amount / 12
-  @Service
-  func f(amount: number): {
+  service f(amount: number): {
     @FunctionNode
     installment: monthly(amount: amount)
     total: amount * 2
@@ -223,14 +218,14 @@ describe('FlowEditorService of a service', () => {
         });
 
         it('shows a `return` context without an annotation, and refuses to create a second one', () => {
-            const {service} = build(`{ @Service func f(a: number): { b: a; return: { b: b } } }`, 'f');
+            const {service} = build(`{ service f(a: number): { b: a; return: { b: b } } }`, 'f');
             expect(service.listNodes().map((node) => node.kind)).toEqual(['parameter', 'expression', 'return']);
             expect(service.getReturnNode('f.return').fields.map((item) => item.name)).toEqual(['b']);
             expect(service.createReturnNode()).toMatchObject({'@kind': 'error', type: 'DuplicateName'});
         });
 
         it('shows a `return` expression with the fields it reads, and edits its text', async () => {
-            const {service, mutable} = build(`{ @Service func f(a: number): { b: a * 2; return: b + 1 } }`, 'f');
+            const {service, mutable} = build(`{ service f(a: number): { b: a * 2; return: b + 1 } }`, 'f');
             expect(service.listNodes()).toEqual([
                 {field: 'f.a', kind: 'parameter'},
                 {field: 'f.b', kind: 'expression'},
@@ -249,15 +244,14 @@ describe('FlowEditorService of a service', () => {
         });
 
         it('names a `return` expression with the annotation, and keeps the name when its text changes', () => {
-            const {service} = build(`{ @Service func f(a: number): { return: a + 1 } }`, 'f');
+            const {service} = build(`{ service f(a: number): { return: a + 1 } }`, 'f');
             expect(service.setNodeName('f.return', 'Total')).toBeUndefined();
             expect(service.setReturnExpression('f.return', 'a + 2')).toBeUndefined();
             expect(service.getReturnNode('f.return')).toMatchObject({label: 'Total', expression: 'a + 2'});
-            expect(service.removeFromFlow('f.return')).toMatchObject({'@kind': 'error'});
         });
 
         it('deletes the return, so the service returns its whole body again', () => {
-            const {service} = build(`{ @Service func f(a: number): { b: a; return: b } }`, 'f');
+            const {service} = build(`{ service f(a: number): { b: a; return: b } }`, 'f');
             expect(service.deleteField('f.return')).toBeUndefined();
             expect(service.listNodes().map((node) => node.kind)).toEqual(['parameter', 'expression']);
             expect(service.createReturnNode()).toBe('f.return');
@@ -278,12 +272,12 @@ describe('FlowEditorService of a service: expression nodes', () => {
     });
 
     it('shows a `return` expression as the return node, not as an expression node', () => {
-        const {service} = build(`{ @Service func f(a: number): { b: a * 2; return: b + 1 } }`, 'f');
+        const {service} = build(`{ service f(a: number): { b: a * 2; return: b + 1 } }`, 'f');
         expect(service.getExpressionNode('f.return')).toEqual({field: 'f.return', type: 'any', variables: []});
     });
 
     it('adds a new expression to the body of the service', async () => {
-        const {service, mutable} = build(`{ @Service func f(a: number): { b: a } }`, 'f');
+        const {service, mutable} = build(`{ service f(a: number): { b: a } }`, 'f');
         expect(service.createExpressionNode()).toBe('f.expression');
         expect(service.createExpressionNode()).toBe('f.expression2');
         expect(service.listNodes().map((node) => node.field)).toEqual(['f.a', 'f.b', 'f.expression', 'f.expression2']);

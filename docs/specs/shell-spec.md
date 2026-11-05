@@ -179,10 +179,10 @@ A valid root path is `'*'` or the path of an entity. `ProjectExplorer` opens eac
 | Path segment                 | Valid in a root path | Views                    | Example                      |
 | ---------------------------- | -------------------- | ------------------------ | ---------------------------- |
 | Model                        | Yes, as `'*'`        | Code, Boxed, Flow, Tests | `'*'`                        |
-| Context field                | Yes, at any position | Code, Boxed, Flow        | `applicant`                  |
-| Workbook (`@Workbook`)       | Yes, at any position | Code, Boxed, Flow        | `loanBook`                   |
+| Context field                | Yes, at any position | Code, Boxed              | `applicant`                  |
+| Workbook (`workbook`)        | Yes, root only       | Code, Boxed, Flow        | `loanBook`                   |
 | Function (`func`)            | Yes, last only       | Code, Boxed, Tests       | `applicant.calculateAge`     |
-| Service (`@Service` func)    | Yes, last only       | Code, Boxed, Flow, Tests | `loanRepayment`              |
+| Service (`service`)          | Yes, last only       | Code, Boxed, Flow, Tests | `loanRepayment`              |
 | Ruleset                      | Yes, last only       | Code, Boxed, Tests       | `band`                       |
 | Type definition              | Yes, last only       | Code, Boxed              | `Customer`                   |
 | Plain value or invocation    | Yes, last only       | Code, Boxed              | `limit`, `loanBook.decision` |
@@ -192,7 +192,11 @@ A valid root path is `'*'` or the path of an entity. `ProjectExplorer` opens eac
 - `Shell` MUST NOT support indexed paths. A path that contains `[` is not a valid root path.
 - A root path MUST NOT go below a function, or below any other entity that is not a context.
 - `Shell` opens the nearest valid ancestor for an invalid root path, and then calls `onPathChange`.
-- A function has no Flow view. A service has a Flow view: its parameters, the nodes of its body and its return.
+- Only a `workbook` and a `service` have a Flow view. The Flow view of the model is the workbook picker: a model that
+  declares no workbook has no Flow view, and its model name opens the Boxed view.
+- A function has no Flow view. A service has a Flow view: its parameters, every field of its body and its return.
+- The Flow view of a workbook shows every field of the workbook, annotated or not. A typed hole
+  (`applicant: <Applicant>`) is a parameter node.
 - A function is a test subject only if every argument has a type. The engine types a generic function at each call site.
 - `ShellViewSwitch` disables the cell of each view that the root path does not have.
 - A root path in a view that it does not have shows the Boxed view. `Shell` calls `onViewChange`.
@@ -259,16 +263,16 @@ The first item is the model name (`@model-name` of the model root), or `Model` w
 `ProjectExplorer` reports an opened entry as `{kind, path}` through `onOpen`. `explorerRoute` in
 [shell-routing.ts](../../src/components/shell/shell-routing.ts) selects the root path and the view.
 
-| Active view   | Opened entry                                      | Root path     | View                       |
-| ------------- | ------------------------------------------------- | ------------- | -------------------------- |
-| Any           | A test                                            | Subject ID    | Tests                      |
-| Any           | A service                                         | Entry path    | Flow                       |
-| Code or Boxed | Any other entry                                   | Entry path    | Unchanged                  |
-| Flow          | A context or a workbook                           | Entry path    | Flow                       |
-| Flow          | A node of a workbook, for example `function-node` | Workbook path | Flow, the node is centered |
-| Flow          | A function, a ruleset, a type or a plain value    | Entry path    | Boxed                      |
-| Tests         | A workbook                                        | Entry path    | Flow                       |
-| Tests         | Any other entry                                   | Entry path    | Boxed                      |
+| Active view   | Opened entry                                        | Root path     | View                       |
+| ------------- | --------------------------------------------------- | ------------- | -------------------------- |
+| Any           | A test                                              | Subject ID    | Tests                      |
+| Any           | A service                                           | Entry path    | Flow                       |
+| Code or Boxed | Any other entry                                     | Entry path    | Unchanged                  |
+| Flow          | A workbook                                          | Entry path    | Flow                       |
+| Flow          | A node of a workbook, for example `function-node`   | Workbook path | Flow, the node is centered |
+| Flow          | A context, a function, a ruleset, a type or a value | Entry path    | Boxed                      |
+| Tests         | A workbook                                          | Entry path    | Flow                       |
+| Tests         | Any other entry                                     | Entry path    | Boxed                      |
 
 - `FlowEditor` selects and centers the node of each new `focusNode` request.
 - `onCreateTest(subjectId)` calls `session.tests.forSubject(subjectId).addTestCase()`.
@@ -280,18 +284,22 @@ The first item is the model name (`@model-name` of the model root), or `Model` w
 ### The settings dialog edits the name and the description of the root path
 
 The settings button (`IconSettings`) is in the header left of the view switch. It shows for the model (`'*'`) and for an
-annotated entity: a field with an `@node` annotation, such as `@Workbook`, `@InputNode`, `@FunctionNode` or `@Service`.
-It does not show for another entity or when `readOnly` is set. A click opens the dialog immediately.
+`workbook`, for a `service`, and for an annotated entity: a field with an `@node` annotation, such as `@InputNode` or
+`@FunctionNode`, or with a label-only `@Name("...")`. It does not show for another entity or when `readOnly` is set. A
+click opens the dialog immediately.
 
-| Root path        | Dialog title      | Name field                                  | Version field     | Description field           |
-| ---------------- | ----------------- | ------------------------------------------- | ----------------- | --------------------------- |
-| `'*'`            | `Model settings`  | The model name (`setModelMetadata`)         | The model version | `documentation` at `'*'`    |
-| Annotated entity | `<Node> settings` | The `name` of the annotation (`@node-name`) | None              | `documentation` at the path |
+| Root path        | Dialog title        | Name field                                  | Version field     | Description field           |
+| ---------------- | ------------------- | ------------------------------------------- | ----------------- | --------------------------- |
+| `'*'`            | `Model settings`    | The model name (`setModelMetadata`)         | The model version | `documentation` at `'*'`    |
+| Workbook         | `Workbook settings` | The `@Name` label (`@node-name`)            | None              | `documentation` at the path |
+| Service          | `Service settings`  | The `@Name` label (`@node-name`)            | None              | `documentation` at the path |
+| Annotated entity | `<Node> settings`   | The `name` of the annotation (`@node-name`) | None              | `documentation` at the path |
 
 - The dialog is the Mantine `lg` size. The value cells (name, version and description) have the white body fill.
 - Save writes all fields in one `session.transaction`. A failed write changes nothing and shows the error in the dialog.
-- An empty annotation name removes the name: `@Workbook(name: "Loan book")` becomes `@Workbook`. The field name does not
-  change. Use the rename of the Project Explorer or the Boxed Editor to rename the field.
+- An empty name removes the name: `@Name("Loan book")` is removed, and `@InputNode(name: "Applicant")` becomes
+  `@InputNode`. The field name does not change. Use the rename of the Project Explorer or the Boxed Editor to rename the
+  field.
 - An annotation name write uses `setWithLinkCheck` on the authored entity with the new `@node-name`.
 - The model name and version are not part of the DSL: the engine has no syntax for them and drops `@model-name`. The
   project manifest keeps them as `model.name` and `model.version`. The session engine adds them to the model root as
@@ -301,15 +309,15 @@ It does not show for another entity or when `readOnly` is set. A click opens the
 
 ### The Flow view of the model offers the workbooks
 
-The Flow view of `'*'` shows one panel for each workbook of the model when the model has workbooks. A click on a panel
-opens the Flow view of the workbook.
+The Flow view of `'*'` shows one panel for each `workbook` declaration of the model when the model has workbooks. A
+click on a panel opens the Flow view of the workbook.
 
-| Panel part  | Content                                                                    |
-| ----------- | -------------------------------------------------------------------------- |
-| Title       | The `name` of the `@Workbook` annotation, or the field name without a name |
-| Subtitle    | The field name, when the annotation has a name                             |
-| Description | The description of the workbook, three lines at most, or `No description`  |
-| Footer      | The number of `@InputNode` and `@FunctionNode` fields, and `Open flow`     |
+| Panel part  | Content                                                                   |
+| ----------- | ------------------------------------------------------------------------- |
+| Title       | The `@Name` label of the workbook, or the field name without a label      |
+| Subtitle    | The field name, when the annotation has a name                            |
+| Description | The description of the workbook, three lines at most, or `No description` |
+| Footer      | The number of `@InputNode` and `@FunctionNode` fields, and `Open flow`    |
 
 A panel of a service opens the Flow view of the service.
 
@@ -404,8 +412,8 @@ annotation as a node.
 - A `ParameterNode` title is the parameter name. A rename migrates the body and the named arguments of each call.
 - A `ParameterNode` is always on the canvas. `Delete parameter` is disabled while the body reads the parameter.
 - The `return` field of a service is its `ReturnNode`, with or without the `@ReturnNode` annotation. The annotation
-  holds only the node name. The `ReturnNode` is always on the canvas: its menu has no `Remove from flow`. `Delete`
-  removes the `return` field, and the service returns its whole body again.
+  holds only the node name. Every node is always on the canvas: no menu has `Remove from flow`. `Delete` removes the
+  `return` field, and the service returns its whole body again.
 - A `ReturnNode` of a context shows the expression of each field. It shows no computed value.
 - A wire into `in:+` adds a field named after the wired value. A wire into a field pin replaces its expression.
 - A `ReturnNode` of an expression shows one row with the expression text. Its pin `in:*` takes one wire for each field
@@ -442,7 +450,7 @@ current model on mount, so it shows the changes of the other views.
 ## Implementation Tasks
 
 - [x] Add the `root` option to `createFlowEditorService`. `listNodes` reads the direct fields of the root only.
-- [x] Make `createDraftNode`, `createInputNode` and `listInputCandidates` use the `root` option.
+- [x] Make `createDraftNode` and `createInputNode` use the `root` option.
 - [x] Key `FlowMetadataDocument` layouts by root path. Add the `root` argument to `getLayout` and `setLayout`.
 - [x] Make `FlowMetadataStore.renamePath` move the layout keys and the node position keys.
 - [x] Create `src/components/shell` with `Shell`, `ShellBreadcrumbs`, `ShellViewSwitch` and the three view adapters.

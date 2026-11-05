@@ -2,7 +2,6 @@ import {
     IconArrowDown,
     IconArrowUp,
     IconCopy,
-    IconEyeOff,
     IconNote,
     IconNoteOff,
     IconPencil,
@@ -58,15 +57,7 @@ export function coreNodeMenuItems(context: CoreNodeMenuContext, slots: CoreNodeM
     if (!context.readOnly) {
         items.push(
             ...startGroup(
-                [
-                    {
-                        id: 'remove-from-flow',
-                        label: 'Remove from flow',
-                        icon: IconEyeOff,
-                        onSelect: context.onRemoveFromFlow,
-                    },
-                    {id: 'delete', label: 'Delete', icon: IconTrash, danger: true, onSelect: context.onDelete},
-                ],
+                [{id: 'delete', label: 'Delete', icon: IconTrash, danger: true, onSelect: context.onDelete}],
                 'Remove',
             ),
         );

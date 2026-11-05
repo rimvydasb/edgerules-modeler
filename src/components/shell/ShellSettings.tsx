@@ -7,7 +7,7 @@ import {isPortableError} from '#lib/portable';
 import {portableAtPath} from '#lib/portableUtils';
 import {cx} from '#ui/cx';
 import {useProjectSession} from '../project-session';
-import {annotationAt} from './shell-path';
+import {annotationAt, rootPathSegments} from './shell-path';
 import * as classes from './shell.module.css';
 
 export interface ShellSettingsProps {
@@ -30,9 +30,18 @@ const FIELD_CLASSES = {
     input: classes.settingsInput,
 };
 
+const KIND_LABELS: Record<string, string> = {workbook: 'Workbook', service: 'Service'};
+
+// What the settings dialog calls the entity: its node annotation, else its kind.
+function entityLabel(model: unknown, root: string, node: string | undefined): string {
+    if (node !== undefined) return node;
+    return KIND_LABELS[rootPathSegments(model, root).at(-1)?.kind ?? ''] ?? 'Entity';
+}
+
 /**
  * The header cell left of the view switch that opens the settings of the root path: the model ('*') or an annotated
- * entity such as a `@Workbook`. The dialog edits the name (the model name, or the `name` of the annotation), the
+ * entity: a `workbook`, a `service` or an annotated node. The dialog edits the name (the model name, or the
+ * `@Name` / `name` of the annotation, `@node-name` in Portable), the
  * model version (the model only) and the description of the documentation store. The dialog is a sheet of glass in
  * the drawing of a Flow node: a one-step header with the kind tile, sharp 1px ruled rows, and a row of step cells at
  * the bottom; the page behind it shows through, blurred.
@@ -44,7 +53,7 @@ export function ShellSettings({root}: ShellSettingsProps): ReactElement {
     const [error, setError] = useState<string | undefined>();
     const model = session.engine.toPortable();
     const annotation = annotationAt(model, root);
-    const title = isModel ? 'Model settings' : `${annotation?.node ?? 'Entity'} settings`;
+    const title = isModel ? 'Model settings' : `${entityLabel(model, root, annotation?.node)} settings`;
 
     const open = () => {
         const current = session.engine.toPortable();
@@ -73,7 +82,11 @@ export function ShellSettings({root}: ShellSettingsProps): ReactElement {
                 const name = values.name.trim();
                 const next = (name === '' ? rest : {...rest, '@node-name': name}) as unknown as PortableNode;
                 if (name !== (annotation?.name ?? '')) {
-                    const written = setWithLinkCheck(session.engine, root, next, previous as unknown as PortableNode);
+                    // A write without `@node-name` keeps the label, so a label-only `@Name` is removed by its path.
+                    const written =
+                        name === '' && annotation?.node === undefined
+                            ? session.engine.remove(`${root}.@Name`)
+                            : setWithLinkCheck(session.engine, root, next, previous as unknown as PortableNode);
                     if (isPortableError(written)) throw new Error(written.message);
                 }
             }

@@ -32,7 +32,6 @@ describe('resolveSource', () => {
 describe('modelWires', () => {
     it('draws one wire per path binding whose source is on the canvas, colored by argument type', () => {
         const service = createFlowEditorService(MutableDecisionService.fromCode(SAMPLE_MODEL));
-        service.addInputNode('applicant');
         service.setCallee('decision', 'risk');
         service.setCallee('payment', 'monthly'); // an expression binding: no wire
         const wires = modelWires(service.listNodes(), (field) => service.getFunctionNode(field));
@@ -40,6 +39,9 @@ describe('modelWires', () => {
             ['decision:age', 'applicant', 'out:age', 'in:age', 'number'],
             ['decision:income', 'applicant', 'out:income', 'in:income', 'number'],
             ['decision:segment', 'applicant', 'out:segment', 'in:segment', 'string'],
+            ['score:age', 'applicant', 'out:age', 'in:age', 'number'],
+            ['score:income', 'applicant', 'out:income', 'in:income', 'number'],
+            ['eligibility:person', 'applicant', 'out:*', 'in:person', 'record'],
         ]);
     });
 

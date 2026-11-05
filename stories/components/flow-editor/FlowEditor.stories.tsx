@@ -34,6 +34,21 @@ const SAMPLE_MODEL = `{
   eligibility: applicantDecision(person: applicant)
 }`;
 
+// The callables of the sample model and no value: every field of a flow is a node, so this flow starts empty.
+const CALLABLES_MODEL = `{
+  type Applicant: { age: <number>; income: <number>; segment: <string> }
+  ruleset risk(age: number, income: number, segment: string): {
+    hitPolicy: "first-match"
+    rules: [
+      { when: { age: 18..25, income: < 30000, segment: "retail" }, then: { level: "high", limit: 1000 } }
+      { when: { age: >= 26 }, then: { level: "medium", limit: 5000 } }
+    ]
+    default: { level: "none", limit: 0 }
+  }
+  func creditScore(age: number, income: number): 300 + age * 2 + income / 1000
+  func monthly(amount: number): amount / 12
+}`;
+
 const FLOW_LAYOUT: FlowLayout = {
     positions: {},
     outputs: [
@@ -43,16 +58,17 @@ const FLOW_LAYOUT: FlowLayout = {
 };
 
 interface EditorArgs {
-    seeded?: boolean; // the applicant input, the decision and score functions and two outputs are on the canvas
+    seeded?: boolean; // the sample model with a description and two outputs
+    empty?: boolean; // a model of callables only: the canvas starts empty
     readOnly?: boolean;
     showLayout?: boolean; // prints the layout the session's flow store holds once onLayoutChange changed it
 }
 
 // The story's project: the seeded variant starts with a description and the outputs in its flow layout.
-function openProject({seeded = false}: EditorArgs): Promise<ProjectSession> {
+function openProject({seeded = false, empty = false}: EditorArgs): Promise<ProjectSession> {
     return openStoryProject({
         name: 'Flow story',
-        model: {dsl: SAMPLE_MODEL},
+        model: {dsl: empty ? CALLABLES_MODEL : SAMPLE_MODEL},
         ...(seeded && {
             documentation: {
                 schemaVersion: 1,
@@ -63,18 +79,9 @@ function openProject({seeded = false}: EditorArgs): Promise<ProjectSession> {
     });
 }
 
-function Editor({seeded = false, readOnly = false, showLayout = false}: EditorArgs): ReactElement {
+function Editor({readOnly = false, showLayout = false}: EditorArgs): ReactElement {
     const session = useProjectSession();
-    const service = useMemo(() => {
-        const created = createFlowEditorService(session.engine);
-        if (seeded) {
-            created.addInputNode('applicant');
-            // Writes the same invocations with @node: FunctionNode, keeping their bindings.
-            created.setCallee('decision', 'risk');
-            created.setCallee('score', 'creditScore');
-        }
-        return created;
-    }, [session, seeded]);
+    const service = useMemo(() => createFlowEditorService(session.engine), [session]);
     // Read on mount only, like FlowEditor's own `defaultLayout`.
     const [defaultLayout] = useState<FlowLayout>(() => session.flow.getLayout('*'));
 
@@ -120,14 +127,14 @@ export default meta;
 
 type Story = StoryObj<typeof Editor>;
 
-/** An input, two function nodes and two outputs, placed by the automatic layout. */
+/** Every field of the model: two inputs, four function nodes and two outputs, placed by the automatic layout. */
 export const Default: Story = {args: {seeded: true}};
 
-/** No node is annotated for the flow yet: the canvas shows how to start. */
-export const Empty: Story = {args: {}};
+/** A model of callables only: the canvas shows how to start. */
+export const Empty: Story = {args: {empty: true}};
 
 /** No palette, no wiring and no removal. */
 export const ReadOnly: Story = {args: {seeded: true, readOnly: true}};
 
 /** Prints what onLayoutChange reports, for hosts that persist `flow.json`. */
-export const LayoutChanges: Story = {args: {showLayout: true}};
+export const LayoutChanges: Story = {args: {showLayout: true, empty: true}};
