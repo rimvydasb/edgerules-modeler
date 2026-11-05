@@ -5,8 +5,11 @@
 `README.md` is a standard slice of every EdgeRules project. It is the long description of the project, in GitHub
 Flavored Markdown.
 
-The Shell shows the README in a `readme` view at the project root. The view has a preview with the new `MarkdownView`
-component, and an edit mode with `CodeEditor`.
+The Shell shows the README in two places:
+
+- **Model root:** the Flow view of `*` shows a README panel above the workbook and service panels.
+- **Document root:** the Project Explorer lists `README.md` in a Documents section. The Shell opens it with two views:
+  Preview (`MarkdownView`, read-only) and Code (`CodeEditor`, editable Markdown).
 
 Related stories:
 
@@ -34,19 +37,87 @@ Related stories:
 - A README MAY use GitHub Flavored Markdown: tables, task lists, fenced code, relative images. It MUST NOT contain raw
   HTML: `MarkdownView` drops it.
 
-### README view in the Shell
+### README panel on the model root
 
-The Shell gets a fourth view, `readme`, at the project root. The README of a project that is not read-only is editable.
+The Flow view of the model root is the `WorkbookPicker`. The content of the model selects what the model root shows.
 
-| Mode    | Component                                | Behavior                                        |
-| ------- | ---------------------------------------- | ----------------------------------------------- |
-| Preview | `MarkdownView`                           | Default mode; `model:` links navigate the Shell |
-| Edit    | `CodeEditor` with `language: 'markdown'` | Markdown highlighting; no engine service        |
+A README exists when its Markdown is not blank.
 
-- An edit writes the `readme` slice store of the session. A save writes it with the other slices in one revision.
+| Model content                         | Model root views | Flow view of the model root                                      |
+| ------------------------------------- | ---------------- | ---------------------------------------------------------------- |
+| At least one workbook or service      | Flow, Boxed      | README panel (if a README exists), Workbooks and Service Methods |
+| A README, no workbook and no service  | Flow, Boxed      | The full README with `MarkdownView`, without a height limit      |
+| No README, no workbook and no service | Boxed            | None                                                             |
+
+- `rootViews` and `modelView` of the Shell use these rules. The breadcrumb of the model opens the Flow view when it
+  exists, else the Boxed view.
+- A model with a service and no workbook shows the Workbooks section with only the `New workbook` panel.
+
+The layout of the README panel, the workbook panels and the service panels:
+
+| Element                  | Layout                                                                                 |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| README panel             | Width of 3 panels and 2 gaps. Height of the content, at most 2 panel heights and 1 gap |
+| README panel content     | `MarkdownView` of the README; content above the maximum height is cut off with a fade  |
+| README panel footer      | `README.md` and the action `Open`                                                      |
+| Workbook and service row | A grid of at most 3 panels per row; a narrow body shows fewer columns                  |
+| Add panel                | The `New workbook` and `New service` panels are grid items, as the other panels        |
+
+- A click on the README panel opens the document root `doc:README.md` in the `preview` view.
+- The README panel is read-only. A `model:` link in it opens that model path.
+- The `Overview` story of `Models/Loan Repayment` opens `*` in the `flow` view. It shows the README panel.
+- `models/loan-repayment` gets an authored `README.md`.
+
+### Documents in the Project Explorer
+
+The Project Explorer has a Documents section, the first section of the tree. It lists the documents of the project.
+
+This story has one document: `README.md`.
+
+| Item              | Value                                                                 |
+| ----------------- | --------------------------------------------------------------------- |
+| Section           | `documents`                                                           |
+| Entry kind        | `document`                                                            |
+| Entry path        | `doc:README.md`                                                       |
+| Entry label       | `README.md`                                                           |
+| Source of entries | The `documents` prop; the explorer does not read them from the engine |
+| Add button        | None                                                                  |
+
+- A click on the `README.md` entry opens `doc:README.md` in the `preview` view.
+- The `doc:` prefix marks a document path. A model path never contains `:`, so the two path forms cannot collide.
+
+### Document root in the Shell
+
+A document path is a root path of the Shell. The breadcrumbs show the model name and `README.md`.
+
+The view switch of a document root shows only Preview and Code; Flow, Boxed and Tests are hidden.
+
+| View      | Component                                | Behavior                                                                      |
+| --------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
+| `preview` | `MarkdownView`                           | Default view. Rendered Markdown, read-only; `model:` links navigate the Shell |
+| `code`    | `CodeEditor` with `language: 'markdown'` | Markdown source with highlighting; editable when the Shell is not read-only   |
+
+- `ShellView` gets `'preview'`. Only a document root has it. A model or entity root falls back from `preview` to
+  `boxed`.
+- A document root falls back from `flow`, `boxed` and `tests` to `preview`.
+- An edit in the Code view writes the `readme` slice store of the session. A save writes it with the other slices in one
+  revision.
 - `CodeEditor` gets the `language` prop: `'edgerules'` (the default) or `'markdown'`. With `'markdown'` the `service`
   prop is not used, and the editor has no diagnostics, completion or formatting.
 - `@codemirror/lang-markdown` becomes an optional peer dependency.
+
+The user opens and edits the README:
+
+```mermaid
+flowchart LR
+    Explorer["Explorer entry README.md"] -->|click| Preview
+    Panel["README panel on the model root"] -->|click| Preview
+    Preview["Preview view: MarkdownView, read-only"] -->|view switch| Code["Code view: CodeEditor, markdown"]
+    Code -->|view switch| Preview
+    Code -->|edit| Slice[("readme slice store")]
+    Slice -->|save| Revision["One project revision"]
+    Preview -->|model: link| ModelPath["Model path in the Shell"]
+```
 
 ### Markdown viewer
 
@@ -70,14 +141,19 @@ The README components and their dependencies:
 flowchart LR
     subgraph pkg["edgerules-react"]
         Shell
+        WorkbookPicker
+        ProjectExplorer
         MarkdownView
         CodeEditor
         ProjectSession
         LocalProjectRepository
     end
     IndexedDB[(IndexedDB)]
-    Shell -->|README preview| MarkdownView
-    Shell -->|README edit| CodeEditor
+    Shell -->|model root Flow view| WorkbookPicker
+    WorkbookPicker -->|README panel| MarkdownView
+    Shell -->|Documents section| ProjectExplorer
+    Shell -->|Preview view| MarkdownView
+    Shell -->|Code view| CodeEditor
     Shell -->|readme slice store| ProjectSession
     MarkdownView -->|static highlighting| CodeEditor
     ProjectSession -->|save bundle with readme| LocalProjectRepository
@@ -119,6 +195,30 @@ interface CodeEditorProps {
 }
 ```
 
+`project-explorer` changes:
+
+```typescript
+type ExplorerSection = 'documents' | 'types' | 'methods' | 'services' | 'variables' | 'workbooks' | 'tests';
+
+type ExplorerEntryKind = /* ...existing kinds */ 'document';
+
+interface ProjectExplorerProps {
+  // ...existing members
+  documents?: readonly string[]; // document file names, e.g. 'README.md'; without it there is no Documents section
+}
+```
+
+`shell` changes:
+
+```typescript
+type ShellView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview'; // 'preview' only for a document root
+
+interface ShellProps {
+  // ...existing members
+  path?: string; // '*', the path of an entity, or a document path such as 'doc:README.md'
+}
+```
+
 ## Architecture Changes
 
 - `project-session`: `README.md` is a project slice (`ProjectBundle.readme`). `PROJECT_FORMAT_VERSION` becomes 3; the
@@ -126,16 +226,20 @@ interface CodeEditorProps {
 - New component `markdown-view`: public API `MarkdownView`. Optional peers `react-markdown` and `remark-gfm`. It has no
   component dependency; it MAY import `code-editor/language/` files.
 - `code-editor`: `language` prop. Optional peer `@codemirror/lang-markdown`.
-- `shell`: `readme` view at the project root. Its allowlist gets `markdown-view`.
+- `project-explorer`: Documents section with `document` entries, from the `documents` prop.
+- `shell`: document root paths (`doc:` prefix) with the `preview` and `code` views; README panel in the
+  `WorkbookPicker`. Its allowlist gets `markdown-view`.
 
 ## Out of Scope
 
 - Mermaid diagrams inside a README.
 - A side-by-side editor with a live preview.
+- Documents other than `README.md`.
 
 ## Future Improvements
 
 - Per-entity Markdown documents (`docs/nodes/*.md`) after stable entity ids exist (`global-project-management.md` §6).
+  They are listed in the Documents section.
 
 ## Verification
 
@@ -168,21 +272,40 @@ Acceptance criteria:
 - [ ] `npm test` passes, including a session test: a README edit and a model edit save as one revision
 - [ ] `npm test` passes, including a factory test: a new project without a README gets `# <name>` and its description
 
-**Phase 2: Markdown viewer and Shell README view**
+**Phase 2: Markdown viewer**
 
 - [ ] Add `markdown-view` with `react-markdown` and `remark-gfm` as optional peers
 - [ ] Implement URL rewrite, scheme filter, `model:` links and `edgerules` code highlighting
 - [ ] Add the `language` prop to `CodeEditor` with `@codemirror/lang-markdown`
-- [ ] Add the `readme` view to the Shell: preview with `MarkdownView`, edit with `CodeEditor`
-- [ ] Add Storybook stories for `MarkdownView` and the Shell README view
+- [ ] Add Storybook stories for `MarkdownView` and the Markdown `CodeEditor`
 - [ ] Add tests for the code of this phase
 
 Acceptance criteria:
 
 - [ ] `npm test` passes, including `MarkdownView.test.tsx`: raw HTML and `javascript:` links do not render
-- [ ] `npm test` passes, including a Shell test: a README edit marks the project dirty, and save keeps it
-- [ ] `npm test` passes, including a Shell test: a `model:` link in the README opens that model path
 - [ ] `npm run depcruise` passes with the new component
+
+**Phase 3: README in the Shell and the Project Explorer**
+
+- [ ] Add the Documents section and the `documents` prop to `ProjectExplorer`
+- [ ] Add document root paths and the `preview` view to the Shell; hide Flow, Boxed and Tests for a document root
+- [ ] Show the README in the `preview` view with `MarkdownView`, and in the `code` view with `CodeEditor`
+- [ ] Add the README panel to `WorkbookPicker`, and limit the workbook and service rows to 3 panels
+- [ ] Show the model root Flow view for a model with a workbook, a service or a README
+- [ ] Add an authored `README.md` to `models/loan-repayment`; open the `Overview` story in the `flow` view
+- [ ] Add a Storybook story for the README document root
+- [ ] Add tests for the code of this phase
+
+Acceptance criteria:
+
+- [ ] `npm test` passes, including a Project Explorer test: the Documents section lists `README.md`
+- [ ] `npm test` passes, including a Shell test: a document root shows only Preview and Code in the view switch
+- [ ] `npm test` passes, including a Shell test: the Preview view has no editor; a Code view edit marks the project
+      dirty
+- [ ] `npm test` passes, including a Shell test: the README panel on the model root opens the README in Preview
+- [ ] `npm test` passes, including a Shell test: a model with only a README shows it in the root Flow view
+- [ ] `npm test` passes, including a Shell test: a model without README, workbook or service has no root Flow view
+- [ ] `npm test` passes, including a Shell test: a `model:` link in the README opens that model path
 
 **Phase E2E:**
 
@@ -190,15 +313,17 @@ Acceptance criteria:
 
 Acceptance criteria:
 
-- [ ] `npm run e2e` passes, including `model-readme.spec.ts`: README edit, save, reload, README kept
+- [ ] `npm run e2e` passes, including `model-readme.spec.ts`: open README from the explorer, edit in Code, save, reload,
+      README kept
 
 **Phase X:**
 
 - [ ] Update `docs/architecture.md` with the changes from `## Architecture Changes`
-- [ ] Update `README.md` with `MarkdownView` and the Shell README view
+- [ ] Update `README.md` with `MarkdownView`, the Documents section and the Shell document root
 - [ ] Review the implementation against this story and the project conventions
 
 Acceptance criteria:
 
 - [ ] Every command in `## Verification` passes
-- [ ] Storybook starts with `npm run storybook` and shows the `MarkdownView` and Shell README stories
+- [ ] Storybook starts with `npm run storybook`; `Models/Loan Repayment` `Overview` shows the README panel above the
+      workbooks
