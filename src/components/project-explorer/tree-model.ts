@@ -4,11 +4,20 @@ import {untypedParameters} from '#lib/callables';
 /** Literal `get()` argument for the root context. */
 export const ROOT_FETCH_PATH = '*';
 
-/** The six sections of the explorer, in display order. */
-export type ExplorerSection = 'types' | 'methods' | 'services' | 'variables' | 'workbooks' | 'tests';
+/** The seven sections of the explorer, in display order. */
+export type ExplorerSection = 'documents' | 'types' | 'methods' | 'services' | 'variables' | 'workbooks' | 'tests';
+
+/** The prefix of a document path: `doc:README.md`. A model path never contains `:`, so the two never collide. */
+export const DOCUMENT_PATH_PREFIX = 'doc:';
+
+/** The path of the document file `name`: `doc:README.md` for `README.md`. */
+export function documentPath(name: string): string {
+    return `${DOCUMENT_PATH_PREFIX}${name}`;
+}
 
 /** What an entry is: it picks the icon of the row and the editor the host opens for it. */
 export type ExplorerEntryKind =
+    | 'document'
     | 'type'
     | 'function'
     | 'service'
@@ -25,7 +34,7 @@ export type ExplorerEntryKind =
 
 export interface ExplorerEntry {
     kind: ExplorerEntryKind;
-    path: string; // the fully qualified model path; the test subject ID for a test
+    path: string; // the fully qualified model path; the test subject ID for a test; `doc:<file>` for a document
     label: string;
     children?: ExplorerEntry[]; // the nodes of a workbook
     untypedArguments?: string[]; // a generic function: the arguments without a type, which keep it from being tested
@@ -158,7 +167,8 @@ function byLabel(a: ExplorerEntry, b: ExplorerEntry): number {
 }
 
 /**
- * Splits the model into the explorer sections, each sorted by name:
+ * Splits the project into the explorer sections, each sorted by name:
+ * - **Documents**: the document files of `documents`, such as `README.md`, as `doc:<file>` paths. The engine has none.
  * - **Types**: the type definitions of the root.
  * - **Methods**: every function and ruleset, also inside contexts, by qualified path: `path(...)` when it has
  *   arguments, `path()` when it has none.
@@ -172,8 +182,10 @@ export function buildSections(
     model: PortableContext,
     types: PortableContext | undefined,
     testSubjects: readonly string[],
+    documents: readonly string[] = [],
 ): ExplorerSections {
     const sections: ExplorerSections = {
+        documents: documents.map((name) => ({kind: 'document', path: documentPath(name), label: name})),
         types: [],
         methods: [],
         services: [],

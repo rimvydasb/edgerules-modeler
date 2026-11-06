@@ -119,6 +119,7 @@ module.exports = {
       'shell',
       [
         'code-editor',
+        'markdown-view',
         'boxed-editor',
         'flow-editor',
         'project-explorer',

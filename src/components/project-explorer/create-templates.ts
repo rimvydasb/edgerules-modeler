@@ -14,7 +14,7 @@ const EMPTY_BODY = {'@kind': 'context', result: 0};
 // The smallest valid entity of each kind; the user completes it in the opened editor.
 // A method is a function or a ruleset; a service is a `service` declaration and a workbook a root `workbook`
 // declaration. Input, output and chart nodes exist only inside a workbook, so no section offers them: the Flow Editor of the workbook creates them.
-export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOption[]> = {
+export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'documents' | 'tests'>, CreateOption[]> = {
     types: [
         {
             kind: 'type',

@@ -5,6 +5,8 @@ import {
     IconBraces,
     IconCategory,
     IconChartLine,
+    IconFileText,
+    IconFiles,
     IconFlask,
     IconListCheck,
     IconLogin2,
@@ -23,6 +25,8 @@ import * as classes from './projectExplorer.module.css';
 export type IconKind = ExplorerEntryKind | ExplorerSection;
 
 const ICON_BY_KIND: Record<IconKind, Icon> = {
+    documents: IconFiles,
+    document: IconFileText,
     types: IconCategory,
     methods: IconMathFunction,
     services: IconServer,

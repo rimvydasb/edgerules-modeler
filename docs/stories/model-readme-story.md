@@ -289,43 +289,43 @@ Acceptance criteria:
 
 **Phase 3: README in the Shell and the Project Explorer**
 
-- [ ] Add the Documents section and the `documents` prop to `ProjectExplorer`
-- [ ] Add document root paths and the `preview` view to the Shell; hide Flow, Boxed and Tests for a document root
-- [ ] Show the README in the `preview` view with `MarkdownView`, and in the `code` view with `CodeEditor`
-- [ ] Add the README panel to `WorkbookPicker`, and limit the workbook and service rows to 3 panels
-- [ ] Show the model root Flow view for a model with a workbook, a service or a README
-- [ ] Add an authored `README.md` to `models/loan-repayment`; open the `Overview` story in the `flow` view
-- [ ] Add a Storybook story for the README document root
-- [ ] Add tests for the code of this phase
+- [x] Add the Documents section and the `documents` prop to `ProjectExplorer`
+- [x] Add document root paths and the `preview` view to the Shell; hide Flow, Boxed and Tests for a document root
+- [x] Show the README in the `preview` view with `MarkdownView`, and in the `code` view with `CodeEditor`
+- [x] Add the README panel to `WorkbookPicker`, and limit the workbook and service rows to 3 panels
+- [x] Show the model root Flow view for a model with a workbook, a service or a README
+- [x] Add an authored `README.md` to `models/loan-repayment`; open the `Overview` story in the `flow` view
+- [x] Add a Storybook story for the README document root
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including a Project Explorer test: the Documents section lists `README.md`
-- [ ] `npm test` passes, including a Shell test: a document root shows only Preview and Code in the view switch
-- [ ] `npm test` passes, including a Shell test: the Preview view has no editor; a Code view edit marks the project
+- [x] `npm test` passes, including a Project Explorer test: the Documents section lists `README.md`
+- [x] `npm test` passes, including a Shell test: a document root shows only Preview and Code in the view switch
+- [x] `npm test` passes, including a Shell test: the Preview view has no editor; a Code view edit marks the project
       dirty
-- [ ] `npm test` passes, including a Shell test: the README panel on the model root opens the README in Preview
-- [ ] `npm test` passes, including a Shell test: a model with only a README shows it in the root Flow view
-- [ ] `npm test` passes, including a Shell test: a model without README, workbook or service has no root Flow view
-- [ ] `npm test` passes, including a Shell test: a `model:` link in the README opens that model path
+- [x] `npm test` passes, including a Shell test: the README panel on the model root opens the README in Preview
+- [x] `npm test` passes, including a Shell test: a model with only a README shows it in the root Flow view
+- [x] `npm test` passes, including a Shell test: a model without README, workbook or service has no root Flow view
+- [x] `npm test` passes, including a Shell test: a `model:` link in the README opens that model path
 
 **Phase E2E:**
 
-- [ ] Add E2E tests for the user flows of this story
+- [x] Add E2E tests for the user flows of this story
 
 Acceptance criteria:
 
-- [ ] `npm run e2e` passes, including `model-readme.spec.ts`: open README from the explorer, edit in Code, save, reload,
+- [x] `npm run e2e` passes, including `model-readme.spec.ts`: open README from the explorer, edit in Code, save, reload,
       README kept
 
 **Phase X:**
 
-- [ ] Update `docs/architecture.md` with the changes from `## Architecture Changes`
-- [ ] Update `README.md` with `MarkdownView`, the Documents section and the Shell document root
-- [ ] Review the implementation against this story and the project conventions
+- [x] Update `docs/architecture.md` with the changes from `## Architecture Changes`
+- [x] Update `README.md` with `MarkdownView`, the Documents section and the Shell document root
+- [x] Review the implementation against this story and the project conventions
 
 Acceptance criteria:
 
 - [ ] Every command in `## Verification` passes
-- [ ] Storybook starts with `npm run storybook`; `Models/Loan Repayment` `Overview` shows the README panel above the
+- [x] Storybook starts with `npm run storybook`; `Models/Loan Repayment` `Overview` shows the README panel above the
       workbooks

@@ -24,6 +24,7 @@ async function fill(page: Page, values: Record<string, string>) {
 test('the model shows its name; the model settings rename it and set its version and description', async ({page}) => {
     await openStory(page, 'models-loan-repayment--overview');
     await expect(crumbs(page)).toHaveText('Loan Repayment Planner', SLOW);
+    await page.getByRole('radio', {name: 'Boxed'}).click();
     await expect(page.getByTestId('row-*').getByRole('heading')).toHaveText('Loan Repayment Planner');
     // The Boxed Editor has no settings of its own: the Shell header has them.
     await expect(page.getByTestId('row-*').getByRole('button', {name: 'Model settings'})).toHaveCount(0);
@@ -48,7 +49,7 @@ test('the model shows its name; the model settings rename it and set its version
 
 test('the Flow view of the model shows a panel per workbook with its name and description', async ({page}) => {
     await openStory(page, 'models-loan-repayment--overview');
-    await page.getByRole('radio', {name: 'Flow'}).click(SLOW);
+    await expect(page.getByRole('radio', {name: 'Flow'})).toHaveAttribute('aria-checked', 'true', SLOW);
     const picker = page.getByTestId('shell-workbook-picker');
     const mortgage = picker.getByTestId('shell-workbook-mortgageBook');
     const terms = picker.getByTestId('shell-workbook-termComparisonBook');

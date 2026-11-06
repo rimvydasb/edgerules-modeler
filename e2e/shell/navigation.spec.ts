@@ -48,8 +48,10 @@ test('the header shows the settings, then Flow, Boxed, Code and Tests, then the 
 test.describe('the kind icon', () => {
     test('opens the model and a workbook in the Flow view, and keeps the Project Explorer open', async ({page}) => {
         await openStory(page, 'models-loan-repayment--overview');
+        // The Overview opens in the Flow view: the Boxed view first.
+        await page.getByRole('radio', {name: 'Boxed'}).click(SLOW);
         await expectView(page, 'Boxed');
-        await page.getByRole('button', {name: 'Open in the Flow view'}).click(SLOW);
+        await page.getByRole('button', {name: 'Open in the Flow view'}).click();
         await expectView(page, 'Flow');
         await expect(page.getByTestId('shell-workbook-picker')).toBeVisible();
         await expect(explorer(page).getByRole('tree')).toBeVisible();
@@ -183,8 +185,9 @@ test.describe('the Project Explorer follows the shown entity', () => {
 test.describe('the column toggles of the Boxed view', () => {
     test('each entity keeps its own description and test column toggles', async ({page}) => {
         await openStory(page, 'models-loan-repayment--overview');
+        await page.getByRole('radio', {name: 'Boxed'}).click(SLOW);
         const header = page.getByTestId('row-*');
-        await header.getByRole('button', {name: 'Hide description'}).click(SLOW);
+        await header.getByRole('button', {name: 'Hide description'}).click();
         await expect(page.getByRole('button', {name: 'Show description'})).toBeVisible();
 
         // Another entity starts with the defaults.

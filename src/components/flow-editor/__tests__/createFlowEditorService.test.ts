@@ -139,7 +139,9 @@ describe('FlowEditorService binding errors', () => {
         // The engine keeps the `@node` annotation of a rejected write; the arguments are restored.
         expect(portable().payment).toMatchObject({'@arguments': (before as {'@arguments': unknown})['@arguments']});
         expect(service.getFunctionNode('payment').error).toMatchObject({parameter: 'amount'});
-        expect(service.getFunctionNode('payment').error?.message).toContain("argument 'amount' expects number, found string");
+        expect(service.getFunctionNode('payment').error?.message).toContain(
+            "argument 'amount' expects number, found string",
+        );
     });
 
     it('removes a new field whose last binding is mistyped and keeps the draft', () => {

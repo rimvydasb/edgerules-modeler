@@ -1,5 +1,30 @@
 import {isRecord} from '#lib/portableUtils';
+import {DOCUMENT_PATH_PREFIX, documentPath} from '../project-explorer/internal';
 import type {ShellView} from './shell-types';
+
+/** The file name of the project README, the only document of a project. */
+export const README_FILE = 'README.md';
+
+/** The document root path of the project README. */
+export const README_PATH = documentPath(README_FILE);
+
+/** The document files the Project Explorer lists. */
+export const DOCUMENTS: readonly string[] = [README_FILE];
+
+/** True for a document path (`doc:` prefix). A model path never contains `:`. */
+export function isDocumentPath(path: string): boolean {
+    return path.startsWith(DOCUMENT_PATH_PREFIX);
+}
+
+/** The file name of a document path: `README.md` for `doc:README.md`. */
+export function documentFile(path: string): string {
+    return path.slice(DOCUMENT_PATH_PREFIX.length);
+}
+
+/** True when the README has content: Markdown that is not blank. */
+export function hasReadme(markdown: string): boolean {
+    return markdown.trim() !== '';
+}
 
 /** What a root path segment is; it picks the icon of the header and the views that can show it. */
 export type ShellPathKind = 'context' | 'workbook' | 'function' | 'service' | 'ruleset' | 'type' | 'field';
@@ -67,20 +92,23 @@ export function isRootPath(model: unknown, path: string): boolean {
     return resolveRootPath(model, path) === path;
 }
 
-/** What a root path is: the whole model ('*') or the kind of its last segment. */
-export type ShellRootKind = 'model' | ShellPathKind;
+/** What a root path is: the whole model ('*'), a document, or the kind of its last segment. */
+export type ShellRootKind = 'model' | 'document' | ShellPathKind;
 
 /**
  * The views of each root path kind; the view switch, the view fallback and the Project Explorer routing all read it.
  * - Code and Boxed show every entity.
  * - Flow is the canvas of every field of a `workbook`, and of the body of a `service`, with its parameters and its
- *   result. The Flow view of the model is the workbook picker: only a model that declares a workbook has it (see
- *   `rootViews`). Another context, a function, a ruleset, a type and a plain field have no Flow view.
+ *   result. The Flow view of the model shows its README, workbooks and services: only a model with a workbook, a
+ *   service or a README has it (see `rootViews`). Another context, a function, a ruleset, a type and a plain field have
+ *   no Flow view.
+ * - Preview and Code show a document: its rendered Markdown and its source. Only a document has Preview.
  * - Tests are the tests of a callable: the model, a function, a service or a ruleset. A function is a test subject only
  *   when every argument has a type (see `untypedParameters`).
  */
 export const ROOT_VIEWS: Record<ShellRootKind, readonly ShellView[]> = {
     model: ['code', 'boxed', 'flow', 'tests'],
+    document: ['preview', 'code'],
     workbook: ['code', 'boxed', 'flow'],
     context: ['code', 'boxed'],
     function: ['code', 'boxed', 'tests'],
@@ -94,11 +122,30 @@ export function rootKind(segments: ShellPathSegment[]): ShellRootKind {
     return segments.at(-1)?.kind ?? 'model';
 }
 
-/** The views of a root path, from `ROOT_VIEWS`; the model has no Flow view when it declares no workbook. */
-export function rootViews(segments: ShellPathSegment[], model: unknown): readonly ShellView[] {
+/**
+ * The views of a model or entity root path, from `ROOT_VIEWS`. The model has a Flow view only when it has a workbook,
+ * a service or a README (`readme`: the README is not blank).
+ */
+export function rootViews(segments: ShellPathSegment[], model: unknown, readme = false): readonly ShellView[] {
     const views = ROOT_VIEWS[rootKind(segments)];
-    if (segments.length > 0 || modelWorkbooks(model).length > 0) return views;
+    if (segments.length > 0 || hasModelFlow(model, readme)) return views;
     return views.filter((view) => view !== 'flow');
+}
+
+/** True when the model root has a Flow view: the model has a workbook, a service or a README. */
+export function hasModelFlow(model: unknown, readme: boolean): boolean {
+    return readme || modelWorkbooks(model).length > 0 || hasService(model);
+}
+
+// A `service` declaration anywhere in the contexts of the model, as the Service Methods of the Project Explorer.
+function hasService(node: unknown): boolean {
+    if (!isRecord(node)) return false;
+    return Object.entries(node).some(([name, child]) => {
+        if (name.startsWith('@') || !isRecord(child)) return false;
+        const kind = child['@kind'];
+        if (kind === 'service' || kind === 'service-schema') return true;
+        return (kind === undefined || kind === 'context') && hasService(child);
+    });
 }
 
 /** The names of the workbooks that are direct fields of the model. */

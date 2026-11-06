@@ -61,8 +61,8 @@ MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
 //  'coalesce | (any) -> any', ...]
 ```
 
-Still reproduces on `0.2.3-alpha.202611052251`: the statics are still only `fromCode`, `fromPortable`, `diagnostics`
-and `completions`, with the same `detail` strings.
+Still reproduces on `0.2.3-alpha.202611052251`: the statics are still only `fromCode`, `fromPortable`, `diagnostics` and
+`completions`, with the same `detail` strings.
 
 **Expected behaviour:** a structured built-in catalog, for example `get('*', 'BUILTIN_DEFINITIONS')` or a static
 `builtins()`. It returns `PortableFunctionSchema`-shaped entries with named `@parameters`, optional/variadic markers per

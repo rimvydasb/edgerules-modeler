@@ -302,7 +302,8 @@ describe('Shell project explorer', () => {
     });
 
     it('opens the tests of a subject in the Tests view, with the editor views next to it', async () => {
-        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}});
+        // A blank README: the model has no workbook, service or README, so no Flow view.
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: ''});
         session.tests.forSubject('riskScore').addTestCase();
         const user = userEvent.setup();
         const {onViewChange} = await renderShell({defaultExplorerOpen: true}, session);
@@ -318,7 +319,8 @@ describe('Shell project explorer', () => {
         expect(screen.getByRole('radio', {name: 'Flow'})).toBeDisabled();
         expect(await screen.findByText('Test Case 1')).toBeInTheDocument();
 
-        // The model name opens the model root; a model without a workbook has no Flow view, so the Boxed view.
+        // The model name opens the model root; a model without a workbook, a service or a README has no Flow view, so
+        // the Boxed view.
         await user.click(screen.getByRole('button', {name: 'Model'}));
         expect(onViewChange).toHaveBeenLastCalledWith('boxed');
         expect(screen.getByRole('radio', {name: 'Flow'})).toBeDisabled();
@@ -1134,5 +1136,206 @@ describe('Shell split screen', () => {
         fireEvent.click(nodeOf('list-input-node-listBook.many'));
         await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'true'));
         expect(await screen.findByTestId('shell-split-panel')).toBeInTheDocument();
+    });
+});
+
+// A README with a model link and a table: the Preview view renders it, the Code view edits its source.
+const README = `# Loans
+
+Prices a loan. See [the limit](model:limit) and the [applicant](model:applicant).
+
+| Field | Meaning     |
+| ----- | ----------- |
+| limit | Credit line |
+`;
+
+function viewCells(): string[] {
+    return screen.getAllByRole('radio').map((cell) => cell.textContent ?? '');
+}
+
+describe('Shell README document', () => {
+    it('opens README.md from the Documents section of the explorer in the Preview view', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        const user = userEvent.setup();
+        const {onPathChange, onViewChange} = await renderShell({defaultView: 'code'}, session);
+        const explorer = screen.getByRole('navigation', {name: 'Project explorer'});
+
+        await user.click(within(explorer).getByText('README.md'));
+        expect(onPathChange).toHaveBeenLastCalledWith('doc:README.md');
+        expect(onViewChange).toHaveBeenLastCalledWith('preview');
+        expect(breadcrumbItems()).toEqual(['Model', 'README.md']);
+        expect(within(explorer).getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute(
+            'aria-selected',
+            'true',
+        );
+        expect(screen.getByRole('heading', {name: 'Loans'})).toBeInTheDocument();
+    });
+
+    it('shows only Preview and Code in the view switch of a document root, and no settings', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        await renderShell({defaultPath: 'doc:README.md', defaultView: 'preview'}, session);
+        expect(viewCells()).toEqual(['Preview', 'Code']);
+        expect(screen.getByRole('radio', {name: 'Preview'})).toHaveAttribute('aria-checked', 'true');
+        expect(screen.queryByRole('button', {name: 'Model settings'})).toBeNull();
+        expect(screen.getByRole('button', {name: 'Open in the Preview view'})).toBeInTheDocument();
+    });
+
+    it('shows Flow, Boxed, Code and Tests at a model path, without Preview', async () => {
+        await renderShell();
+        expect(viewCells()).toEqual(['Flow', 'Boxed', 'Code', 'Tests']);
+    });
+
+    it.each(['flow', 'boxed', 'tests'] as const)('falls back from %s to Preview at a document root', async (view) => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        const {onViewChange} = await renderShell({defaultPath: 'doc:README.md', defaultView: view}, session);
+        expect(onViewChange).toHaveBeenLastCalledWith('preview');
+        expect(screen.getByTestId('shell-document-preview')).toBeInTheDocument();
+    });
+
+    it('falls back from Preview to Boxed at a model path', async () => {
+        const {onViewChange} = await renderShell({defaultPath: 'applicant', defaultView: 'preview'});
+        expect(onViewChange).toHaveBeenLastCalledWith('boxed');
+        expect(screen.getByRole('treegrid')).toBeInTheDocument();
+    });
+
+    it('opens another doc: path as the model', async () => {
+        const {onPathChange} = await renderShell({defaultPath: 'doc:NOTES.md'});
+        expect(onPathChange).toHaveBeenLastCalledWith('*');
+        expect(breadcrumbItems()).toEqual(['Model']);
+    });
+
+    it('has no editor in the Preview view; an edit in the Code view marks the project dirty', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        const user = userEvent.setup();
+        await renderShell({defaultPath: 'doc:README.md', defaultView: 'preview'}, session);
+        expect(screen.getByTestId('shell').querySelector('.cm-editor')).toBeNull();
+        expect(screen.getByRole('table')).toBeInTheDocument();
+
+        await user.click(screen.getByRole('radio', {name: 'Code'}));
+        expect(codeView().state.doc.toString()).toBe(README);
+        expect(session.getSnapshot().dirtySlices).not.toContain('readme');
+
+        typeCode('# Loans\n\nUpdated.\n');
+        expect(session.getSlice('readme')).toBe('# Loans\n\nUpdated.\n');
+        expect(session.getSnapshot().dirtySlices).toContain('readme');
+
+        await user.click(screen.getByRole('radio', {name: 'Preview'}));
+        expect(screen.getByText('Updated.')).toBeInTheDocument();
+    });
+
+    it('opens the Code view of the README read-only when the Shell is read-only', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        await renderShell({defaultPath: 'doc:README.md', defaultView: 'code', readOnly: true}, session);
+        expect(codeView().state.readOnly).toBe(true);
+    });
+
+    it('opens the model path of a model: link in the README', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        const user = userEvent.setup();
+        const {onPathChange, onViewChange} = await renderShell(
+            {defaultPath: 'doc:README.md', defaultView: 'preview'},
+            session,
+        );
+
+        await user.click(screen.getByRole('link', {name: 'applicant'}));
+        expect(onPathChange).toHaveBeenLastCalledWith('applicant');
+        // A context has no Flow view: its main view is Boxed.
+        expect(onViewChange).toHaveBeenLastCalledWith('boxed');
+        expect(breadcrumbItems()).toEqual(['Model', 'applicant']);
+        expect(screen.getByRole('treegrid')).toBeInTheDocument();
+    });
+
+    it('returns to the model root from the model name crumb', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        const user = userEvent.setup();
+        const {onPathChange, onViewChange} = await renderShell(
+            {defaultPath: 'doc:README.md', defaultView: 'preview'},
+            session,
+        );
+        await user.click(screen.getByRole('button', {name: 'Model'}));
+        expect(onPathChange).toHaveBeenLastCalledWith('*');
+        // The model has a README: its Flow view exists.
+        expect(onViewChange).toHaveBeenLastCalledWith('flow');
+    });
+});
+
+describe('Shell model root README', () => {
+    it('shows the README panel above the workbooks; a click opens the README in the Preview view', async () => {
+        const {session} = await openFixtureProject({model: {dsl: WORKBOOK_MODEL}, readme: README});
+        const user = userEvent.setup();
+        const {onPathChange, onViewChange} = await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+
+        const picker = screen.getByTestId('shell-workbook-picker');
+        const panel = within(picker).getByTestId('shell-readme-panel');
+        expect(picker.firstElementChild).toBe(panel);
+        expect(within(panel).getByRole('heading', {name: 'Loans'})).toBeInTheDocument();
+        expect(within(picker).getByRole('button', {name: 'loanBook'})).toBeInTheDocument();
+
+        await user.click(within(panel).getByText(/Prices a loan/));
+        expect(onPathChange).toHaveBeenLastCalledWith('doc:README.md');
+        expect(onViewChange).toHaveBeenLastCalledWith('preview');
+        expect(breadcrumbItems()).toEqual(['Model', 'README.md']);
+        expect(screen.getByTestId('shell-document-preview')).toBeInTheDocument();
+    });
+
+    it('opens the README from the Open action of the panel', async () => {
+        const {session} = await openFixtureProject({model: {dsl: WORKBOOK_MODEL}, readme: README});
+        const user = userEvent.setup();
+        await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+        await user.click(within(screen.getByTestId('shell-readme-panel')).getByRole('button', {name: 'Open'}));
+        expect(breadcrumbItems()).toEqual(['Model', 'README.md']);
+    });
+
+    it('opens the model path of a model: link in the README panel, not the README', async () => {
+        const {session} = await openFixtureProject({
+            model: {dsl: WORKBOOK_MODEL},
+            readme: 'Start with [the workbook](model:loanBook).',
+        });
+        const user = userEvent.setup();
+        const {onViewChange} = await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+        await user.click(within(screen.getByTestId('shell-readme-panel')).getByRole('link', {name: 'the workbook'}));
+        expect(breadcrumbItems()).toEqual(['Model', 'loanBook']);
+        expect(onViewChange).not.toHaveBeenCalledWith('preview');
+        expect(screen.getByRole('radio', {name: 'Flow'})).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('has no README panel for a blank README', async () => {
+        const {session} = await openFixtureProject({model: {dsl: WORKBOOK_MODEL}, readme: '  \n'});
+        await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+        expect(screen.getByTestId('shell-workbook-picker')).toBeInTheDocument();
+        expect(screen.queryByTestId('shell-readme-panel')).toBeNull();
+    });
+
+    it('shows the full README in the Flow view of a model with only a README', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: README});
+        await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+        expect(screen.getByRole('radio', {name: 'Flow'})).toHaveAttribute('aria-checked', 'true');
+        expect(screen.queryByTestId('shell-workbook-picker')).toBeNull();
+        expect(within(screen.getByTestId('shell-document-preview')).getByRole('table')).toBeInTheDocument();
+    });
+
+    it('has no Flow view for a model without a README, a workbook or a service', async () => {
+        const {session} = await openFixtureProject({model: {dsl: SHELL_MODEL}, readme: ''});
+        const {onViewChange} = await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+        expect(onViewChange).toHaveBeenLastCalledWith('boxed');
+        expect(screen.getByRole('radio', {name: 'Flow'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Open in the Boxed view'})).toBeInTheDocument();
+    });
+
+    it('shows the Workbooks section with only the New workbook panel for a model with a service and no workbook', async () => {
+        const {session} = await openFixtureProject({
+            model: {dsl: `{ service quote(income: number): { score: income / 100 } }`},
+            readme: '',
+        });
+        await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
+        const workbooks = screen.getByRole('region', {name: 'Workbooks'});
+        expect(
+            within(workbooks)
+                .getAllByRole('button')
+                .map((panel) => panel.getAttribute('aria-label')),
+        ).toEqual(['New workbook']);
+        expect(
+            within(screen.getByRole('region', {name: 'Service Methods'})).getByRole('button', {name: 'quote(...)'}),
+        ).toBeInTheDocument();
     });
 });

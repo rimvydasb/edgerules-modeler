@@ -1,7 +1,10 @@
 import {IconArrowRight, IconBook2, IconMathFunction, IconPlus} from '@tabler/icons-react';
-import {useState, type ReactElement, type ReactNode} from 'react';
+import {useLayoutEffect, useRef, useState, type MouseEvent, type ReactElement, type ReactNode} from 'react';
+import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
+import {MarkdownView} from '../../markdown-view';
 import {CREATE_OPTIONS, CreateDialog} from '../../project-explorer/internal';
+import {README_FILE} from '../shell-path';
 import * as classes from '../shell.module.css';
 
 /** One workbook of the model, as its panel shows it. */
@@ -22,6 +25,9 @@ export interface ServiceSummary {
 }
 
 export interface WorkbookPickerProps {
+    readme?: string; // the README Markdown; without it there is no README panel
+    onOpenReadme?: () => void; // a click on the README panel
+    onModelLink?: (path: string) => void; // a `model:` link of the README panel
     workbooks: readonly WorkbookSummary[];
     services: readonly ServiceSummary[];
     onSelect: (workbook: string) => void;
@@ -108,11 +114,69 @@ function Panel({
 }
 
 /**
- * The Flow view of the model root when the model has workbooks: one panel per workbook with its name, its field name,
+ * The README panel: the README rendered, as wide as a row of three panels, at most two panels high. Content above the
+ * maximum height is cut off with a fade. A click opens the README; a `model:` link in it opens its model path.
+ */
+function ReadmePanel({
+    markdown,
+    onOpen,
+    onModelLink,
+}: {
+    markdown: string;
+    onOpen?: () => void;
+    onModelLink?: (path: string) => void;
+}): ReactElement {
+    const content = useRef<HTMLDivElement>(null);
+    const [cut, setCut] = useState(false);
+    // The fade shows only when the README is higher than the panel.
+    useLayoutEffect(() => {
+        const element = content.current;
+        if (!element) return;
+        const measure = () => setCut(element.scrollHeight > element.clientHeight + 1);
+        measure();
+        if (typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        if (element.firstElementChild) observer.observe(element.firstElementChild);
+        return () => observer.disconnect();
+    }, [markdown]);
+    // A link keeps its own action; any other click opens the README.
+    const onClick = (event: MouseEvent<HTMLElement>) => {
+        if ((event.target as HTMLElement).closest('a')) return;
+        onOpen?.();
+    };
+    return (
+        <section className={classes.readmePanel} aria-label={README_FILE} data-testid="shell-readme-panel">
+            {/* A pointer shortcut; the Open button is the keyboard action. */}
+            <div
+                ref={content}
+                className={cx(classes.readmeContent, cut && classes.readmeContentCut)}
+                onClick={onClick}
+                data-cut={cut || undefined}
+            >
+                <MarkdownView markdown={markdown} onModelLink={onModelLink} />
+            </div>
+            <div className={classes.workbookFooter}>
+                <span>{README_FILE}</span>
+                <button type="button" className={classes.readmeOpen} onClick={onOpen}>
+                    Open
+                    <IconArrowRight aria-hidden="true" size={14} />
+                </button>
+            </div>
+        </section>
+    );
+}
+
+/**
+ * The Flow view of the model root when the model has workbooks or services: the README panel when the model has a
+ * README, then one panel per workbook with its name, its field name,
  * its description and its node counts, and a panel that creates a new workbook. A click opens its flow. Below, one
  * panel per `service` declaration of the model, and a panel that creates a new service; a click opens it.
  */
 export function WorkbookPicker({
+    readme,
+    onOpenReadme,
+    onModelLink,
     workbooks,
     services,
     onSelect,
@@ -125,32 +189,35 @@ export function WorkbookPicker({
     const create = creating === 'workbook' ? onCreate : creating === 'service' ? onCreateService : undefined;
     return (
         <div className={classes.workbooks} data-testid="shell-workbook-picker">
-            <section className={classes.workbookGroup} aria-label="Workbooks">
-                <h2 className={classes.workbookGroupTitle}>Workbooks</h2>
-                <div className={classes.workbookPanels}>
-                    {workbooks.map((workbook) => (
-                        <Panel
-                            key={workbook.path}
-                            title={workbook.name ?? workbook.path}
-                            field={workbook.name !== undefined ? workbook.path : undefined}
-                            description={workbook.description}
-                            icon={<IconBook2 aria-hidden="true" size={20} color="#fff" />}
-                            iconColor={KIND_COLORS.model}
-                            footer={`${count(workbook.inputs, 'input')} · ${count(workbook.functions, 'function')}`}
-                            action="Open flow"
-                            onClick={() => onSelect(workbook.path)}
-                            testId={`shell-workbook-${workbook.path}`}
-                        />
-                    ))}
-                    {onCreate && (
-                        <AddPanel
-                            label="New workbook"
-                            onClick={() => setCreating('workbook')}
-                            testId="shell-workbook-add"
-                        />
-                    )}
-                </div>
-            </section>
+            {readme !== undefined && <ReadmePanel markdown={readme} onOpen={onOpenReadme} onModelLink={onModelLink} />}
+            {(workbooks.length > 0 || onCreate) && (
+                <section className={classes.workbookGroup} aria-label="Workbooks">
+                    <h2 className={classes.workbookGroupTitle}>Workbooks</h2>
+                    <div className={classes.workbookPanels}>
+                        {workbooks.map((workbook) => (
+                            <Panel
+                                key={workbook.path}
+                                title={workbook.name ?? workbook.path}
+                                field={workbook.name !== undefined ? workbook.path : undefined}
+                                description={workbook.description}
+                                icon={<IconBook2 aria-hidden="true" size={20} color="#fff" />}
+                                iconColor={KIND_COLORS.model}
+                                footer={`${count(workbook.inputs, 'input')} · ${count(workbook.functions, 'function')}`}
+                                action="Open flow"
+                                onClick={() => onSelect(workbook.path)}
+                                testId={`shell-workbook-${workbook.path}`}
+                            />
+                        ))}
+                        {onCreate && (
+                            <AddPanel
+                                label="New workbook"
+                                onClick={() => setCreating('workbook')}
+                                testId="shell-workbook-add"
+                            />
+                        )}
+                    </div>
+                </section>
+            )}
             {(services.length > 0 || onCreateService) && (
                 <section className={classes.workbookGroup} aria-label="Service Methods">
                     <h2 className={classes.workbookGroupTitle}>Service Methods</h2>

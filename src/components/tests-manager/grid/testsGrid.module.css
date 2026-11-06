@@ -208,10 +208,10 @@
 }
 
 .spin {
-  animation: tm-spin 0.8s linear infinite;
+  animation: tmSpin 0.8s linear infinite;
 }
 
-@keyframes tm-spin {
+@keyframes tmSpin {
   to {
     transform: rotate(360deg);
   }

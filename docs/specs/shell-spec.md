@@ -49,7 +49,7 @@ The `ProjectExplorer` side panel is optional. It is 256px wide, below the header
 | Kind icon square   | Toggle `button` with `aria-pressed`                                 | Shows and hides the `ProjectExplorer` side panel.                            |
 | `ProjectExplorer`  | Side panel below the header, left of the body                       | Mounted only while open. Its close button hides it.                          |
 | `ShellSettings`    | Header cell `button` left of the view switch, and a Mantine `Modal` | Only for `'*'` and an annotated entity, and not when `readOnly`.             |
-| `ShellViewSwitch`  | `radiogroup` of four 3-step header cells                            | Changes the active view. The root path does not change.                      |
+| `ShellViewSwitch`  | `radiogroup` of four 3-step header cells; two for a document root   | Changes the active view. The root path does not change.                      |
 | `ShellSplitToggle` | Toggle `button` with `aria-pressed`, one step right of Tests        | Off by default. Enabled only in the Flow view. Splits the Flow view.         |
 | Editor body        | One of `CodeEditor`, `BoxedEditor`, `FlowEditor`, `TestsManager`    | Only the active editor is mounted.                                           |
 | `ShellStatus`      | Mantine `Alert`                                                     | Shows the last commit error of the Code view. It is hidden without an error. |
@@ -138,11 +138,11 @@ stories/components/shell/     # Storybook story with the sample model
 ## Public API
 
 ```typescript
-type ShellView = 'code' | 'boxed' | 'flow' | 'tests';
+type ShellView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview'; // 'preview' only for a document root
 
 interface ShellProps {
   languageService: CodeEditorService; // diagnostics and completions; the engine class statics fit
-  path?: string; // controlled root path: '*' or the path of an entity; the test subject in the 'tests' view
+  path?: string; // controlled root path: '*', the path of an entity, or a document path such as 'doc:README.md'
   defaultPath?: string; // uncontrolled initial root path; defaults to '*'
   onPathChange?: (path: string) => void; // breadcrumb click, drill-down, or fallback to an existing path
   view?: ShellView; // controlled active view
@@ -174,11 +174,13 @@ interface ShellProps {
 
 ### The root path addresses each entry of the Project Explorer
 
-A valid root path is `'*'` or the path of an entity. `ProjectExplorer` opens each of its entries with `onOpen`.
+A valid root path is `'*'`, the path of an entity, or the document path `doc:README.md`. `ProjectExplorer` opens each of
+its entries with `onOpen`.
 
 | Path segment                 | Valid in a root path | Views                    | Example                      |
 | ---------------------------- | -------------------- | ------------------------ | ---------------------------- |
 | Model                        | Yes, as `'*'`        | Code, Boxed, Flow, Tests | `'*'`                        |
+| Document (`doc:` prefix)     | Yes, alone           | Preview, Code            | `doc:README.md`              |
 | Context field                | Yes, at any position | Code, Boxed              | `applicant`                  |
 | Workbook (`workbook`)        | Yes, root only       | Code, Boxed, Flow        | `loanBook`                   |
 | Function (`func`)            | Yes, last only       | Code, Boxed, Tests       | `applicant.calculateAge`     |
@@ -192,8 +194,18 @@ A valid root path is `'*'` or the path of an entity. `ProjectExplorer` opens eac
 - `Shell` MUST NOT support indexed paths. A path that contains `[` is not a valid root path.
 - A root path MUST NOT go below a function, or below any other entity that is not a context.
 - `Shell` opens the nearest valid ancestor for an invalid root path, and then calls `onPathChange`.
-- Only a `workbook` and a `service` have a Flow view. The Flow view of the model is the workbook picker: a model that
-  declares no workbook has no Flow view, and its model name opens the Boxed view.
+- Only the model, a `workbook` and a `service` have a Flow view. The Flow view of the model is the `WorkbookPicker`: the
+  README panel (if a README exists), the Workbooks and the Service Methods. A model with a README and no workbook or
+  service shows the full README instead. A model with no README, workbook or service has no Flow view, and its model
+  name opens the Boxed view. A README exists when its Markdown is not blank.
+- The README panel is 3 panels and 2 gaps wide, and at most 2 panel heights and 1 gap high; a fade cuts off the rest. A
+  click opens `doc:README.md` in the Preview view; a `model:` link in it opens that model path. The workbook and service
+  rows are a grid of at most 3 panels per row.
+- A document root has only the Preview view (`MarkdownView`, read-only) and the Code view (`CodeEditor` with
+  `language: 'markdown'`). The view switch hides Flow, Boxed and Tests, and a model path hides Preview. A document root
+  falls back to Preview; a model path falls back from Preview to Boxed. An edit in the Code view writes the `readme`
+  slice store of the session; a save writes it with the other slices in one revision. The breadcrumb is the model name
+  and `README.md`. Another `doc:` path falls back to `'*'`.
 - A function has no Flow view. A service has a Flow view: its parameters, every field of its body and its return.
 - The Flow view of a workbook shows every field of the workbook, annotated or not. A typed hole
   (`applicant: <Applicant>`) is a parameter node.
@@ -265,12 +277,13 @@ The first item is the model name (`@model-name` of the model root), or `Model` w
 
 | Active view   | Opened entry                                        | Root path     | View                       |
 | ------------- | --------------------------------------------------- | ------------- | -------------------------- |
+| Any           | A document (`README.md`)                            | `doc:` path   | Preview                    |
 | Any           | A test                                              | Subject ID    | Tests                      |
 | Any           | A service                                           | Entry path    | Flow                       |
 | Code or Boxed | Any other entry                                     | Entry path    | Unchanged                  |
 | Flow          | A workbook                                          | Entry path    | Flow                       |
 | Flow          | A node of a workbook, for example `function-node`   | Workbook path | Flow, the node is centered |
-| Flow          | A context, a function, a ruleset, a type or a value | Entry path    | Boxed                      |
+| Flow, Preview | A context, a function, a ruleset, a type or a value | Entry path    | Boxed                      |
 | Tests         | A workbook                                          | Entry path    | Flow                       |
 | Tests         | Any other entry                                     | Entry path    | Boxed                      |
 

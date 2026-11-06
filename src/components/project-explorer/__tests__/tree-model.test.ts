@@ -5,12 +5,13 @@ import {buildSections, isIdentifier, methodKind} from '../tree-model';
 import {uniqueName} from '../create-templates';
 import {MODEL_DSL} from '../testing/model.dsl';
 
-function sections(code: string, testSubjects: string[] = []) {
+function sections(code: string, testSubjects: string[] = [], documents?: string[]) {
     const service = MutableDecisionService.fromCode(code);
     return buildSections(
         service.get('*') as PortableContext,
         service.get('*', 'TYPE_DEFINITIONS') as PortableContext,
         testSubjects,
+        documents,
     );
 }
 
@@ -92,6 +93,15 @@ describe('buildSections', () => {
             ['other', 'other'],
         ]);
         expect(result.variables.map((entry) => entry.path)).toEqual(['applicant']);
+    });
+});
+
+describe('buildSections documents', () => {
+    it('lists the documents as doc: paths, and none without them', () => {
+        expect(sections(MODEL_DSL, [], ['README.md']).documents).toEqual([
+            {kind: 'document', path: 'doc:README.md', label: 'README.md'},
+        ]);
+        expect(sections(MODEL_DSL, []).documents).toEqual([]);
     });
 });
 

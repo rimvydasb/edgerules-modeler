@@ -156,6 +156,49 @@ describe('ProjectExplorer open', () => {
     });
 });
 
+describe('ProjectExplorer documents', () => {
+    it('lists the documents first, as doc: entries, and opens a clicked one', async () => {
+        const onOpen = vi.fn();
+        const user = userEvent.setup();
+        render(<ProjectExplorer service={buildService()} documents={['README.md']} onOpen={onOpen} />);
+
+        const headers = within(screen.getByRole('tree'))
+            .getAllByRole('treeitem')
+            .filter((item) => item.dataset.level === '1')
+            .map((item) => item.querySelector('span span')?.textContent);
+        expect(headers[0]).toBe('Documents');
+        expect(sectionCount('Documents')).toBe('1');
+        const readme = screen.getByText('README.md').closest('[role="treeitem"]');
+        expect(readme).toHaveAttribute('data-value', 'document:doc:README.md');
+        expect(screen.getByTestId('icon-document')).toBeInTheDocument();
+
+        await user.click(screen.getByText('README.md'));
+        expect(onOpen).toHaveBeenCalledWith({kind: 'document', path: 'doc:README.md'});
+    });
+
+    it('has no add button in Documents, and no Documents section without the prop', () => {
+        const {unmount} = render(<ProjectExplorer service={buildService()} documents={['README.md']} />);
+        expect(screen.queryByRole('button', {name: 'Add to Documents'})).toBeNull();
+        expect(screen.getByRole('button', {name: 'Add to Types'})).toBeInTheDocument();
+        unmount();
+
+        render(<ProjectExplorer service={buildService()} />);
+        expect(screen.queryByText('Documents')).toBeNull();
+        expect(screen.queryByText('README.md')).toBeNull();
+    });
+
+    it('finds a document by the search, and shows Documents in the rail', async () => {
+        const user = userEvent.setup();
+        const {rerender} = render(<ProjectExplorer service={buildService()} documents={['README.md']} />);
+        await user.type(screen.getByRole('textbox', {name: 'Search project'}), 'readme');
+        expect(screen.getByText('README.md')).toBeInTheDocument();
+        expect(screen.queryByText('Types')).toBeNull();
+
+        rerender(<ProjectExplorer service={buildService()} documents={['README.md']} collapsed />);
+        expect(screen.getByRole('button', {name: 'Show Documents'})).toBeInTheDocument();
+    });
+});
+
 describe('ProjectExplorer create', () => {
     async function create(user: ReturnType<typeof userEvent.setup>, section: string, item?: string, name?: string) {
         await user.click(screen.getByRole('button', {name: `Add to ${section}`}));

@@ -12,6 +12,12 @@ test('Default story renders the five sections', async ({page}) => {
     }
 });
 
+test('Documents story lists README.md in the first section', async ({page}) => {
+    await openStory(page, 'components-project-explorer--documents');
+    await expect(page.getByText('Documents', {exact: true})).toBeVisible();
+    await expect(page.getByText('README.md', {exact: true})).toBeVisible();
+});
+
 test('Expanded story reveals the entries of every section and the nodes of a workbook', async ({page}) => {
     await openStory(page, 'components-project-explorer--expanded');
     await expect(page.getByText('Person', {exact: true})).toBeVisible();

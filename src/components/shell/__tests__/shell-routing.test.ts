@@ -40,6 +40,10 @@ describe('explorerRoute', () => {
         ['tests', {kind: 'function', path: 'riskScore'}, {path: 'riskScore', view: 'boxed'}],
         // A test always opens in the Tests view.
         ['code', {kind: 'test', path: '*'}, {path: '*', view: 'tests'}],
+        // A document always opens in the Preview view; from it, a model entry opens in the Boxed view.
+        ['flow', {kind: 'document', path: 'doc:README.md'}, {path: 'doc:README.md', view: 'preview'}],
+        ['code', {kind: 'document', path: 'doc:README.md'}, {path: 'doc:README.md', view: 'preview'}],
+        ['preview', {kind: 'variable', path: 'limit'}, {path: 'limit', view: 'boxed'}],
     ])('from %s, %o opens %o', (view, target, route) => {
         expect(explorerRoute(target, view, model)).toEqual(route);
     });
