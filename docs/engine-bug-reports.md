@@ -7,7 +7,7 @@ Each entry has a label:
 
 Delete a [VALID] entry when the engine fixes it.
 
-All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.4-alpha.202611071657`** on
+All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.5-alpha.202611072026`** on
 **2026-11-07** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
 
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
@@ -35,7 +35,7 @@ The DSL has no syntax for either key, so `getCode('*')` drops both as well. The 
 (`docs/specs/shell-spec.md`) works around it: the project manifest keeps `model.name` and `model.version`, and the
 session engine adds them to the model root as `@model-name` and `@model-version`.
 
-Still reproduces on `0.2.4-alpha.202611071657`.
+Still reproduces on `0.2.5-alpha.202611072026`.
 
 **Expected behaviour:** a root `set('*', …)` persists `@model-version` exactly as `fromPortable` does. For
 `@model-name`, it persists the key or rejects the write (the sibling gap in `API_SPEC.md`).
@@ -63,7 +63,7 @@ MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
 //  'coalesce | (any) -> any', ...]
 ```
 
-Still reproduces on `0.2.4-alpha.202611071657`: the statics are still only `fromCode`, `fromPortable`, `diagnostics` and
+Still reproduces on `0.2.5-alpha.202611072026`: the statics are still only `fromCode`, `fromPortable`, `diagnostics` and
 `completions`, with the same `detail` strings.
 
 **Expected behaviour:** a structured built-in catalog, for example `get('*', 'BUILTIN_DEFINITIONS')` or a static
@@ -71,64 +71,31 @@ Still reproduces on `0.2.4-alpha.202611071657`: the statics are still only `from
 parameter (or one entry per overload), and `@return`. `get('*', 'ALL')` + `get('*', 'EXTERNAL_DEFINITIONS')` already
 cover user callables.
 
-## [VALID] An instance typed before it has an owner keeps a `Missing` owner, so its facts never resolve
-
-**What is wrong:** a type with an `owner` field (`type Applicant: { owner application: <Application>; ... }`) gets its
-owner when an `Application` holds it. If the instance was typed as `Applicant` first — for example as the argument of a
-`func` — it keeps no owner when it is later put into an `Application`. Its `facts` then read `Missing` (or `Invalid`)
-for every owner path, and the decisions that read those facts give wrong answers instead of an error.
-
-```ts
-const service = MutableDecisionService.fromCode(`{
-    type A: { owner app: <App>; age: <number> }
-    type App: { year: <number>; people: <A[]> }
-    facts A(a: A): { total: a.age + a.app.year }
-    func one(a: A): a
-    typedFirst: ({ year: 10; people: [one({age: 1})] } as App).people[0].total
-    untyped: ({ year: 10; people: [{age: 1}] } as App).people[0].total
-}`);
-await service.execute('*');
-// { typedFirst: "Missing('typedFirst.app')", untyped: 11 }
-```
-
-The same happens when a `func` with an `Applicant` parameter builds the application that a `service` then reads. The
-loan origination model (`models/loan-origination/model.ts`) works around it: `jointApplication` takes an owner-free
-`ApplicantProfile` type and returns the application `as Application`.
-
-Reproduces on `0.2.4-alpha.202611071657`.
-
-**Expected behaviour:** placing a typed instance into an owner binds the owner, and the facts of the instance evaluate
-with it — the same result as for an untyped instance. If rebinding is not possible, linking reports an error.
-
-## [VALID] A `facts` declaration has no path: `set(type, …)` ignores a changed `@facts`, and `remove(type)` orphans it
+## [VALID] A `facts` declaration has no path, and `getCode(type)` leaves out its facts
 
 **What is wrong:** the authored model keeps a `facts` declaration under the `@facts` key of its type definition
 (`PortableTypeDefinition['@facts']`), but no API addresses it on its own:
 
-1. `get`, `set`, `getCode` and `remove` reject `Applicant.@facts` (`EntryNotFound` / `WrongFieldPath`), and
-   `getCode('Applicant')` returns the type without its facts.
-2. `set('Applicant', definition)` with a changed `@facts` returns success and changes nothing; without `@facts` it keeps
-   the old facts. Only a root `set('*', …)` or `setCode('Applicant', 'facts Applicant(…): {…}')` changes them.
-3. `remove('Applicant')` removes the type and leaves `facts Applicant(…)` in the model.
+1. `get`, `set`, `getCode` and `remove` reject `Applicant.@facts` (`EntryNotFound` / `WrongFieldPath`).
+2. `getCode('Applicant')` returns the type without its facts.
+
+`set(type, …)` writes a changed `@facts`, and `remove(type)` removes the facts with the type. A definition without
+`@facts` keeps the declared facts (by design), so the only ways to remove a facts declaration are a root `set('*', …)`
+or a removal of the type.
 
 ```ts
 const service = MutableDecisionService.fromCode('{ type A: {age: <number>}\n facts A(a: A): { old: a.age > 60 } }');
-const definition = service.toPortable().A;
-definition['@facts']['@body'].old = {'@kind': 'expression', expression: 'a.age > 70'};
-service.set('A', definition); // no error
-service.getCode('*'); // still "old: a.age > 60"
-service.remove('A');
-service.getCode('*'); // "{ facts A(a: A): { old: a.age > 60 } }"
+service.get('A.@facts'); // { '@kind': 'error', type: 'EntryNotFound', message: 'entry not found: A.@facts' }
+service.getCode('A'); // "type A: {\n    age: <number>\n}"  — no facts
 ```
 
-`#lib/factsPaths` works around 1 and 2: it addresses facts as `<Type>.@facts`, writes them with a root `set('*', …)`,
-and cuts their code from `getCode('*')`.
+`#lib/factsPaths` works around it: it addresses facts as `<Type>.@facts`, removes them with a root `set('*', …)`, and
+cuts their code from `getCode('*')`.
 
-Reproduces on `0.2.4-alpha.202611071657`.
+Reproduces on `0.2.5-alpha.202611072026`.
 
-**Expected behaviour:** `set(type, …)` writes the `@facts` it is given (and removes them when the key is absent, or
-documents that it keeps them), `remove(type)` removes the facts of the type too, and `getCode(type)` returns the facts
-with the type — or the engine offers a path for the facts declaration.
+**Expected behaviour:** `getCode(type)` returns the facts with the type, or the engine offers a path for the facts
+declaration (`get`, `getCode`, `remove`).
 
 ## [NOT A BUG] `getCode('*')` drops source comments
 

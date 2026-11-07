@@ -11,15 +11,12 @@
  * - **Decisions:** one business question per decision: `ApplicantScore` and `ApplicantPolicy` per applicant,
  *   `HouseholdRisk`, `LoanPricing`, `LoanDecision` and `LoanOffer` per application.
  * - **Service:** `loanOriginationDecision` is the external contract; `originationBook` and `capacityBook` are the
- *   workbooks. `jointApplication` builds an `Application` from two `ApplicantProfile`s: an `Applicant` typed before it
- *   is in an `Application` keeps no owner, so its facts stay `Missing` (`docs/engine-bug-reports.md`).
+ *   workbooks. `jointApplication` builds an `Application` from the loan terms and two `Applicant`s.
  */
 export const LOAN_ORIGINATION_DSL = `{
     // Structure layer: the input data
     type Applicant: { owner application: <Application>; name: <string>; birthDate: <date>; employment: <string>; yearsEmployed: <number>; monthlyIncome: <number>; monthlyExpenses: <number>; monthlyDebtPayments: <number>; bureauScore: <number>; delinquencies: <number> }
     type Application: { applicationDate: <date>; loanAmount: <number>; propertyValue: <number>; termYears: <number>; applicants: <Applicant[]> }
-    // The applicant data without the owner: an Applicant typed before it is in an Application keeps no owner (engine bug).
-    type ApplicantProfile: { name: <string>; birthDate: <date>; employment: <string>; yearsEmployed: <number>; monthlyIncome: <number>; monthlyExpenses: <number>; monthlyDebtPayments: <number>; bureauScore: <number>; delinquencies: <number> }
     type LoanTerms: { applicationDate: <date>; loanAmount: <number>; propertyValue: <number>; termYears: <number> }
 
     // Facts layer: the derived fields of every instance
@@ -185,7 +182,7 @@ export const LOAN_ORIGINATION_DSL = `{
     }
 
     // Example execution
-    func jointApplication(loan: LoanTerms, mainApplicant: ApplicantProfile, coApplicant: ApplicantProfile): {
+    func jointApplication(loan: LoanTerms, mainApplicant: Applicant, coApplicant: Applicant): {
         application: {
             applicationDate: loan.applicationDate
             loanAmount: loan.loanAmount

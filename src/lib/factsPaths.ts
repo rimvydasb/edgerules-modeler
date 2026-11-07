@@ -77,15 +77,18 @@ export function withFactsPaths<S extends FactsPathService>(service: S): S {
         const node = (service.toPortable() as unknown as Record<string, unknown>)[type];
         return isRecord(node) && node['@kind'] === 'type-definition' ? node : undefined;
     };
-    // Writes the new facts declaration of `type` (none: removes it) through the whole model: `set(type, …)` ignores a
-    // changed `@facts` (docs/engine-bug-reports.md).
+    // Writes the new facts declaration of `type`, or removes it when `facts` is undefined. `set(type, …)` writes the
+    // `@facts` it is given, but a definition without `@facts` keeps the declared facts: a removal rewrites the whole
+    // model.
     const writeFacts = (type: string, facts: unknown): PortableNode | PortableError => {
         const definition = typeDefinition(type);
         if (!definition) return notFound(type);
+        if (facts !== undefined) {
+            return service.set(type, {...definition, [FACTS_KEY]: facts} as unknown as PortableNode);
+        }
         const {[FACTS_KEY]: _previous, ...rest} = definition;
         const root = service.toPortable() as unknown as Record<string, unknown>;
-        const next = facts === undefined ? rest : {...rest, [FACTS_KEY]: facts};
-        return service.set('*', {...root, [type]: next} as unknown as PortableNode);
+        return service.set('*', {...root, [type]: rest} as unknown as PortableNode);
     };
     // A copy of the facts declaration of `type` with `update` applied to the body field at `rest`.
     const updateBody = (
