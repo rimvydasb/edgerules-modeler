@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import {forEachDiagnostic} from '@codemirror/lint';
 import {EditorView} from '@codemirror/view';
 import {MutableDecisionService} from '@edgerules/node/mutable';
 import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
@@ -525,6 +526,29 @@ describe('Shell view switch', () => {
     it('shows the code of a type in the Code view', async () => {
         const {session} = await renderShell({defaultPath: 'Customer', defaultView: 'code'});
         expect(codeView().state.doc.toString()).toBe(session.engine.getCode('Customer'));
+    });
+
+    it('checks the code of an entity in the scope of the whole model', async () => {
+        const {session} = await openFixtureProject({
+            model: {
+                dsl: `{
+    type Customer: { name: <string>; income: <number, 0> }
+    func riskScore(income: number): { score: income / 100 }
+    func check(customer: Customer): { score: riskScore(customer.income).score }
+}`,
+            },
+        });
+        await renderShell({defaultPath: 'check', defaultView: 'code'}, session);
+        const messages = () => {
+            const found: string[] = [];
+            forEachDiagnostic(codeView().state, (diagnostic) => found.push(diagnostic.message));
+            return found;
+        };
+
+        // Only a reference that the model does not declare is marked; `Customer` and `riskScore` are known.
+        typeCode('func check(customer: Customer): { score: riskScore(customer.income).score + missing }');
+        await waitFor(() => expect(messages()).toHaveLength(1));
+        expect(messages()[0]).toContain('missing');
     });
 
     it('starts in the Boxed view and switches views at the same root path', async () => {

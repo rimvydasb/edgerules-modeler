@@ -17,6 +17,8 @@ Entry format: a heading with the label and the problem name, then **What is wron
 
 > KNOWN ISSUE. IGNORE IT. This issue is well known and will be revisited in future stories.
 
+**Issue:** https://github.com/rimvydasb/edgerules/issues/62
+
 **What is wrong:** `MutableDecisionService.fromPortable({'@model-version': '1.4.0', ...})` keeps `@model-version`
 (`API_SPEC.md` "Limitations" #3: only `@model-version` round-trips; `@model-name` is accepted on parse but not
 persisted). A root `set('*', …)` on a service that already exists drops **both** keys. The rest of the write commits. So
