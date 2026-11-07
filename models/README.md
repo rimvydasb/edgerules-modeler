@@ -3,11 +3,11 @@
 Complete, realistic EdgeRules projects that the components are tested and demonstrated with. Each model is one project
 bundle: the DSL model and the documentation, tests and flow slices that a host stores next to it.
 
-| Model                                         | Shows                                                                                                                                               |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [loan-repayment](loan-repayment/index.ts)     | Types, a decision table, functions, a `service`, two `workbook`s with charts, test suites                                                           |
-| [loan-origination](loan-origination/index.ts) | Records, a scorecard and three decision tables, policy rules, affordability, a `service`, two `workbook`s with charts, test suites over list inputs |
-| [client-outreach](client-outreach/index.ts)   | An `optimise` element (HiGHS MILP) over decision tables: which of 100 prospects to call, email or text in a day of two workers                      |
+| Model                                         | Shows                                                                                                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [loan-repayment](loan-repayment/index.ts)     | Types, a decision table, functions, a `service`, two `workbook`s with charts, test suites                                                                                            |
+| [loan-origination](loan-origination/index.ts) | Layered: types with `facts`, a scorecard and three decision tables, `decision`s, policy rules, affordability, a `service`, two `workbook`s with charts, test suites over list inputs |
+| [client-outreach](client-outreach/index.ts)   | An `optimise` element (HiGHS MILP) over decision tables: which of 100 prospects to call, email or text in a day of two workers                                                       |
 
 ## Layout of a Model
 

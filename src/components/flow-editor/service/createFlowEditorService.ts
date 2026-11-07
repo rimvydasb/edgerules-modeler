@@ -19,6 +19,7 @@ import {
 } from '../../boxed-editor/internal';
 import type {BoxedTableRowData, SignatureParameter} from '../../boxed-editor';
 import {
+    callableParameters,
     childPath,
     formatPortableValue,
     isFunctionDefinition,
@@ -67,8 +68,9 @@ const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const PATH_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*(\[\d+\]|\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 
 function parametersOf(schema: unknown): SignatureParameter[] {
-    if (!isRecord(schema) || !isRecord(schema['@parameters'])) return [];
-    return Object.entries(schema['@parameters']).map(([name, type]) => ({
+    const parameters = callableParameters(schema);
+    if (!isRecord(parameters)) return [];
+    return Object.entries(parameters).map(([name, type]) => ({
         name,
         type: typeText(type) ?? 'any',
     }));

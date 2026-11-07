@@ -20,7 +20,9 @@ test('Documents story lists README.md in the first section', async ({page}) => {
 
 test('Expanded story reveals the entries of every section and the nodes of a workbook', async ({page}) => {
     await openStory(page, 'components-project-explorer--expanded');
-    await expect(page.getByText('Person', {exact: true})).toBeVisible();
+    // Under Types and under Facts Library: the facts of a type have the name of the type.
+    await expect(page.getByText('Person', {exact: true})).toHaveCount(2);
+    await expect(page.getByText('Eligibility(...)', {exact: true})).toBeVisible();
     await expect(page.getByText('nested.deep()', {exact: true})).toBeVisible();
     await expect(page.getByText('globalConst', {exact: true})).toBeVisible();
     await expect(page.getByText('decision', {exact: true})).toBeVisible();

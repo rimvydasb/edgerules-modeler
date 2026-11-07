@@ -2,6 +2,7 @@ import type {PortableContext, PortableNode} from '@edgerules/portable';
 import type {BoxedRowData, BoxedRowKind, BoxedTableRowData, SignatureParameter} from '../boxed-editor-types';
 import {
     authoredEntries,
+    callableParameters,
     childPath,
     formatPortableValue,
     indexedPath,
@@ -138,7 +139,7 @@ function normalizeFunction(name: string, path: string, node: PortableRecord): Bo
         : normalizeContextChildren(body, path);
     return {
         ...rowBase('function', path, name),
-        parameters: parametersOf(node['@parameters']),
+        parameters: parametersOf(callableParameters(node)),
         ...(typeText(node['@return']) ? {type: typeText(node['@return'])} : {}),
         children,
     };
@@ -265,8 +266,8 @@ export function normalizeNode(name: string, path: string, node: PortableNode, sc
         case 'function':
             return normalizeFunction(name, path, record);
         case 'service':
-        case 'derivations':
-        case 'decisions':
+        case 'decision':
+        case 'facts':
             return {...normalizeFunction(name, path, record), keyword: record['@kind']};
         case 'ruleset':
             return normalizeRuleset(name, path, record);

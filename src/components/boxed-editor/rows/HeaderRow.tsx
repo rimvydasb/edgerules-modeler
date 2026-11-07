@@ -28,8 +28,16 @@ const METAPHOR_NAMES: Partial<Record<BoxedRowKind, string>> = {
     optimisation: 'Optimisation',
 };
 
+// A `function` row of a declaration keyword: a `decision`, the `facts` of a type or a `service`.
+const KEYWORD_NAMES: Partial<Record<NonNullable<BoxedRowData['keyword']>, string>> = {
+    decision: 'Decision',
+    facts: 'Facts',
+    service: 'Service',
+};
+
 function metaphorName(row: BoxedRowData): string {
     if (row.kind === 'model') return row.name;
+    if (row.kind === 'function' && row.keyword && KEYWORD_NAMES[row.keyword]) return KEYWORD_NAMES[row.keyword]!;
     return METAPHOR_NAMES[row.kind] ?? row.kind;
 }
 

@@ -328,3 +328,52 @@ describe('BoxedEditorService normalization', () => {
         expect(service.getBoxedRowsData('collect.values')).toHaveLength(2);
     });
 });
+
+describe('BoxedEditorService decision declarations', () => {
+    it('normalizes a decision with its `@context` as the argument and writes it back as `@context`', () => {
+        const mutable = MutableDecisionService.fromCode(`{
+            type Applicant: { age: <number> }
+            decision Eligibility(applicant: Applicant): { adult: applicant.age >= 18 }
+        }`);
+        const authored = (mutable.toPortable() as unknown as Record<string, unknown>).Eligibility;
+        const row = normalizeNode('Eligibility', 'Eligibility', authored as never) as BoxedTableRowData;
+        expect(row).toMatchObject({kind: 'function', keyword: 'decision'});
+        expect(row.parameters).toEqual([expect.objectContaining({name: 'applicant'})]);
+        const written = denormalize(row) as unknown as Record<string, unknown>;
+        expect(written['@kind']).toBe('decision');
+        expect(written['@context']).toEqual({applicant: 'Applicant'});
+        expect(written['@parameters']).toBeUndefined();
+        expect(written['@body']).toEqual(
+            expect.objectContaining({adult: {'@kind': 'expression', expression: 'applicant.age >= 18'}}),
+        );
+        expect(isPortableError(mutable.set('Eligibility', written as never))).toBe(false);
+    });
+});
+
+describe('BoxedEditorService facts declarations', () => {
+    const FACTS_MODEL = `{
+        type Applicant: { age: <number> }
+        facts Applicant(applicant: Applicant): { adult: applicant.age >= 18 }
+    }`;
+
+    it('shows the facts of a type at <Type>.@facts, named after the type, with their body', () => {
+        const service = createBoxedEditorService(MutableDecisionService.fromCode(FACTS_MODEL));
+        expect(service.getBoxedRowData('Applicant.@facts')).toMatchObject({
+            kind: 'function',
+            keyword: 'facts',
+            name: 'Applicant',
+            parameters: [expect.objectContaining({name: 'applicant'})],
+        });
+        expect(service.getBoxedRowsData('Applicant.@facts').map((row) => [row.path, row.value])).toEqual([
+            ['Applicant.@facts.adult', 'applicant.age >= 18'],
+        ]);
+    });
+
+    it('writes an edited body field back to the facts of the type', () => {
+        const mutable = MutableDecisionService.fromCode(FACTS_MODEL);
+        const service = createBoxedEditorService(mutable);
+        const row = service.getBoxedRowsData('Applicant.@facts')[0]!;
+        expect(isPortableError(service.setBoxedRowData(row.path, {...row, value: 'applicant.age >= 21'}))).toBe(false);
+        expect(mutable.getCode('*')).toContain('adult: applicant.age >= 21');
+    });
+});

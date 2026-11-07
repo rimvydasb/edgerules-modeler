@@ -49,6 +49,32 @@ describe('rootPathSegments', () => {
     });
 });
 
+describe('rootPathSegments of layer declarations', () => {
+    const model = MutableDecisionService.fromCode(
+        `{
+        type Person: { age: <number> }
+        facts Person(person: Person): { adult: person.age >= 18 }
+        decision Eligibility(person: Person): { eligible: person.adult }
+    }`,
+    ).toPortable();
+
+    it('addresses the facts of a type as <Type>.@facts, after the type segment', () => {
+        expect(rootPathSegments(model, 'Person.@facts')).toEqual([
+            {name: 'Person', path: 'Person', kind: 'type'},
+            {name: '@facts', path: 'Person.@facts', kind: 'facts'},
+        ]);
+        expect(rootViews(rootPathSegments(model, 'Person.@facts'), model)).toEqual(['code', 'boxed']);
+        expect(resolveRootPath(model, 'Person.@facts.adult')).toBe('Person.@facts');
+    });
+
+    it('gives a decision its own kind, with tests', () => {
+        expect(rootPathSegments(model, 'Eligibility')).toEqual([
+            {name: 'Eligibility', path: 'Eligibility', kind: 'decision'},
+        ]);
+        expect(rootViews(rootPathSegments(model, 'Eligibility'), model)).toContain('tests');
+    });
+});
+
 describe('rootViews', () => {
     it.each([
         ['*', ['code', 'boxed', 'flow', 'tests']],

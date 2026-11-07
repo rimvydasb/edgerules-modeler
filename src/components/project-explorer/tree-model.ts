@@ -1,11 +1,14 @@
 import type {PortableContext, PortableNode} from '@edgerules/portable';
 import {untypedParameters} from '#lib/callables';
+import {factsPath} from '#lib/factsPaths';
+import {callableParameters} from '#lib/portableUtils';
 
 /** Literal `get()` argument for the root context. */
 export const ROOT_FETCH_PATH = '*';
 
-/** The seven sections of the explorer, in display order. */
-export type ExplorerSection = 'documents' | 'types' | 'methods' | 'services' | 'variables' | 'workbooks' | 'tests';
+/** The nine sections of the explorer, in display order. */
+export type ExplorerSection =
+    'documents' | 'types' | 'factsLibrary' | 'methods' | 'decisions' | 'services' | 'variables' | 'workbooks' | 'tests';
 
 /** The prefix of a document path: `doc:README.md`. A model path never contains `:`, so the two never collide. */
 export const DOCUMENT_PATH_PREFIX = 'doc:';
@@ -19,7 +22,9 @@ export function documentPath(name: string): string {
 export type ExplorerEntryKind =
     | 'document'
     | 'type'
+    | 'facts'
     | 'function'
+    | 'decision'
     | 'service'
     | 'ruleset'
     | 'context'
@@ -34,7 +39,8 @@ export type ExplorerEntryKind =
 
 export interface ExplorerEntry {
     kind: ExplorerEntryKind;
-    path: string; // the fully qualified model path; the test subject ID for a test; `doc:<file>` for a document
+    // the fully qualified model path; `<Type>.@facts` for facts; the test subject ID for a test; `doc:<file>` for a document
+    path: string;
     label: string;
     children?: ExplorerEntry[]; // the nodes of a workbook
     untypedArguments?: string[]; // a generic function: the arguments without a type, which keep it from being tested
@@ -60,22 +66,18 @@ function kindOf(node: Record<string, unknown>): string | undefined {
     return node['@kind'] as string | undefined;
 }
 
-// The `@kind` of a function: a `func`, an external function, or a layer view, in the authored or the schema view.
-const FUNCTION_KINDS = new Set([
-    'function',
-    'function-schema',
-    'external-function',
-    'derivations',
-    'derivations-schema',
-    'decisions',
-    'decisions-schema',
-]);
+// The `@kind` of a function: a `func` or an external function, in the authored or the schema view.
+const FUNCTION_KINDS = new Set(['function', 'function-schema', 'external-function']);
 
-/** The method kind of a callable field, or undefined when the field is not callable. A `service` is listed apart. */
-export function methodKind(node: unknown): 'function' | 'service' | 'ruleset' | undefined {
+/**
+ * The method kind of a callable field, or undefined when the field is not callable. A `service` and a `decision` are
+ * listed apart.
+ */
+export function methodKind(node: unknown): 'function' | 'decision' | 'service' | 'ruleset' | undefined {
     if (!isRecord(node)) return undefined;
     const kind = kindOf(node);
     if (kind === 'service' || kind === 'service-schema') return 'service';
+    if (kind === 'decision' || kind === 'decision-schema') return 'decision';
     if (kind !== undefined && FUNCTION_KINDS.has(kind)) return 'function';
     if (kind === 'ruleset' || kind === 'ruleset-schema') return 'ruleset';
     return undefined;
@@ -106,30 +108,26 @@ function fields(context: Record<string, unknown>): [string, PortableNode][] {
 
 // A callable reads as a call, as in the Shell breadcrumbs: `name(...)` when it has arguments, `name()` when it has none.
 function methodLabel(path: string, node: Record<string, unknown>): string {
-    const parameters = node['@parameters'];
+    const parameters = callableParameters(node);
     return isRecord(parameters) && Object.keys(parameters).length > 0 ? `${path}(...)` : `${path}()`;
 }
 
-// Every callable of a context, at any depth: the services in `services`, the other callables in `methods`. A function is
-// atomic and a workbook holds nodes, not methods.
-function collectMethods(
-    contextPath: string,
-    context: Record<string, unknown>,
-    methods: ExplorerEntry[],
-    services: ExplorerEntry[],
-): void {
+// Every callable of a context, at any depth: the services in `services`, the decisions in `decisions`, the other
+// callables in `methods`. A function is atomic and a workbook holds nodes, not methods.
+function collectMethods(contextPath: string, context: Record<string, unknown>, sections: ExplorerSections): void {
     for (const [name, node] of fields(context)) {
         const path = joinPath(contextPath, name);
         const kind = methodKind(node);
         if (kind) {
             const untypedArguments = untypedParameters(node);
-            (kind === 'service' ? services : methods).push({
+            const section = kind === 'service' ? 'services' : kind === 'decision' ? 'decisions' : 'methods';
+            sections[section].push({
                 kind,
                 path,
                 label: methodLabel(path, node as Record<string, unknown>),
                 ...(untypedArguments.length > 0 && {untypedArguments}),
             });
-        } else if (isContext(node)) collectMethods(path, node, methods, services);
+        } else if (isContext(node)) collectMethods(path, node, sections);
     }
 }
 
@@ -170,8 +168,11 @@ function byLabel(a: ExplorerEntry, b: ExplorerEntry): number {
  * Splits the project into the explorer sections, each sorted by name:
  * - **Documents**: the document files of `documents`, such as `README.md`, as `doc:<file>` paths. The engine has none.
  * - **Types**: the type definitions of the root.
+ * - **Facts Library**: every `facts` declaration, by the name of its type. The engine keeps it under the `@facts` key of
+ *   the type definition, so the entry path is `<Type>.@facts` (`#lib/factsPaths`).
  * - **Methods**: every function and ruleset, also inside contexts, by qualified path: `path(...)` when it has
  *   arguments, `path()` when it has none.
+ * - **Decisions**: every `decision` declaration, labelled like a method.
  * - **Services**: every `service` declaration, labelled like a method.
  * - **Variables**: every other root field, contexts included.
  * - **Workbooks**: every root `workbook` declaration, labelled with its `@Name`, with its nodes as children. A model
@@ -187,17 +188,22 @@ export function buildSections(
     const sections: ExplorerSections = {
         documents: documents.map((name) => ({kind: 'document', path: documentPath(name), label: name})),
         types: [],
+        factsLibrary: [],
         methods: [],
+        decisions: [],
         services: [],
         variables: [],
         workbooks: [],
         tests: [],
     };
 
-    for (const [name] of types ? fields(types) : []) {
+    for (const [name, definition] of types ? fields(types) : []) {
         sections.types.push({kind: 'type', path: name, label: name});
+        if (isRecord(definition) && isRecord(definition['@facts'])) {
+            sections.factsLibrary.push({kind: 'facts', path: factsPath(name), label: name});
+        }
     }
-    collectMethods('', model as Record<string, unknown>, sections.methods, sections.services);
+    collectMethods('', model as Record<string, unknown>, sections);
     for (const [name, node] of fields(model)) {
         if (methodKind(node)) continue;
         if (isWorkbook(node)) {
@@ -207,7 +213,9 @@ export function buildSections(
             sections.variables.push({kind: isContext(node) ? 'context' : 'variable', path: name, label: name});
         }
     }
-    const methodLabels = new Map([...sections.methods, ...sections.services].map((entry) => [entry.path, entry.label]));
+    const methodLabels = new Map(
+        [...sections.methods, ...sections.decisions, ...sections.services].map((entry) => [entry.path, entry.label]),
+    );
     for (const subjectId of testSubjects) {
         const label = subjectId === '*' ? 'Model' : (methodLabels.get(subjectId) ?? `${subjectId}()`);
         sections.tests.push({kind: 'test', path: subjectId, label});

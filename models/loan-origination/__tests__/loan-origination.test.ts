@@ -31,12 +31,6 @@ interface Bin {
     points: number;
 }
 
-interface ApplicantRecord {
-    data: Applicant;
-    age: number;
-    disposableIncome: number;
-}
-
 interface Scorecard {
     bins: Bin[];
     score: number;
@@ -44,8 +38,14 @@ interface Scorecard {
 }
 
 interface Origination {
-    record: {ltv: number; householdIncome: number; householdDebtPayments: number; applicantRecords: ApplicantRecord[]};
-    applicants: {name: string; scorecard: Scorecard; policy: {failed: string[]; allPassed: boolean}}[];
+    ltv: number;
+    applicants: {
+        name: string;
+        age: number;
+        disposableIncome: number;
+        scorecard: Scorecard;
+        policy: {failed: string[]; allPassed: boolean};
+    }[];
     householdScore: number;
     grade: {grade: string};
     knockouts: string[];
@@ -56,6 +56,7 @@ interface Origination {
 }
 
 const RULESETS = new Set(['applicantScorecard', 'riskGrade', 'pricingGrid', 'decisionMatrix']);
+const DECISIONS = ['ApplicantScore', 'ApplicantPolicy', 'HouseholdRisk', 'LoanPricing', 'LoanDecision', 'LoanOffer'];
 
 const JONAS: Applicant = {
     name: 'Jonas Petraitis',
@@ -139,6 +140,36 @@ describe('loan origination model', () => {
         },
     );
 
+    describe('layers', () => {
+        it('derives the facts of every applicant and of the application', async () => {
+            const service = engine();
+            expect(service.get('Applicant', 'TYPE_DEFINITIONS')).toHaveProperty(['@facts', '@kind'], 'facts-schema');
+            expect(service.get('Application', 'TYPE_DEFINITIONS')).toHaveProperty(['@facts', '@kind'], 'facts-schema');
+            const result = (await service.execute('*')) as {
+                originationBook: {application: {application: Record<string, unknown>}};
+            };
+            const application = result.originationBook.application.application;
+            expect(application).toMatchObject({ltv: 0.75, householdIncome: 6800, householdDebtPayments: 250});
+            expect(application.applicants).toEqual([
+                {...JONAS, age: 38, disposableIncome: 2650},
+                {...IEVA, age: 36, disposableIncome: 1700},
+            ]);
+        });
+
+        it.each(DECISIONS)('declares %s as a decision with requirements', (name) => {
+            const schema = engine().get(name);
+            expect(schema).toHaveProperty('@kind', 'decision-schema');
+            expect(schema).toHaveProperty('@requires');
+        });
+
+        it('makes the service depend on the applicant and the application decisions', () => {
+            expect(engine().get('loanOriginationDecision')).toHaveProperty(
+                ['@requires', 'decisions'],
+                ['ApplicantPolicy', 'ApplicantScore', 'HouseholdRisk', 'LoanDecision', 'LoanOffer', 'LoanPricing'],
+            );
+        });
+    });
+
     describe('applicantScorecard', () => {
         it('puts the applicant into exactly one bin of every characteristic', async () => {
             const bins = (await engine().execute('applicantScorecard', {
@@ -192,10 +223,10 @@ describe('loan origination model', () => {
             expect(result.applicants.map((applicant) => applicant.scorecard.grade.grade)).toEqual(['A', 'C']);
             expect(result.householdScore).toBe(Math.min(...result.applicants.map((a) => a.scorecard.score)));
             expect(result.grade.grade).toBe('C');
-            expect(result.record).toMatchObject({ltv: 0.75, householdIncome: 6800, householdDebtPayments: 250});
-            expect(result.record.applicantRecords).toEqual([
-                {data: JONAS, age: 38, disposableIncome: 2650},
-                {data: IEVA, age: 36, disposableIncome: 1700},
+            expect(result.ltv).toBe(0.75);
+            expect(result.applicants.map(({age, disposableIncome}) => ({age, disposableIncome}))).toEqual([
+                {age: 38, disposableIncome: 2650},
+                {age: 36, disposableIncome: 1700},
             ]);
             expect(result.applicants.map((applicant) => applicant.name)).toEqual([JONAS.name, IEVA.name]);
             expect(result.decision.outcome).toBe('APPROVE');

@@ -1,5 +1,6 @@
 import type {PortableError, PortableNode} from '@edgerules/portable';
 import {isPortableError} from './portable';
+import {callableParameters} from './portableUtils';
 
 export type CallableKind = 'function' | 'ruleset' | 'optimise' | 'loop';
 
@@ -32,7 +33,7 @@ function untypedNames(parameters: unknown): string[] {
  * generic: the engine types it at each call site and refuses to execute it directly, so it cannot be tested.
  */
 export function untypedParameters(schema: unknown): string[] {
-    return isRecord(schema) ? untypedNames(schema['@parameters']) : [];
+    return untypedNames(callableParameters(schema));
 }
 
 function hasOnlyTypedParameters(parameters: unknown): boolean {
@@ -41,8 +42,7 @@ function hasOnlyTypedParameters(parameters: unknown): boolean {
 
 const SCHEMA_KINDS: Record<string, CallableKind> = {
     'function-schema': 'function',
-    'derivations-schema': 'function',
-    'decisions-schema': 'function',
+    'decision-schema': 'function',
     'service-schema': 'function',
     'ruleset-schema': 'ruleset',
     'loop-schema': 'loop',
@@ -57,7 +57,7 @@ function walkCallables(node: unknown, path: readonly string[], into: Callable[])
         const kind = value['@kind'];
         if (kind === 'context') {
             walkCallables(value, [...path, key], into);
-        } else if (kind !== undefined && kind in SCHEMA_KINDS && hasOnlyTypedParameters(value['@parameters'])) {
+        } else if (kind !== undefined && kind in SCHEMA_KINDS && hasOnlyTypedParameters(callableParameters(value))) {
             into.push({path: [...path, key].join('.'), kind: SCHEMA_KINDS[kind]});
         }
     }

@@ -59,12 +59,31 @@ export function lastPathName(path: string): string | undefined {
     return path.slice(dot + 1);
 }
 
-// The `@kind` of a callable whose body is a context or an expression: a `func`, a layer view or a `service`.
-const FUNCTION_DEFINITION_KINDS = new Set(['function', 'service', 'derivations', 'decisions']);
+// The `@kind` of a callable whose body is a context or an expression: a `func`, a `decision`, a `facts` or a `service`.
+// A `facts` declaration is not a field: it lives under the `@facts` key of its type definition (`#lib/factsPaths`).
+const FUNCTION_DEFINITION_KINDS = new Set(['function', 'service', 'decision', 'facts']);
 
-/** A `func`, `derivations`, `decisions` or `service` definition: a `@parameters` / `@body` callable. */
+// The `@kind` of a layer declaration (definition or schema view): its one parameter, the decision context, is in
+// `@context`, not in `@parameters`.
+const LAYER_KINDS = new Set(['decision', 'decision-schema', 'facts', 'facts-schema']);
+
+/** A `func`, `decision`, `facts` or `service` definition: a `@parameters` (or `@context`) / `@body` callable. */
 export function isFunctionDefinition(value: unknown): value is Record<string, unknown> {
     return isRecord(value) && typeof value['@kind'] === 'string' && FUNCTION_DEFINITION_KINDS.has(value['@kind']);
+}
+
+/** True for a `decision` or `facts` declaration, in the authored or the schema view. */
+export function isLayerDeclaration(value: unknown): boolean {
+    return isRecord(value) && typeof value['@kind'] === 'string' && LAYER_KINDS.has(value['@kind']);
+}
+
+/**
+ * The parameters of a callable, definition or schema: `@context` for a `decision` / `facts` declaration (exactly one
+ * entry, the decision context), `@parameters` for any other callable.
+ */
+export function callableParameters(value: unknown): unknown {
+    if (!isRecord(value)) return undefined;
+    return isLayerDeclaration(value) ? value['@context'] : value['@parameters'];
 }
 
 function tokenizePath(path: string): Array<string | number> {

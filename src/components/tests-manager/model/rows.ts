@@ -1,4 +1,5 @@
 import {isPortableError} from '#lib/portable';
+import {callableParameters} from '#lib/portableUtils';
 import type {TestRow, TestSectionId} from '../../test-cases-service';
 import type {MutableDecisionService, TestSubject} from '../tests-manager-types';
 
@@ -170,7 +171,7 @@ export function deriveRows(service: MutableDecisionService, subject: TestSubject
         subject.kind === 'optimise' ? service.get(subject.id, 'EXTERNAL_DEFINITIONS') : service.get(subject.id);
     if (isPortableError(schema) || !isRecord(schema)) return [];
 
-    const parameters = schema['@parameters'];
+    const parameters = callableParameters(schema);
     if (isRecord(parameters)) {
         for (const [name, paramRef] of Object.entries(parameters)) {
             expandTypeRef([name], paramRef, typeDefs, inputs, new Set());

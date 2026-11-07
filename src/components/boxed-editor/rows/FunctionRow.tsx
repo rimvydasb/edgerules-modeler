@@ -1,4 +1,4 @@
-import {IconMathFunction} from '@tabler/icons-react';
+import {IconDatabase, IconGavel, IconMathFunction} from '@tabler/icons-react';
 import {Fragment, type ReactElement} from 'react';
 import {KIND_COLORS} from '#ui/kindColors';
 import type {BoxedRowData, BoxedTableRowData} from '../boxed-editor-types';
@@ -41,8 +41,14 @@ export function FunctionRow({row}: FunctionRowProps): ReactElement {
                 tall
                 strong
                 iconActsAsDragHandle
-                icon={<IconMathFunction size={19} color="#fff" />}
-                iconBgColor={KIND_COLORS.function}
+                icon={<FunctionIcon keyword={row.keyword} />}
+                iconBgColor={
+                    row.keyword === 'decision'
+                        ? KIND_COLORS.decision
+                        : row.keyword === 'facts'
+                          ? KIND_COLORS.facts
+                          : KIND_COLORS.function
+                }
                 value={
                     <ArgumentHeaders
                         rowPath={row.path}
@@ -65,6 +71,13 @@ export function FunctionRow({row}: FunctionRowProps): ReactElement {
             )}
         </>
     );
+}
+
+// The icon of the declaration keyword: a `decision` and the `facts` of a type differ from a `func`.
+function FunctionIcon({keyword}: {keyword: BoxedRowData['keyword']}): ReactElement {
+    if (keyword === 'decision') return <IconGavel size={19} color="#fff" />;
+    if (keyword === 'facts') return <IconDatabase size={19} color="#fff" />;
+    return <IconMathFunction size={19} color="#fff" />;
 }
 
 function renderChild(child: BoxedRowData, functionRow: BoxedTableRowData): ReactElement {

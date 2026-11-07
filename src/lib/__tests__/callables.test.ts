@@ -68,3 +68,23 @@ describe('untypedParameters', () => {
         expect(untypedParameters(undefined)).toEqual([]);
     });
 });
+
+describe('decision declarations', () => {
+    const LAYERS = `{
+        type Applicant: { age: <number> }
+        facts Applicant(applicant: Applicant): { old: applicant.age > 60 }
+        decision Eligibility(applicant: Applicant): { adult: applicant.age >= 18 }
+        service approve(applicant: Applicant): { return: applicant.Eligibility.adult }
+    }`;
+
+    it('lists a decision as a function, and reads its `@context` as its parameters', () => {
+        const service = MutableDecisionService.fromCode(LAYERS);
+        expect(listCallables(service)).toEqual(
+            expect.arrayContaining([
+                {path: 'Eligibility', kind: 'function'},
+                {path: 'approve', kind: 'function'},
+            ]),
+        );
+        expect(untypedParameters(service.get('Eligibility'))).toEqual([]);
+    });
+});

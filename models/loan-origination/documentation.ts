@@ -8,7 +8,16 @@ export const LOAN_ORIGINATION_DOCUMENTATION: DocumentationDocument = {
         Applicant: 'One borrower of the application: identity, employment, monthly budget and credit bureau data',
         LoanTerms: 'The requested loan: the application date, the amount, the property value and the term in years',
         Application: 'A mortgage application: the loan terms and one or more applicants',
-        ApplicantRecord: 'One applicant with the facts derived from the application: the age and the disposable income',
+        ApplicantProfile:
+            'The data of one applicant without the application that holds it: the input of jointApplication',
+        ApplicantScore: 'Scores one applicant with the scorecard and grades the score',
+        ApplicantPolicy: 'Checks one applicant against the knockout rules and names every failed rule',
+        HouseholdRisk: 'The household score, the score of the weaker applicant, and its risk grade',
+        LoanPricing: 'The margin for the household risk grade and the loan-to-value, and the offered rate',
+        LoanDecision:
+            'The knockouts of every applicant, the affordability stress test and the APPROVE, REFER or DECLINE verdict',
+        LoanOffer:
+            'The approved amount, rate and payment, or the counter-offer within the affordability and LTV limits',
         creditPolicy: 'The parameters of the credit policy: the reference rate, the stress buffer and the limits',
         applicantScorecard:
             'The application scorecard: every characteristic of the applicant falls into one bin, and each bin gives points',
@@ -16,15 +25,10 @@ export const LOAN_ORIGINATION_DOCUMENTATION: DocumentationDocument = {
         pricingGrid: 'The margin over the reference rate for the risk grade and the loan-to-value',
         decisionMatrix:
             'Combines the knockouts, the risk grade, the loan-to-value and the debt service into a decision',
-        applicantRecord: 'The applicant data plus the age at the application date and the disposable income',
         policyRules: 'The knockout rules of the credit policy, one record per rule',
-        scoreApplicant: 'Scores the record of one applicant with the scorecard and grades the score',
-        applicantDecision: 'The name, the scorecard and the policy rules of one applicant record',
-        applicationRecord:
-            'The application data plus the loan-to-value, the household budget and the record of every applicant',
         affordability:
             'The monthly payment, the payment stress-tested at the rate plus the buffer, the debt service to income and the largest affordable loan',
-        jointApplication: 'Builds an application from the loan terms and two applicants',
+        jointApplication: 'Builds an application from the loan terms and two applicant profiles',
         loanOriginationDecision:
             'Decides a mortgage application: scores and checks every applicant, prices the loan, tests affordability and makes an offer',
         borrowingCapacity: 'The largest affordable loan of a household for terms of 10 to 30 years',
@@ -36,8 +40,6 @@ export const LOAN_ORIGINATION_DOCUMENTATION: DocumentationDocument = {
         'originationBook.mainApplicant': 'The main applicant',
         'originationBook.coApplicant': 'The co-applicant',
         'originationBook.application': 'The application built from the loan terms and both applicants',
-        'originationBook.mainRecord': 'The record of the main applicant at the application date',
-        'originationBook.coRecord': 'The record of the co-applicant at the application date',
         'originationBook.mainScorecard': 'The scorecard of the main applicant',
         'originationBook.coScorecard': 'The scorecard of the co-applicant',
         'originationBook.origination': 'The origination decision on the application',

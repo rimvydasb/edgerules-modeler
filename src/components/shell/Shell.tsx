@@ -2,7 +2,7 @@ import {Alert} from '@mantine/core';
 import {useCallback, useEffect, useMemo, useRef, useState, type ReactElement} from 'react';
 import {listCallables, untypedParameters} from '#lib/callables';
 import {isPortableError} from '#lib/portable';
-import {isRecord} from '#lib/portableUtils';
+import {callableParameters, isRecord} from '#lib/portableUtils';
 import {cx} from '#ui/cx';
 import {createBoxedEditorService, type BoxedEditorOpenTarget} from '../boxed-editor';
 import {createFlowEditorService, type FlowEditorOpenTarget, type FlowFocusRequest} from '../flow-editor';
@@ -49,11 +49,11 @@ interface BoxedColumns {
     tests?: boolean;
 }
 
-// The `@parameters` of the callable at `path` of `model`.
+// The parameters of the callable at `path` of `model` (`@context` for a `decision`).
 function parametersAt(model: unknown, path: string): Record<string, unknown> {
     let node = model;
     for (const name of path.split('.')) node = isRecord(node) ? node[name] : undefined;
-    const parameters = isRecord(node) ? node['@parameters'] : undefined;
+    const parameters = callableParameters(node);
     return isRecord(parameters) ? parameters : {};
 }
 
@@ -122,7 +122,9 @@ export function Shell({
     // A generic function: the arguments that need a type before it can be tested.
     const untypedArguments = useMemo(
         () =>
-            segments.at(-1)?.kind === 'function' || segments.at(-1)?.kind === 'service'
+            segments.at(-1)?.kind === 'function' ||
+            segments.at(-1)?.kind === 'decision' ||
+            segments.at(-1)?.kind === 'service'
                 ? untypedParameters(session.engine.get(root))
                 : [],
         // eslint-disable-next-line react-hooks/exhaustive-deps

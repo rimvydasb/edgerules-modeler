@@ -3,8 +3,8 @@ import {LOAN_ORIGINATION_PROJECT} from '../../models/loan-origination';
 import {renderShellHost, SHELL_HOST_ARG_TYPES, ShellHost} from '../support/ShellHost';
 import {openStoryProject} from '../support/storyProject';
 
-// The loan origination project of models/loan-origination in the Shell: applicant and application records, a
-// scorecard, policy rules, pricing and decision tables, a `service`, two workbooks with charts, and tests. Each story
+// The loan origination project of models/loan-origination in the Shell: applicant and application types with `facts`,
+// a scorecard, policy rules, pricing and decision tables, `decision`s, a `service`, two workbooks with charts, and tests. Each story
 // opens one entity of it; the controls open any other path or view.
 const meta: Meta<typeof ShellHost> = {
     title: 'Models/Loan Origination',
@@ -25,10 +25,13 @@ export const Overview: Story = {};
 /** The `applicantScorecard` decision table: every characteristic of the applicant falls into one bin of points. */
 export const Scorecard: Story = {args: {defaultPath: 'applicantScorecard'}};
 
+/** The `LoanDecision` decision: the knockouts, the affordability stress test and the verdict of the application. */
+export const LoanDecision: Story = {args: {defaultPath: 'LoanDecision'}};
+
 /** The `decisionMatrix` decision table: knockouts, grade, LTV and DSTI decide APPROVE, REFER or DECLINE. */
 export const DecisionMatrix: Story = {args: {defaultPath: 'decisionMatrix'}};
 
-/** The `loanOriginationDecision` service in the Boxed view: the records, the per-applicant decisions, the pricing and the offer. */
+/** The `loanOriginationDecision` service in the Boxed view: the per-applicant and the application decisions, the pricing and the offer. */
 export const Service: Story = {args: {defaultPath: 'loanOriginationDecision'}};
 
 /**

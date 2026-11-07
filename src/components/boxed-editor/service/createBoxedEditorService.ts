@@ -1,4 +1,5 @@
 import type {PortableContext, PortableError, PortableNode, PortableRootContext} from '@edgerules/portable';
+import {isFactsPath, splitFactsPath, withFactsPaths} from '#lib/factsPaths';
 import {setWithLinkCheck} from '#lib/linkCheck';
 import {isPortableError} from '#lib/portable';
 import type {BoxedEditorService, BoxedRowData} from '../boxed-editor-types';
@@ -6,6 +7,7 @@ import {denormalize, denormalizeTypeField} from './denormalize';
 import {normalizeNode, normalizeRoot} from './normalize';
 import {
     authoredEntries,
+    callableParameters,
     childPath,
     isFunctionDefinition,
     isRecord,
@@ -128,7 +130,11 @@ function loadRows(mutable: MutableDecisionService, path: string): CachedRows {
 
     if (node === undefined) return {rows: []};
     const itemIndex = path.match(/\[(\d+)\]$/)?.[1];
-    const name = lastPathName(path) ?? `Item ${itemIndex === undefined ? '' : Number(itemIndex) + 1}`;
+    // A facts declaration has the name of its type.
+    const facts = splitFactsPath(path);
+    const name =
+        (facts?.rest === '' ? facts.type : lastPathName(path)) ??
+        `Item ${itemIndex === undefined ? '' : Number(itemIndex) + 1}`;
     const row = normalizeNode(name, path, node, schema);
     return {
         row: {...row, children: undefined},
@@ -289,7 +295,8 @@ interface ComplexTypeOwner {
  * `optimisationOwner` already gives `@optimise` settings.
  */
 function complexTypeOwner(root: PortableRootContext, path: string): ComplexTypeOwner | undefined {
-    if (path === '*') return undefined;
+    // The facts of a type are a callable, not fields of the type: `withFactsPaths` writes them.
+    if (path === '*' || isFactsPath(path)) return undefined;
     const name = /^[^.[\]]+/.exec(path)?.[0];
     if (!name) return undefined;
     const node = root[name];
@@ -404,7 +411,8 @@ function containsIdentifier(node: PortableNode, name: string): boolean {
         return true;
     }
     return Object.entries(node).some(
-        ([key, child]) => key !== '@parameters' && containsIdentifier(child as PortableNode, name),
+        ([key, child]) =>
+            key !== '@parameters' && key !== '@context' && containsIdentifier(child as PortableNode, name),
     );
 }
 
@@ -489,7 +497,7 @@ function callableParameterChange(
 ): CallableParameterChange | undefined {
     if ((row.kind !== 'function' && row.kind !== 'ruleset' && row.kind !== 'optimisation') || !isRecord(previous))
         return undefined;
-    const oldParameters = previous['@parameters'];
+    const oldParameters = callableParameters(previous);
     if (!isRecord(oldParameters)) return undefined;
     const oldNames = Object.keys(oldParameters);
     const newNames =
@@ -497,7 +505,7 @@ function callableParameterChange(
     if (newNames.length === oldNames.length + 1) {
         const name = newNames.find((candidate) => !oldNames.includes(candidate));
         const next = denormalize(row);
-        const parameters = isRecord(next) ? next['@parameters'] : undefined;
+        const parameters = callableParameters(next);
         if (name && isRecord(parameters)) {
             return {kind: 'add', name, value: parameterSeed(parameters[name])};
         }
@@ -564,7 +572,9 @@ function replacePortablePath(root: PortableRootContext, path: string, value: Por
     return next as unknown as PortableRootContext;
 }
 
-export function createBoxedEditorService(mutable: MutableDecisionService): BoxedEditorService {
+export function createBoxedEditorService(engine: MutableDecisionService): BoxedEditorService {
+    // A facts declaration is addressed as `<Type>.@facts`, a path the engine does not have.
+    const mutable = withFactsPaths(engine);
     const listeners = new Set<() => void>();
     const cache = createRowCache((path) => loadRows(mutable, path));
 

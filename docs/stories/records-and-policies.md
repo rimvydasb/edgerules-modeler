@@ -2,4 +2,4 @@
 
 ## Records
 
-EdgeRules now supports `derivations` and `decisions` as first-class language constructs.
+EdgeRules now supports `facts` (attached to a structure `type`) and `decision` as first-class language constructs.

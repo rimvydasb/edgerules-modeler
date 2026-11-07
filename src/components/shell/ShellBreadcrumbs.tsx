@@ -3,8 +3,10 @@ import {
     IconBook2,
     IconBraces,
     IconChevronRight,
+    IconDatabase,
     IconFileText,
     IconFlask,
+    IconGavel,
     IconListCheck,
     IconMathFunction,
     IconSitemap,
@@ -48,6 +50,10 @@ function KindGlyph({kind}: {kind: GlyphKind}): ReactElement {
         case 'function':
         case 'service':
             return <IconMathFunction size={19} color="#fff" />;
+        case 'decision':
+            return <IconGavel size={19} color="#fff" />;
+        case 'facts':
+            return <IconDatabase size={19} color="#fff" />;
         case 'ruleset':
             return <IconListCheck size={19} color="#fff" />;
         case 'type':
@@ -66,12 +72,18 @@ const KIND_FILL: Partial<Record<GlyphKind, string>> = {
     function: KIND_COLORS.function,
     service: KIND_COLORS.service,
     ruleset: KIND_COLORS.ruleset,
+    decision: KIND_COLORS.decision,
+    facts: KIND_COLORS.facts,
     type: KIND_COLORS.complexType,
 };
 
 // A callable reads as a call: `name(...)`.
 function segmentLabel(segment: ShellPathSegment): string {
-    return segment.kind === 'function' || segment.kind === 'service' || segment.kind === 'ruleset'
+    if (segment.kind === 'facts') return 'facts';
+    return segment.kind === 'function' ||
+        segment.kind === 'decision' ||
+        segment.kind === 'service' ||
+        segment.kind === 'ruleset'
         ? `${segment.name}(...)`
         : segment.name;
 }

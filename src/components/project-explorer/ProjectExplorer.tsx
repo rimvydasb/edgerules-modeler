@@ -92,7 +92,9 @@ const NO_SUBJECTS: readonly string[] = [];
 const SECTIONS: {section: ExplorerSection; label: string}[] = [
     {section: 'documents', label: 'Documents'},
     {section: 'types', label: 'Types'},
+    {section: 'factsLibrary', label: 'Facts Library'},
     {section: 'methods', label: 'Methods'},
+    {section: 'decisions', label: 'Decisions'},
     {section: 'services', label: 'Service Methods'},
     {section: 'variables', label: 'Variables'},
     {section: 'workbooks', label: 'Workbooks'},
@@ -322,7 +324,11 @@ export function ProjectExplorer({
             ...(sections?.workbooks ?? []),
         ])
             names.add(entry.path);
-        for (const entry of [...(sections?.methods ?? []), ...(sections?.services ?? [])])
+        for (const entry of [
+            ...(sections?.methods ?? []),
+            ...(sections?.decisions ?? []),
+            ...(sections?.services ?? []),
+        ])
             if (!entry.path.includes('.')) names.add(entry.path);
         return names;
     }, [sections]);
@@ -330,8 +336,8 @@ export function ProjectExplorer({
     const canCreate = !readOnly && service.set !== undefined;
     const testSubjectOptions: {path: string; label: string; untypedArguments?: string[]}[] = [
         {path: '*', label: 'Model'},
-        // The methods and the services, by name.
-        ...[...(sections?.methods ?? []), ...(sections?.services ?? [])]
+        // The methods, the decisions and the services, by name.
+        ...[...(sections?.methods ?? []), ...(sections?.decisions ?? []), ...(sections?.services ?? [])]
             .sort((a, b) => a.label.localeCompare(b.label))
             .map((entry) => ({
                 path: entry.path,
@@ -408,7 +414,7 @@ export function ProjectExplorer({
         }
 
         // A document is a project file: the explorer does not create one.
-        if (section === 'documents' || !canCreate) return null;
+        if (section === 'documents' || section === 'factsLibrary' || section === 'decisions' || !canCreate) return null;
         const options = CREATE_OPTIONS[section];
         if (options.length === 1) {
             return <span {...stop}>{trigger(() => setPending({section, option: options[0]!}))}</span>;

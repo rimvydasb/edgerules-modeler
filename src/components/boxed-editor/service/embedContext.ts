@@ -2,6 +2,7 @@ import type {PortableNode, PortableRootContext} from '@edgerules/portable';
 import type {CodeEditorEmbedContext} from '../../code-editor-cell';
 import {
     authoredEntries,
+    callableParameters,
     childPath,
     formatPortableValue,
     indexedPath,
@@ -53,7 +54,7 @@ function contextText(node: Record<string, unknown>, path: string, activePath: st
                     ? nodeText(body as PortableNode, childPath(childP, 'result'), activePath)
                     : contextText(body as Record<string, unknown>, childP, activePath);
                 const keyword = record['@kind'] === 'function' ? 'func' : String(record['@kind']);
-                return `${keyword} ${name}(${parametersText(record['@parameters'])}): ${bodyText}`;
+                return `${keyword} ${name}(${parametersText(callableParameters(record))}): ${bodyText}`;
             }
             if (record['@kind'] === 'type-definition') {
                 return `type ${name}: ${typeDefinitionText(record, childP, activePath)}`;

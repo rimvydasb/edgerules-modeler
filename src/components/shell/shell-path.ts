@@ -1,3 +1,4 @@
+import {FACTS_KEY} from '#lib/factsPaths';
 import {isRecord} from '#lib/portableUtils';
 import {DOCUMENT_PATH_PREFIX, documentPath} from '../project-explorer/internal';
 import type {ShellView} from './shell-types';
@@ -27,7 +28,8 @@ export function hasReadme(markdown: string): boolean {
 }
 
 /** What a root path segment is; it picks the icon of the header and the views that can show it. */
-export type ShellPathKind = 'context' | 'workbook' | 'function' | 'service' | 'ruleset' | 'type' | 'field';
+export type ShellPathKind =
+    'context' | 'workbook' | 'function' | 'decision' | 'facts' | 'service' | 'ruleset' | 'type' | 'field';
 
 /** One breadcrumb item of a root path. */
 export interface ShellPathSegment {
@@ -46,9 +48,9 @@ function pathKind(node: unknown): ShellPathKind {
             return 'workbook';
         case 'service':
             return 'service';
+        case 'decision':
+            return 'decision';
         case 'function':
-        case 'derivations':
-        case 'decisions':
         case 'external-function':
             return 'function';
         case 'ruleset':
@@ -63,19 +65,25 @@ function pathKind(node: unknown): ShellPathKind {
 /**
  * The segments of the longest prefix of `path` that is a valid root path of `model`: contexts and workbooks at any
  * position, and any other entity (a function, a ruleset, a type or a plain field) last only. An index, an annotation
- * or a missing field ends the walk.
+ * or a missing field ends the walk. The one exception is `<Type>.@facts`: the facts declaration of a type, whose
+ * segment follows the type segment (`#lib/factsPaths`).
  */
 export function rootPathSegments(model: unknown, path: string): ShellPathSegment[] {
     if (path === '*' || path === '') return [];
     const segments: ShellPathSegment[] = [];
     let context = model;
-    for (const name of path.split('.')) {
+    const names = path.split('.');
+    for (const [index, name] of names.entries()) {
         if (name.includes('[') || name.startsWith('@') || !isRecord(context)) break;
         const child = context[name];
         if (child === undefined) break;
         const kind = pathKind(child);
         const segmentPath = segments.length === 0 ? name : `${segments.at(-1)!.path}.${name}`;
         segments.push({name, path: segmentPath, kind});
+        const facts = kind === 'type' && isRecord(child) ? child[FACTS_KEY] : undefined;
+        if (segments.length === 1 && names[index + 1] === FACTS_KEY && isRecord(facts)) {
+            segments.push({name: FACTS_KEY, path: `${segmentPath}.${FACTS_KEY}`, kind: 'facts'});
+        }
         // A function is atomic, and only a context has fields: the root path never goes below anything else.
         if (kind !== 'context' && kind !== 'workbook') break;
         context = child;
@@ -103,7 +111,8 @@ export type ShellRootKind = 'model' | 'document' | ShellPathKind;
  *   service or a README has it (see `rootViews`). Another context, a function, a ruleset, a type and a plain field have
  *   no Flow view.
  * - Preview and Code show a document: its rendered Markdown and its source. Only a document has Preview.
- * - Tests are the tests of a callable: the model, a function, a service or a ruleset. A function is a test subject only
+ * - Tests are the tests of a callable: the model, a function, a decision, a service or a ruleset. The facts of a type
+ *   are not a test subject: they need the owner of the instance. A function is a test subject only
  *   when every argument has a type (see `untypedParameters`).
  */
 export const ROOT_VIEWS: Record<ShellRootKind, readonly ShellView[]> = {
@@ -112,6 +121,8 @@ export const ROOT_VIEWS: Record<ShellRootKind, readonly ShellView[]> = {
     workbook: ['code', 'boxed', 'flow'],
     context: ['code', 'boxed'],
     function: ['code', 'boxed', 'tests'],
+    decision: ['code', 'boxed', 'tests'],
+    facts: ['code', 'boxed'],
     service: ['code', 'boxed', 'flow', 'tests'],
     ruleset: ['code', 'boxed', 'tests'],
     type: ['code', 'boxed'],

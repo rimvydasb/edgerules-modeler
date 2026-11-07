@@ -17,7 +17,7 @@ function sectionCount(label: string): string | null | undefined {
 }
 
 describe('ProjectExplorer sections', () => {
-    it('renders the six sections in order, expanded, with their member counts', () => {
+    it('renders the eight sections in order, expanded, with their member counts', () => {
         render(<ProjectExplorer service={buildService()} testSubjects={['*']} />);
 
         const tree = screen.getByRole('tree');
@@ -25,14 +25,28 @@ describe('ProjectExplorer sections', () => {
             .getAllByRole('treeitem')
             .filter((item) => item.dataset.level === '1')
             .map((item) => item.querySelector('span span')?.textContent);
-        expect(headers).toEqual(['Types', 'Methods', 'Service Methods', 'Variables', 'Workbooks', 'Tests']);
+        expect(headers).toEqual([
+            'Types',
+            'Facts Library',
+            'Methods',
+            'Decisions',
+            'Service Methods',
+            'Variables',
+            'Workbooks',
+            'Tests',
+        ]);
         expect(sectionCount('Types')).toBe('2');
+        expect(sectionCount('Facts Library')).toBe('1');
         expect(sectionCount('Methods')).toBe('3');
+        expect(sectionCount('Decisions')).toBe('1');
         expect(sectionCount('Service Methods')).toBe('1');
         expect(sectionCount('Variables')).toBe('3');
         expect(sectionCount('Workbooks')).toBe('1');
         expect(sectionCount('Tests')).toBe('1');
         expect(screen.getAllByText('riskScore(...)')).toHaveLength(1);
+        // A decision is listed apart from the methods; the facts of a type by the name of the type.
+        expect(screen.getAllByText('Eligibility(...)')).toHaveLength(1);
+        expect(screen.getAllByText('Person')).toHaveLength(2);
     });
 
     it('filters the entries by the search, and hides the sections without matches', async () => {
@@ -125,7 +139,9 @@ describe('ProjectExplorer sections', () => {
 describe('ProjectExplorer open', () => {
     it.each([
         ['Types', 'Person', {kind: 'type', path: 'Person'}],
+        ['Facts Library', 'Person', {kind: 'facts', path: 'Person.@facts'}],
         ['Methods', 'nested.deep()', {kind: 'function', path: 'nested.deep'}],
+        ['Decisions', 'Eligibility(...)', {kind: 'decision', path: 'Eligibility'}],
         ['Methods', 'risk(...)', {kind: 'ruleset', path: 'risk'}],
         ['Service Methods', 'processApplication(...)', {kind: 'service', path: 'processApplication'}],
         ['Variables', 'nested', {kind: 'context', path: 'nested'}],
@@ -141,7 +157,9 @@ describe('ProjectExplorer open', () => {
         await user.click(screen.getByText(section));
         await user.click(screen.getByText(section));
         expect(onOpen).not.toHaveBeenCalled();
-        await user.click(screen.getByText(label));
+        // Within its section: the facts of a type have the name of the type.
+        const sectionItem = screen.getByText(section).closest<HTMLElement>('[role="treeitem"]')!;
+        await user.click(within(sectionItem).getByText(label));
         expect(onOpen).toHaveBeenCalledWith(target);
     });
 
@@ -283,7 +301,14 @@ describe('ProjectExplorer create', () => {
 
         await user.click(screen.getByRole('button', {name: 'Add to Tests'}));
         const subjects = (await screen.findAllByRole('menuitem')).map((item) => item.textContent);
-        expect(subjects).toEqual(['Model', 'nested.deep()', 'processApplication(...)', 'risk(...)', 'riskScore(...)']);
+        expect(subjects).toEqual([
+            'Model',
+            'Eligibility(...)',
+            'nested.deep()',
+            'processApplication(...)',
+            'risk(...)',
+            'riskScore(...)',
+        ]);
 
         await user.click(screen.getByRole('menuitem', {name: 'risk(...)'}));
         expect(onCreateTest).toHaveBeenCalledWith('risk');

@@ -83,7 +83,10 @@ function functionNode(row: BoxedTableRowData): PortableNode {
         children.length === 1 && (children[0].kind === 'function-result' || children[0].name === 'result');
     return {
         '@kind': row.keyword ?? 'function',
-        '@parameters': parameters(row.parameters),
+        // A `decision` or a `facts` holds its one parameter, the decision context, in `@context`.
+        [row.keyword === 'decision' || row.keyword === 'facts' ? '@context' : '@parameters']: parameters(
+            row.parameters,
+        ),
         '@body': onlyResult ? expression(children[0].value) : contextFromChildren(children),
     } as PortableNode;
 }

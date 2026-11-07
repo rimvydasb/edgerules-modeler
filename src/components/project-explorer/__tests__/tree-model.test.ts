@@ -106,12 +106,12 @@ describe('buildSections documents', () => {
 });
 
 describe('methodKind', () => {
-    it('tells functions, services and rulesets apart, and is undefined for anything else', () => {
+    it('tells functions, decisions, services and rulesets apart, and is undefined for anything else', () => {
         expect(methodKind({'@kind': 'function-schema'})).toBe('function');
         expect(methodKind({'@kind': 'service'})).toBe('service');
         expect(methodKind({'@kind': 'service-schema'})).toBe('service');
-        expect(methodKind({'@kind': 'derivations-schema'})).toBe('function');
-        expect(methodKind({'@kind': 'derivations'})).toBe('function');
+        expect(methodKind({'@kind': 'decision-schema'})).toBe('decision');
+        expect(methodKind({'@kind': 'decision'})).toBe('decision');
         expect(methodKind({'@kind': 'ruleset-schema'})).toBe('ruleset');
         expect(methodKind({'@kind': 'context'})).toBeUndefined();
         expect(methodKind(5)).toBeUndefined();

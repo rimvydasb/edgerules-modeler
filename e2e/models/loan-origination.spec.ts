@@ -16,9 +16,12 @@ function explorer(page: Page) {
 test('the Project Explorer lists every entity of the model', async ({page}) => {
     await openStory(page, 'models-loan-origination--overview');
     const nav = explorer(page);
+    // `.first()`: a type with facts is listed again under Facts Library.
+    for (const entry of ['Applicant', 'Application']) {
+        await expect(nav.getByText(entry, {exact: true}).first(), entry).toBeVisible(SLOW);
+        await expect(nav.getByText(entry, {exact: true}), entry).toHaveCount(2);
+    }
     for (const entry of [
-        'Applicant',
-        'Application',
         'LoanTerms',
         'sampleDecision',
         // A workbook is listed by its `@Name`.
@@ -32,6 +35,8 @@ test('the Project Explorer lists every entity of the model', async ({page}) => {
         'decisionMatrix(...)',
         'loanOriginationDecision(...)',
         'policyRules(...)',
+        'ApplicantScore(...)',
+        'LoanDecision(...)',
     ]) {
         await expect(nav.getByText(method, {exact: true}).first(), method).toBeVisible();
     }
@@ -40,51 +45,58 @@ test('the Project Explorer lists every entity of the model', async ({page}) => {
 test('the Project Explorer labels a method with arguments as name(...) and one without as name()', async ({page}) => {
     await openStory(page, 'models-loan-origination--overview');
     const nav = explorer(page);
-    // `.first()`: the method; `applicantRecord(...)` is listed again under Tests.
-    await expect(nav.getByText('applicantRecord(...)', {exact: true}).first()).toBeVisible(SLOW);
+    await expect(nav.getByText('affordability(...)', {exact: true}).first()).toBeVisible(SLOW);
     await expect(nav.getByText('creditPolicy()', {exact: true})).toBeVisible();
-    await expect(nav.getByText('applicantRecord()', {exact: true})).toHaveCount(0);
+    await expect(nav.getByText('affordability()', {exact: true})).toHaveCount(0);
 });
 
 test.describe('a function opened from the Project Explorer', () => {
     test.beforeEach(async ({page}) => {
         await openStory(page, 'models-loan-origination--origination-book');
-        await explorer(page).getByText('applicantRecord(...)', {exact: true}).first().click(SLOW);
-        await expect(page.getByRole('navigation', {name: 'Model path'})).toContainText('applicantRecord(...)');
-        // The Flow view of the book shows the nodes of the function body; its arguments are edited in the Boxed view.
+        // `.first()`: the method; `affordability(...)` is listed again under Tests.
+        await explorer(page).getByText('affordability(...)', {exact: true}).first().click(SLOW);
+        await expect(page.getByRole('navigation', {name: 'Model path'})).toContainText('affordability(...)');
         await page.getByRole('radio', {name: 'Boxed'}).click();
     });
 
+    const ARGUMENTS = ['householdIncome', 'householdDebtPayments', 'loanAmount', 'rate', 'termYears'];
+
     test('shows its arguments above its body', async ({page}) => {
-        await expect(page.getByTestId('row-applicantRecord')).toBeVisible();
-        await expectHeaders(page, 'applicantRecord', ['applicant', 'applicationDate']);
-        for (const field of ['data', 'age', 'disposableIncome']) {
-            await expect(page.getByTestId(`row-applicantRecord.${field}`), field).toBeVisible();
+        await expect(page.getByTestId('row-affordability')).toBeVisible();
+        await expectHeaders(page, 'affordability', ARGUMENTS);
+        for (const field of ['payment', 'stressedRate', 'stressedPayment', 'dsti', 'maxPayment', 'maxLoan']) {
+            await expect(page.getByTestId(`row-affordability.${field}`), field).toBeVisible();
         }
     });
 
     test('renames an argument and migrates its references in the body', async ({page}) => {
-        await renameHeader(page, 'applicantRecord', 'applicationDate', 'asOf');
-        await expectHeaders(page, 'applicantRecord', ['applicant', 'asOf']);
-        await expect(valueCell(page, 'applicantRecord.age')).toContainText('asOf');
+        await renameHeader(page, 'affordability', 'rate', 'annualRate');
+        await expectHeaders(page, 'affordability', [
+            'householdIncome',
+            'householdDebtPayments',
+            'loanAmount',
+            'annualRate',
+            'termYears',
+        ]);
+        await expect(valueCell(page, 'affordability.stressedRate')).toContainText('annualRate');
     });
 
-    // `applicationRecord` calls `applicantRecord(applicant, applicationDate)` and `calendarDiff` reads a date: the engine
-    // rejects an edit that breaks either, and the editor shows why.
-    test('rejects a retype that breaks the body visibly', async ({page}) => {
-        await retypeHeader(page, 'applicantRecord', 'applicationDate', 'string');
-        await expect(page.getByLabel('Change type of applicationDate')).toHaveAttribute('aria-invalid', 'true');
-        await expect(page.getByTestId('row-applicantRecord').getByRole('alert')).toContainText(
-            "argument 'applicationDate' expects string, found date",
+    // `LoanDecision` and `borrowingCapacity` call `affordability` with a number term: the engine rejects an edit that
+    // breaks a caller, and the editor shows why.
+    test('rejects a retype that breaks the callers visibly', async ({page}) => {
+        await retypeHeader(page, 'affordability', 'termYears', 'string');
+        await expect(page.getByLabel('Change type of termYears')).toHaveAttribute('aria-invalid', 'true');
+        await expect(page.getByTestId('row-affordability').getByRole('alert')).toContainText(
+            "argument 'termYears' expects string, found number",
         );
     });
 
     test('rejects an argument its callers do not supply visibly', async ({page}) => {
-        await chooseRowAction(page, 'applicantRecord', 'Add argument');
-        await expect(page.getByTestId('row-applicantRecord').getByRole('alert')).toContainText(
-            "function 'applicantRecord' expects 3 argument(s) but 2 argument(s) were supplied",
+        await chooseRowAction(page, 'affordability', 'Add argument');
+        await expect(page.getByTestId('row-affordability').getByRole('alert')).toContainText(
+            "function 'affordability' expects 6 argument(s) but 5 argument(s) were supplied",
         );
-        await expectHeaders(page, 'applicantRecord', ['applicant', 'applicationDate']);
+        await expectHeaders(page, 'affordability', ARGUMENTS);
     });
 });
 
@@ -122,4 +134,16 @@ test('the service tests of joint and single applications pass when run', async (
     await page.getByRole('button', {name: 'Run all'}).click();
     for (let index = 0; index < 6; index++) await expect(summaries.nth(index)).toHaveText('11/11');
     await expect(page.locator('[data-mismatch="true"]')).toHaveCount(0);
+});
+
+test('the facts of a type open as their own root, not as the type', async ({page}) => {
+    await openStory(page, 'models-loan-origination--overview');
+    const factsSection = explorer(page).getByRole('treeitem', {name: /Facts Library/});
+    await factsSection.getByText('Applicant', {exact: true}).click(SLOW);
+    await page.getByRole('radio', {name: 'Boxed'}).click();
+    await expect(page.getByRole('navigation', {name: 'Model path'})).toContainText('facts');
+    await expect(page.getByTestId('row-Applicant.@facts')).toBeVisible();
+    for (const field of ['age', 'disposableIncome']) {
+        await expect(page.getByTestId(`row-Applicant.@facts.${field}`), field).toBeVisible();
+    }
 });
