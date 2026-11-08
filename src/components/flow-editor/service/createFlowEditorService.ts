@@ -204,27 +204,9 @@ export function createFlowEditorService(
     const fieldsOfType = (type: unknown): Record<string, unknown> | undefined =>
         structureFields(type) ?? (typeof type === 'string' ? structureFields(linkedAt(type)) : undefined);
 
-    // The declared type of `path`. The engine has no path into the result of an invocation (`idle.tasks` of
-    // `idle: noTasks(…)`), and the linked `type` of an invocation names no fields: the type of such a path is read from
-    // the `return` of the callee (docs/engine-bug-reports.md).
-    const declaredTypeAt = (path: string): unknown => {
-        const node = linkedAt(path);
-        if (node) return node;
-        const keys = path.split('.');
-        for (let length = keys.length - 1; length > 0; length -= 1) {
-            const owner = linkedAt(keys.slice(0, length).join('.'));
-            if (!owner) continue;
-            if (owner['@kind'] !== 'invocation' || typeof owner.method !== 'string') return undefined;
-            let type: unknown = linkedAt(owner.method)?.return;
-            for (const key of keys.slice(length)) type = fieldsOfType(type)?.[key];
-            return type;
-        }
-        return undefined;
-    };
-
     // The type of a list path from the linked model, and the field names of its items when they are records.
     const declaredListType = (path: string): {type: string; columns?: string[]} => {
-        const schema = declaredTypeAt(path);
+        const schema = linkedAt(path);
         if (!isRecord(schema)) return {type: 'any[]'};
         const columns = Object.keys(fieldsOfType(schema.items) ?? {});
         return {type: typeText(schema) ?? 'any[]', ...(columns.length > 0 && {columns})};
