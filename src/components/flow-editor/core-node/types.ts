@@ -100,7 +100,7 @@ export interface NodeMenuButtonProps {
 
 export interface NodeFrameProps {
     field: string; // model field path
-    label?: string; // '@node-name'; the title falls back to the field
+    label?: string; // '@name'; the title falls back to the field
     testId: string;
     selected?: boolean;
     width: number; // px, from the node layout; the least width when `fit` is set
@@ -113,7 +113,7 @@ export interface NodeFrameProps {
     menuItems: RowMenuItem[];
     editing: NodeEditing<{kind: string}> | null;
     onEditingChange: (editing: CoreEditing | null) => void;
-    onRenameNode?: (text: string) => string | void; // replaces the '@node-name' write; returns an error text
+    onRenameNode?: (text: string) => string | void; // replaces the '@name' write; returns an error text
     children: ReactNode; // the body: tracks, or an empty state
 }
 

@@ -105,8 +105,7 @@ describe('loan origination model', () => {
     it('describes only paths the model has', () => {
         const service = engine();
         for (const path of Object.keys(LOAN_ORIGINATION_DOCUMENTATION.byPath)) {
-            // `ALL` also reads the type definitions.
-            expect(service.get(path, 'ALL'), path).not.toHaveProperty('@kind', 'error');
+            expect(service.get(path), path).not.toHaveProperty('@kind', 'error');
         }
     });
 
@@ -143,8 +142,8 @@ describe('loan origination model', () => {
     describe('layers', () => {
         it('derives the facts of every applicant and of the application', async () => {
             const service = engine();
-            expect(service.get('Applicant', 'TYPE_DEFINITIONS')).toHaveProperty(['@facts', '@kind'], 'facts-schema');
-            expect(service.get('Application', 'TYPE_DEFINITIONS')).toHaveProperty(['@facts', '@kind'], 'facts-schema');
+            expect(service.get('ApplicantFacts')).toHaveProperty('@kind', 'facts');
+            expect(service.get('ApplicationFacts')).toHaveProperty('@kind', 'facts');
             const result = (await service.execute('*')) as {
                 originationBook: {application: {application: Record<string, unknown>}};
             };
@@ -158,13 +157,13 @@ describe('loan origination model', () => {
 
         it.each(DECISIONS)('declares %s as a decision with requirements', (name) => {
             const schema = engine().get(name);
-            expect(schema).toHaveProperty('@kind', 'decision-schema');
-            expect(schema).toHaveProperty('@requires');
+            expect(schema).toHaveProperty('@kind', 'decision');
+            expect(schema).toHaveProperty('requires');
         });
 
         it('makes the service depend on the applicant and the application decisions', () => {
             expect(engine().get('loanOriginationDecision')).toHaveProperty(
-                ['@requires', 'decisions'],
+                ['requires', 'decisions'],
                 ['ApplicantPolicy', 'ApplicantScore', 'HouseholdRisk', 'LoanDecision', 'LoanOffer', 'LoanPricing'],
             );
         });
@@ -321,12 +320,12 @@ describe('loan origination model', () => {
                 for (const sink of [...layout.outputs, ...(layout.charts ?? [])]) {
                     const {node, handle} = sink.source!;
                     expect(node.startsWith(`${root}.`), sink.label).toBe(true);
-                    const field = service.get(node) as {'@node'?: string; '@method'?: string};
+                    const field = service.get(node) as {'@node'?: string; method?: string};
                     expect(field['@node'], `${root} ${sink.label}`).toBe('FunctionNode');
                     const result = handle.slice('out:'.length);
                     if (result === 'result') continue;
-                    const callee = field['@method']!;
-                    expect(service.get(callee), `${node} ${handle}`).toHaveProperty(['@return', result]);
+                    const callee = field.method!;
+                    expect(service.get(callee), `${node} ${handle}`).toHaveProperty(['return', 'fields', result]);
                 }
             }
         });

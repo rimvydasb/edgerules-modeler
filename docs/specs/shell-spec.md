@@ -232,7 +232,7 @@ its entries with `onOpen`.
 
 The breadcrumb has one item for the model and one item for each path segment.
 
-The first item is the model name (`@model-name` of the model root), or `Model` when the model has no name.
+The first item is the model name (`metadata.name` of the `model` slice), or `Model` when the model has no name.
 
 | Root path                | Breadcrumb items                            |
 | ------------------------ | ------------------------------------------- |
@@ -246,8 +246,8 @@ The first item is the model name (`@model-name` of the model root), or `Model` w
 - A click on an item sets the root path to the path of that item.
 - In the Tests view, a click on an item also sets the view to Boxed.
 - A root path that a Flow view opens in the Boxed Editor (`Expand` of the split screen, or `Open in…` of a node) has the
-  item of that Flow view after the model name, unless the root path is inside it. The item shows the `@node-name` of the
-  Flow view root, or its field name. A click on it opens that Flow view. Another root path removes the item.
+  item of that Flow view after the model name, unless the root path is inside it. The item shows the `@name` of the Flow
+  view root, or its field name. A click on it opens that Flow view. Another root path removes the item.
 
 | Opened from              | Root path       | Breadcrumb items                                                  |
 | ------------------------ | --------------- | ----------------------------------------------------------------- |
@@ -291,8 +291,8 @@ The first item is the model name (`@model-name` of the model root), or `Model` w
 - `onCreateTest(subjectId)` calls `session.tests.forSubject(subjectId).addTestCase()`.
 - `readOnly` hides the add buttons of the explorer.
 - A model change re-reads the model in the explorer. The expanded sections stay expanded.
-- A segment with a `@node-name` annotation shows the field name. The breadcrumb shows model paths, not node titles. The
-  item of the Flow view that opened the root path is the one exception.
+- A segment with a `@name` annotation shows the field name. The breadcrumb shows model paths, not node titles. The item
+  of the Flow view that opened the root path is the one exception.
 
 ### The settings dialog edits the name and the description of the root path
 
@@ -301,23 +301,24 @@ The settings button (`IconSettings`) is in the header left of the view switch. I
 `@FunctionNode`, or with a label-only `@Name("...")`. It does not show for another entity or when `readOnly` is set. A
 click opens the dialog immediately.
 
-| Root path        | Dialog title        | Name field                                  | Version field     | Description field           |
-| ---------------- | ------------------- | ------------------------------------------- | ----------------- | --------------------------- |
-| `'*'`            | `Model settings`    | The model name (`setModelMetadata`)         | The model version | `documentation` at `'*'`    |
-| Workbook         | `Workbook settings` | The `@Name` label (`@node-name`)            | None              | `documentation` at the path |
-| Service          | `Service settings`  | The `@Name` label (`@node-name`)            | None              | `documentation` at the path |
-| Annotated entity | `<Node> settings`   | The `name` of the annotation (`@node-name`) | None              | `documentation` at the path |
+| Root path        | Dialog title        | Name field                             | Version field     | Description field           |
+| ---------------- | ------------------- | -------------------------------------- | ----------------- | --------------------------- |
+| `'*'`            | `Model settings`    | The model name (`setModelMetadata`)    | The model version | `documentation` at `'*'`    |
+| Workbook         | `Workbook settings` | The `@Name` label (`@name`)            | None              | `documentation` at the path |
+| Service          | `Service settings`  | The `@Name` label (`@name`)            | None              | `documentation` at the path |
+| Annotated entity | `<Node> settings`   | The `name` of the annotation (`@name`) | None              | `documentation` at the path |
 
 - The dialog is the Mantine `lg` size. The value cells (name, version and description) have the white body fill.
 - Save writes all fields in one `session.transaction`. A failed write changes nothing and shows the error in the dialog.
 - An empty name removes the name: `@Name("Loan book")` is removed, and `@InputNode(name: "Applicant")` becomes
   `@InputNode`. The field name does not change. Use the rename of the Project Explorer or the Boxed Editor to rename the
   field.
-- An annotation name write uses `setWithLinkCheck` on the authored entity with the new `@node-name`.
-- The model name and version are not part of the DSL: the engine has no syntax for them and drops `@model-name`. The
-  project manifest keeps them as `model.name` and `model.version`. The session engine adds them to the model root as
-  `@model-name` and `@model-version` in `get('*')` and `toPortable()`, so the Boxed Editor header and the Tests Manager
-  show the model name.
+- An annotation name write is an annotation-only `set` of the entity: `{'@kind': <kind>, '@name': <name>}`, or
+  `'@name': null` to remove the name. It keeps the node and its value, and does not change whether the model links.
+- The model name and version are not part of the model: neither the DSL nor the Portable format has a key for them, and
+  the engine rejects `@model-name` and `@model-version`. The project manifest keeps them as `model.name` and
+  `model.version`; the `model` slice snapshot gives them as `metadata`. The Shell passes the name to the Boxed Editor
+  service (`createBoxedEditorService(engine, {modelName})`) for the header of the model row.
 - The Boxed Editor has no settings dialog. The Shell settings replace it.
 
 ### The Flow view of the model offers the workbooks
@@ -417,7 +418,7 @@ annotation as a node.
 
 | Node            | Node id                 | Source in the model                            | Pins                                                                    |
 | --------------- | ----------------------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
-| `ParameterNode` | `<service>.<parameter>` | One entry of `@parameters` and its type        | Out: one per field of a record type, and the whole value                |
+| `ParameterNode` | `<service>.<parameter>` | One entry of `parameters` and its type         | Out: one per field of a record type, and the whole value                |
 | `FunctionNode`  | `<service>.<field>`     | A `@FunctionNode` field of the body            | In: arguments. Out: results                                             |
 | `ReturnNode`    | `<service>.return`      | The `return` field: a context or an expression | A context: one per field, and the add pin `in:+`. An expression: `in:*` |
 

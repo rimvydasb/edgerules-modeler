@@ -8,7 +8,7 @@ export type ValueInputNodeType = Node<ValueInputNodeData, 'valueInputNode'>;
 
 export interface ValueInputNodeModel {
     field: string; // model field path
-    label?: string; // '@node-name'
+    label?: string; // '@name'
     type: string; // the value type, for example 'number' or 'string'
     value?: string; // expression text, for example '23' or "'retail'"; undefined when the field does not exist
 }

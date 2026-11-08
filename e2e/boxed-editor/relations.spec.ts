@@ -146,13 +146,13 @@ test.describe('Boxed Editor / drag and drop', () => {
     test('reorders optimisation variables and constraints', async ({page}) => {
         await openBoxedEditorStory(page, 'full-model');
         await dragRow(page, 'factoryProduction.variables.chairs', 'factoryProduction.variables.tables');
-        await expectLiveModel(page, /"@variables":\{"tables".*"chairs"/s);
+        await expectLiveModel(page, /"variables":\{"tables".*"chairs"/s);
         await dragRow(
             page,
             'factoryProduction.constraints.workerCapacity',
             'factoryProduction.constraints.stickSupply',
         );
-        await expectLiveModel(page, /"@constraints":\{"stickSupply".*"workerCapacity"/s);
+        await expectLiveModel(page, /"constraints":\{"stickSupply".*"workerCapacity"/s);
     });
 
     test('reorders relation items', async ({page}) => {

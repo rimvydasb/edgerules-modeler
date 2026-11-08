@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
 import type {FlowEditorOpenTarget} from '../../flow-editor-types';
 import {renderNode} from '../../testing/renderNode';
+import {compactModel} from '#lib/testing/compactPortable';
 
 const renderInput = (options: Parameters<typeof renderNode>[1] = {}) =>
     renderNode('applicant', {...options, input: 'object'});
@@ -41,7 +42,7 @@ describe('ObjectInputNode', () => {
         expect(screen.getByText('values')).toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Value of age'})).toHaveTextContent('23');
         expect(screen.getByRole('button', {name: 'Value of income'})).toHaveTextContent('25000');
-        expect(screen.getByRole('button', {name: 'Value of segment'})).toHaveTextContent("'retail'");
+        expect(screen.getByRole('button', {name: 'Value of segment'})).toHaveTextContent('\"retail\"');
     });
 
     it('shows a declaration with a kind icon, no value and no output pin', () => {
@@ -72,7 +73,7 @@ describe('ObjectInputNode', () => {
             expect(await service.readOutput('decision.level')).toEqual({value: 'high', type: 'string'});
             await typeValue('age', '30');
             await waitFor(() => expect(screen.getByRole('button', {name: 'Value of age'})).toHaveTextContent('30'));
-            expect(mutable.toPortable()).toMatchObject({applicant: {age: 30}});
+            expect(compactModel(mutable)).toMatchObject({applicant: {age: 30}});
             expect(await service.readOutput('decision.level')).toEqual({value: 'medium', type: 'string'});
         });
 
@@ -81,7 +82,7 @@ describe('ObjectInputNode', () => {
             await typeValue('age', '30 +');
             expect(await screen.findByRole('alert')).toBeInTheDocument();
             expect(screen.getByTestId('value-editor-age')).toBeInTheDocument();
-            expect(mutable.toPortable()).toMatchObject({applicant: {age: 23}});
+            expect(compactModel(mutable)).toMatchObject({applicant: {age: 23}});
         });
 
         it('restores the value on Escape', async () => {

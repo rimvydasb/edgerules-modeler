@@ -277,7 +277,7 @@ describe('Shell project explorer', () => {
         await user.clear(name);
         await user.type(name, 'pricing');
         await user.click(screen.getByRole('button', {name: 'Create'}));
-        expect(session.engine.toPortable()['pricing']).toMatchObject({'@kind': 'service'});
+        expect(session.engine.toPortable().fields['pricing']).toMatchObject({'@kind': 'service'});
         expect(breadcrumbItems()).toEqual(['Model', 'pricing(...)']);
         expect(screen.getByRole('radio', {name: 'Flow'})).toHaveAttribute('aria-checked', 'true');
     });

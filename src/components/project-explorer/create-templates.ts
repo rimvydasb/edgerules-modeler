@@ -1,4 +1,4 @@
-import type {PortableNode} from '@edgerules/portable';
+import type {PortableSetValue} from '@edgerules/portable';
 import type {ExplorerEntryKind, ExplorerSection} from './tree-model';
 
 /** One "New …" item of a section menu. */
@@ -6,10 +6,10 @@ export interface CreateOption {
     kind: ExplorerEntryKind;
     label: string;
     defaultName: string; // the start of the proposed name; a number makes it unique
-    template: () => PortableNode;
+    template: () => PortableSetValue;
 }
 
-const EMPTY_BODY = {'@kind': 'context', result: 0};
+const EMPTY_BODY = {'@kind': 'context', fields: {result: 0}} as const;
 
 // The smallest valid entity of each kind; the user completes it in the opened editor.
 // A method is a function or a ruleset; a service is a `service` declaration and a workbook a root `workbook`
@@ -24,7 +24,7 @@ export const CREATE_OPTIONS: Record<
             kind: 'type',
             label: 'Type',
             defaultName: 'NewType',
-            template: () => ({'@kind': 'type-definition', value: {'@kind': 'type', type: 'string'}}) as PortableNode,
+            template: () => ({'@kind': 'type', fields: {value: {'@kind': 'placeholder', type: 'string'}}}),
         },
     ],
     methods: [
@@ -32,20 +32,19 @@ export const CREATE_OPTIONS: Record<
             kind: 'function',
             label: 'Function',
             defaultName: 'newFunction',
-            template: () => ({'@kind': 'function', '@parameters': {}, '@body': EMPTY_BODY}) as PortableNode,
+            template: () => ({'@kind': 'method', parameters: {}, body: EMPTY_BODY}),
         },
         {
             kind: 'ruleset',
             label: 'Ruleset',
             defaultName: 'newRuleset',
-            template: () =>
-                ({
-                    '@kind': 'ruleset',
-                    '@parameters': {value: 'number'},
-                    '@hitPolicy': 'first-match',
-                    '@rules': [],
-                    '@default': EMPTY_BODY,
-                }) as PortableNode,
+            template: () => ({
+                '@kind': 'ruleset',
+                parameters: {value: 'number'},
+                hitPolicy: 'first-match',
+                rules: [],
+                default: EMPTY_BODY,
+            }),
         },
     ],
     services: [
@@ -53,7 +52,7 @@ export const CREATE_OPTIONS: Record<
             kind: 'service',
             label: 'Service',
             defaultName: 'newService',
-            template: () => ({'@kind': 'service', '@parameters': {}, '@body': EMPTY_BODY}) as PortableNode,
+            template: () => ({'@kind': 'service', parameters: {}, body: EMPTY_BODY}),
         },
     ],
     variables: [
@@ -62,7 +61,7 @@ export const CREATE_OPTIONS: Record<
             kind: 'context',
             label: 'Context',
             defaultName: 'newContext',
-            template: () => ({'@kind': 'context'}) as PortableNode,
+            template: () => ({'@kind': 'context', fields: {}}),
         },
     ],
     workbooks: [
@@ -70,7 +69,7 @@ export const CREATE_OPTIONS: Record<
             kind: 'workbook',
             label: 'Workbook',
             defaultName: 'newWorkbook',
-            template: () => ({'@kind': 'workbook'}) as PortableNode,
+            template: () => ({'@kind': 'workbook', fields: {}}),
         },
     ],
 };

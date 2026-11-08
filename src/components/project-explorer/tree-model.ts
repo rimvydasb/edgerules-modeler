@@ -1,7 +1,6 @@
 import type {PortableContext, PortableNode} from '@edgerules/portable';
 import {untypedParameters} from '#lib/callables';
-import {factsPath} from '#lib/factsPaths';
-import {callableParameters} from '#lib/portableUtils';
+import {callableParameters, fieldsOf} from '#lib/portableUtils';
 
 /** Literal `get()` argument for the root context. */
 export const ROOT_FETCH_PATH = '*';
@@ -39,7 +38,7 @@ export type ExplorerEntryKind =
 
 export interface ExplorerEntry {
     kind: ExplorerEntryKind;
-    // the fully qualified model path; `<Type>.@facts` for facts; the test subject ID for a test; `doc:<file>` for a document
+    // the fully qualified model path; the test subject ID for a test; `doc:<file>` for a document
     path: string;
     label: string;
     children?: ExplorerEntry[]; // the nodes of a workbook
@@ -59,15 +58,12 @@ function isRecord(node: unknown): node is Record<string, unknown> {
     return node !== null && typeof node === 'object' && !Array.isArray(node);
 }
 
-// Widened to `string | undefined`: the engine's default filter returns schema kinds (`'function-schema'`,
-// `'service-schema'`, `'ruleset-schema'`, …) for callables (see API_SPEC.md), shapes that are not part of the declared
-// `PortableNode` union.
 function kindOf(node: Record<string, unknown>): string | undefined {
     return node['@kind'] as string | undefined;
 }
 
-// The `@kind` of a function: a `func` or an external function, in the authored or the schema view.
-const FUNCTION_KINDS = new Set(['function', 'function-schema', 'external-function']);
+// The `@kind` of a function: a `func` or an external function, in the declaration or the interface view.
+const FUNCTION_KINDS = new Set(['method', 'method-interface', 'external-method']);
 
 /**
  * The method kind of a callable field, or undefined when the field is not callable. A `service` and a `decision` are
@@ -76,17 +72,15 @@ const FUNCTION_KINDS = new Set(['function', 'function-schema', 'external-functio
 export function methodKind(node: unknown): 'function' | 'decision' | 'service' | 'ruleset' | undefined {
     if (!isRecord(node)) return undefined;
     const kind = kindOf(node);
-    if (kind === 'service' || kind === 'service-schema') return 'service';
-    if (kind === 'decision' || kind === 'decision-schema') return 'decision';
+    if (kind === 'service' || kind === 'service-interface') return 'service';
+    if (kind === 'decision' || kind === 'decision-interface') return 'decision';
     if (kind !== undefined && FUNCTION_KINDS.has(kind)) return 'function';
-    if (kind === 'ruleset' || kind === 'ruleset-schema') return 'ruleset';
+    if (kind === 'ruleset' || kind === 'ruleset-interface') return 'ruleset';
     return undefined;
 }
 
 function isContext(node: unknown): node is Record<string, unknown> {
-    if (!isRecord(node)) return false;
-    const kind = kindOf(node);
-    return kind === undefined || kind === 'context';
+    return isRecord(node) && kindOf(node) === 'context';
 }
 
 /** A root `workbook` declaration: `@kind: 'workbook'`. */
@@ -98,11 +92,10 @@ export function joinPath(parentPath: string, name: string): string {
     return parentPath === '' ? name : `${parentPath}.${name}`;
 }
 
-// The own fields of a context. A `.` never appears in an identifier (EBNF.md), so a dotted key is a projection
-// artifact of the engine, not a field.
-function fields(context: Record<string, unknown>): [string, PortableNode][] {
-    return Object.entries(context)
-        .filter(([name, value]) => !name.startsWith('@') && !name.includes('.') && value !== undefined)
+// The own fields of a context or a workbook.
+function fields(context: unknown): [string, PortableNode][] {
+    return Object.entries(fieldsOf(context) ?? {})
+        .filter(([, value]) => value !== undefined)
         .map(([name, value]) => [name, value as PortableNode]);
 }
 
@@ -124,7 +117,7 @@ function collectMethods(contextPath: string, context: Record<string, unknown>, s
             sections[section].push({
                 kind,
                 path,
-                label: methodLabel(path, node as Record<string, unknown>),
+                label: methodLabel(path, node as unknown as Record<string, unknown>),
                 ...(untypedArguments.length > 0 && {untypedArguments}),
             });
         } else if (isContext(node)) collectMethods(path, node, sections);
@@ -149,13 +142,13 @@ function workbookNodeKind(node: unknown): ExplorerEntryKind {
     if (method) return method;
     const kind = kindOf(node);
     if (kind === 'invocation') return 'function-node';
-    if (kind === 'context' || kind === 'type') return 'input-node';
+    if (kind === 'context' || kind === 'placeholder') return 'input-node';
     return 'node';
 }
 
-// The label of a workbook: its `@Name` (`@node-name`), else its name.
+// The label of a workbook: its `@Name` (`@name`), else its name.
 function workbookLabel(name: string, workbook: Record<string, unknown>): string {
-    const label = workbook['@node-name'];
+    const label = workbook['@name'];
     return typeof label === 'string' && label !== '' ? label : name;
 }
 
@@ -167,9 +160,8 @@ function byLabel(a: ExplorerEntry, b: ExplorerEntry): number {
 /**
  * Splits the project into the explorer sections, each sorted by name:
  * - **Documents**: the document files of `documents`, such as `README.md`, as `doc:<file>` paths. The engine has none.
- * - **Types**: the type definitions of the root.
- * - **Facts Library**: every `facts` declaration, by the name of its type. The engine keeps it under the `@facts` key of
- *   the type definition, so the entry path is `<Type>.@facts` (`#lib/factsPaths`).
+ * - **Types**: the `type` declarations of the root.
+ * - **Facts Library**: the `facts` declarations of the root.
  * - **Methods**: every function and ruleset, also inside contexts, by qualified path: `path(...)` when it has
  *   arguments, `path()` when it has none.
  * - **Decisions**: every `decision` declaration, labelled like a method.
@@ -181,7 +173,6 @@ function byLabel(a: ExplorerEntry, b: ExplorerEntry): number {
  */
 export function buildSections(
     model: PortableContext,
-    types: PortableContext | undefined,
     testSubjects: readonly string[],
     documents: readonly string[] = [],
 ): ExplorerSections {
@@ -197,15 +188,18 @@ export function buildSections(
         tests: [],
     };
 
-    for (const [name, definition] of types ? fields(types) : []) {
-        sections.types.push({kind: 'type', path: name, label: name});
-        if (isRecord(definition) && isRecord(definition['@facts'])) {
-            sections.factsLibrary.push({kind: 'facts', path: factsPath(name), label: name});
-        }
-    }
-    collectMethods('', model as Record<string, unknown>, sections);
+    collectMethods('', model as unknown as Record<string, unknown>, sections);
     for (const [name, node] of fields(model)) {
         if (methodKind(node)) continue;
+        const kind = isRecord(node) ? kindOf(node) : undefined;
+        if (kind === 'type') {
+            sections.types.push({kind: 'type', path: name, label: name});
+            continue;
+        }
+        if (kind === 'facts') {
+            sections.factsLibrary.push({kind: 'facts', path: name, label: name});
+            continue;
+        }
         if (isWorkbook(node)) {
             const children = workbookNodes(name, node);
             sections.workbooks.push({kind: 'workbook', path: name, label: workbookLabel(name, node), children});
@@ -220,7 +214,7 @@ export function buildSections(
         const label = subjectId === '*' ? 'Model' : (methodLabels.get(subjectId) ?? `${subjectId}()`);
         sections.tests.push({kind: 'test', path: subjectId, label});
     }
-    // The engine projection does not keep the source order: a section lists its entries by name, the model test first.
+    // A section lists its entries by name, the model test first.
     for (const entries of Object.values(sections)) entries.sort(byLabel);
     return sections;
 }

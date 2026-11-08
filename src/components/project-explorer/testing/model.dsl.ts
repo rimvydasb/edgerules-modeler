@@ -8,7 +8,7 @@ export const MODEL_DSL = `{
         name: <string>; age: <number>; tags: <string[]>
     }
     type PeopleList: <Person[]>
-    facts Person(person: Person): { adult: person.age >= 18 }
+    facts PersonFacts(person: Person): { adult: person.age >= 18 }
     decision Eligibility(person: Person): { eligible: person.adult }
     func riskScore(income: number): { score: income / 100 }
     service processApplication(income: number): { result: riskScore(income).score }

@@ -1,32 +1,23 @@
-import {splitFactsPath} from '#lib/factsPaths';
 import {embedService, type CodeEditorEmbedContext, type CodeEditorService} from '../../code-editor/language/service';
 
 // `getCode('*')` indents every nesting level by this much.
 const INDENT = '    ';
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-interface Step {
-    name: string;
-    keyword?: 'facts'; // a facts declaration has the name of its type: only the keyword tells them apart
-}
-
-function stepsOf(root: string): Step[] | undefined {
-    const facts = splitFactsPath(root);
-    if (facts) return facts.rest === '' ? [{name: facts.type, keyword: 'facts'}] : undefined;
+function stepsOf(root: string): string[] | undefined {
     const names = root.split('.');
-    return names.every((name) => IDENTIFIER.test(name)) ? names.map((name) => ({name})) : undefined;
+    return names.every((name) => IDENTIFIER.test(name)) ? names : undefined;
 }
 
-// The declaration line of `step` at `indent`: `name: …`, `func name(…`, `type name: …`, `facts Type(…` and so on.
-function declares(rest: string, step: Step): boolean {
-    if (step.keyword) return new RegExp(`^${step.keyword} ${step.name}\\s*\\(`).test(rest);
-    return new RegExp(`^(?:(?!facts )[a-z]+ )?${step.name}\\s*[:(]`).test(rest);
+// The declaration line of `name` at `indent`: `name: …`, `func name(…`, `type name: …`, `facts name(…` and so on.
+function declares(rest: string, name: string): boolean {
+    return new RegExp(`^(?:[a-z]+ )?${name}\\s*[:(]`).test(rest);
 }
 
 /**
  * The text around the code of `root` in `model`, the canonical code of the whole model (`getCode('*')`), so that the
- * code of one entity can be analyzed in the scope of the model. `code` is the code of `root` as `getCode(root)` (or
- * `factsCode`) returns it. Undefined for the model root, or when `root` is not found in `model`.
+ * code of one entity can be analyzed in the scope of the model. `code` is the code of `root` as `getCode(root)` returns
+ * it. Undefined for the model root, or when `root` is not found in `model`.
  */
 export function codeEmbedContext(model: string, root: string, code: string): CodeEditorEmbedContext | undefined {
     if (root === '*' || code === '') return undefined;

@@ -1,9 +1,9 @@
-import type {PortableError, PortableNode} from '@edgerules/portable';
+import type {PortableError, PortableNode, PortableSetValue} from '@edgerules/portable';
 import {isPortableError} from './portable';
 
 /** Structural subset of `MutableDecisionService` that `setWithLinkCheck` uses. */
 export interface LinkCheckService {
-    set(path: string, node: PortableNode): PortableNode | PortableError;
+    set(path: string, node: PortableSetValue): PortableNode | PortableError;
     remove(path: string): void | PortableError;
     link(): void;
 }
@@ -21,8 +21,8 @@ export interface LinkCheckService {
 export function setWithLinkCheck(
     mutable: LinkCheckService,
     writePath: string,
-    writeNode: PortableNode,
-    previousNode: PortableNode | undefined,
+    writeNode: PortableSetValue,
+    previousNode: PortableSetValue | undefined,
 ): PortableNode | PortableError {
     let previousLinkError: PortableError | undefined;
     try {

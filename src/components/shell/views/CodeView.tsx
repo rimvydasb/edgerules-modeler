@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactElement} from 'react';
-import {factsCode, setFactsCode, splitFactsPath} from '#lib/factsPaths';
 import {isPortableError} from '#lib/portable';
 import {CodeEditor, type CodeEditorService} from '../../code-editor';
 import {useProjectSession, useProjectSlice, type ProjectSession} from '../../project-session';
@@ -19,9 +18,7 @@ export interface CodeViewProps {
 
 function committedCode(session: ProjectSession, root: string): string {
     if (root === '*') return session.getDslDraft();
-    // The engine returns a type without its facts: the facts declaration is cut from the code of the model.
-    const facts = splitFactsPath(root);
-    const code = facts ? factsCode(session.engine, facts.type) : session.engine.getCode(root);
+    const code = session.engine.getCode(root);
     return isPortableError(code) ? '' : code;
 }
 
@@ -29,8 +26,7 @@ function committedCode(session: ProjectSession, root: string): string {
 // back with the transaction.
 function commitPath(session: ProjectSession, root: string, code: string): string | undefined {
     const result = session.transaction(() => {
-        const facts = splitFactsPath(root);
-        const written = facts ? setFactsCode(session.engine, facts.type, code) : session.engine.setCode(root, code);
+        const written = session.engine.setCode(root, code);
         if (isPortableError(written)) throw new Error(written.message);
         session.engine.link();
     });

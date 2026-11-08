@@ -82,7 +82,8 @@ describe('Shell settings', () => {
         await saveSettings(user, {Name: 'Risk desk', Version: '2.1.0', Description: 'Scores loans'});
 
         expect(session.getSlice('model').metadata).toEqual({name: 'Risk desk', version: '2.1.0'});
-        expect(session.engine.toPortable()).toMatchObject({'@model-name': 'Risk desk', '@model-version': '2.1.0'});
+        // The model has no name of its own: the metadata stays out of the engine.
+        expect(JSON.stringify(session.engine.toPortable())).not.toContain('Risk desk');
         expect(session.documentation.getDescription('*')).toBe('Scores loans');
         expect(session.exportBundle().manifest.model).toMatchObject({name: 'Risk desk', version: '2.1.0'});
         expect(screen.getByTestId('row-*').querySelector('[role="heading"]')).toHaveTextContent('Risk desk');
@@ -119,7 +120,9 @@ describe('Shell settings', () => {
         expect(workbookLine(session, 'loanBook')).toBe('@Name("Mortgage book")');
         expect(session.documentation.getDescription('loanBook')).toBe('The mortgages');
         // The field keeps its name and its nodes.
-        expect(session.engine.toPortable()).toMatchObject({loanBook: {'@node-name': 'Mortgage book', input: {}}});
+        expect(session.engine.toPortable().fields).toMatchObject({
+            loanBook: {'@name': 'Mortgage book', fields: {input: {}}},
+        });
     });
 
     it('names an unnamed workbook with @Name, and an empty name removes it', async () => {

@@ -78,8 +78,7 @@ describe('deriveRows — model subject', () => {
     });
 
     // The engine rejects a recursive type at *link* time (`E210: recursive type alias`), but `get()`
-    // no longer errors for a linking reason (edgerules `doc/architecture/CRUD_SPEC.md`) — it falls back to
-    // the raw, type-free AST projection instead, uniformly for every path. So `deriveRows` still gets
+    // never errors for a linking reason — it returns the unlinked view (`linked: false`) instead. So `deriveRows` still gets
     // a readable (if untyped) schema here, and the existing `seen` guard in `expandTypeRef` (built for
     // the ordinary non-recursive case) is what actually stops the walk at one level.
     it('terminates the walk at one level for a model whose only type is recursive', () => {
@@ -88,11 +87,9 @@ describe('deriveRows — model subject', () => {
       root: <Node>
     }`);
         const rows = deriveRows(service, MODEL_SUBJECT);
-        // `root`'s typed hole loses its `writeOnly` flag along with the rest of its link-derived
-        // enrichment while the model doesn't link, so `walkDataContext` classifies it (and everything
-        // it expands into) as computed rather than input — an accepted quirk of the degraded view, not
-        // specific to this test.
-        expect(pathsIn(rows, 'validations')).toEqual(['root.name', 'root.children', 'root.children[0]']);
+        // `writeOnly` is not a linked key: the unlinked view keeps it, so `root` stays an input.
+        expect(pathsIn(rows, 'inputs')).toEqual(['root.name', 'root.children', 'root.children[0]']);
+        expect(pathsIn(rows, 'validations')).toEqual([]);
     });
 
     it('expands a multi-dimensional array one index per dimension', () => {

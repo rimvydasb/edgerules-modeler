@@ -14,6 +14,7 @@ import {createTestCasesService} from '../../test-cases-service';
 import type {TestCasesService, TestRow} from '../../test-cases-service';
 import {createTestRunner} from '../../tests-manager';
 import type {MutableDecisionService as RunnerService, TestRunner, TestSubject} from '../../tests-manager';
+import {compactModel} from '#lib/testing/compactPortable';
 
 const MODEL_SUBJECT: TestSubject = {id: '*', kind: 'model', name: 'Model'};
 
@@ -119,7 +120,7 @@ describe('test-results: triggers', () => {
         expect(runSpy).not.toHaveBeenCalled();
 
         await waitFor(() => expect(runSpy).toHaveBeenCalledTimes(1), {timeout: 1000});
-        expect(mutable.toPortable()).toMatchObject({amount: 13});
+        expect(compactModel(mutable)).toMatchObject({amount: 13});
 
         testCasesService.dispose();
     });

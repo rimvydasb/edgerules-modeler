@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import {MutableDecisionService} from '@edgerules/node/mutable';
 import {DecisionTableEditor} from '../DecisionTableEditor';
 import {BEST_MATCH_MODEL_DSL, RISK_MODEL_DSL, SCORECARD_MODEL_DSL} from '../testing/model.dsl';
+import {compact} from '#lib/testing/compactPortable';
 
 // The real dev-build engine service — never mocked (see project testing policy).
 const languageService = MutableDecisionService;
@@ -64,7 +65,7 @@ describe('DecisionTableEditor rendering', () => {
     it('renders the pinned default row', () => {
         const {container} = renderRisk();
         expect(container.textContent).toContain('default');
-        expect(container.textContent).toContain("'none'");
+        expect(container.textContent).toContain('\"none\"');
     });
 
     it('shows the hit policy and statically highlighted cells without mounting CodeMirror', () => {
@@ -166,10 +167,10 @@ describe('DecisionTableEditor editing', () => {
         await waitFor(() => {
             expect(container.querySelector('.cm-editor')).toBeNull();
         });
-        const definition = service.get('risk.*') as {
-            '@rules': Array<{when?: Record<string, string>}>;
+        const definition = compact(service.get('risk')) as {
+            rules: Array<{when?: Record<string, string>}>;
         };
-        expect(definition['@rules'][0].when).not.toHaveProperty('income');
+        expect(definition.rules[0].when).not.toHaveProperty('income');
     });
 
     it('restores the model and surfaces the engine error when an edit is rejected', async () => {
@@ -213,7 +214,7 @@ describe('DecisionTableEditor editing', () => {
 
         await user.click(screen.getByRole('button', {name: /add rule/i}));
         await waitFor(() => {
-            expect((service.get('risk.*') as {'@rules': unknown[]})['@rules']).toHaveLength(4);
+            expect((compact(service.get('risk')) as {rules: unknown[]}).rules).toHaveLength(4);
         });
 
         await user.click(screen.getByLabelText('rule 4 menu'));
@@ -221,7 +222,7 @@ describe('DecisionTableEditor editing', () => {
         // Destructive deletes require confirmation (DT-008).
         await user.click(screen.getByRole('button', {name: /delete rule/i}));
         await waitFor(() => {
-            expect((service.get('risk.*') as {'@rules': unknown[]})['@rules']).toHaveLength(3);
+            expect((compact(service.get('risk')) as {rules: unknown[]}).rules).toHaveLength(3);
         });
         expect(container.querySelectorAll('tbody tr')).toHaveLength(3 + 1 + 1); // rules + default + add-rule
         // An undo affordance follows a destructive structural edit.
@@ -236,10 +237,10 @@ describe('DecisionTableEditor editing', () => {
         await user.click(screen.getByRole('menuitem', {name: /move down/i}));
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {
-                '@rules': Array<{then: Record<string, unknown>}>;
+            const definition = compact(service.get('risk')) as {
+                rules: Array<{then: Record<string, unknown>}>;
             };
-            expect(definition['@rules'][0].then.level).toBe("'medium'");
+            expect(definition.rules[0].then.level).toBe('\"medium\"');
         });
     });
 
@@ -251,7 +252,7 @@ describe('DecisionTableEditor editing', () => {
         await user.click(screen.getByRole('option', {name: /best match/i}));
 
         await waitFor(() => {
-            expect((service.get('risk.*') as {'@hitPolicy': string})['@hitPolicy']).toBe('best-match');
+            expect((compact(service.get('risk')) as {hitPolicy: string}).hitPolicy).toBe('best-match');
         });
         const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent ?? '');
         expect(headers.some((text) => text.includes('priority'))).toBe(true);
@@ -269,10 +270,10 @@ describe('DecisionTableEditor editing', () => {
         await user.keyboard('{Control>}a{/Control}99{Enter}');
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {
-                '@default': Record<string, unknown>;
+            const definition = compact(service.get('risk')) as {
+                default: Record<string, unknown>;
             };
-            expect(definition['@default'].limit).toBe(99);
+            expect(definition['default'].limit).toBe(99);
         });
     });
 
@@ -287,10 +288,10 @@ describe('DecisionTableEditor editing', () => {
         await user.keyboard('young low income{Enter}');
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {
-                '@rules': Array<{name?: string}>;
+            const definition = compact(service.get('risk')) as {
+                rules: Array<{name?: string}>;
             };
-            expect(definition['@rules'][0].name).toBe('young low income');
+            expect(definition.rules[0].name).toBe('young low income');
         });
     });
 
@@ -304,10 +305,10 @@ describe('DecisionTableEditor editing', () => {
         await user.click(screen.getByRole('button', {name: 'OK'}));
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {
-                '@parameters': Record<string, unknown>;
+            const definition = compact(service.get('risk')) as {
+                parameters: Record<string, unknown>;
             };
-            expect(definition['@parameters']).toHaveProperty('channel');
+            expect(definition.parameters).toHaveProperty('channel');
         });
         // The `decision` call site still only passes age/income/segment — the new
         // defaulted parameter must not break it.
@@ -327,10 +328,10 @@ describe('DecisionTableEditor editing', () => {
         await user.click(screen.getByRole('button', {name: 'OK'}));
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {
-                '@rules': Array<{then: Record<string, unknown>}>;
+            const definition = compact(service.get('risk')) as {
+                rules: Array<{then: Record<string, unknown>}>;
             };
-            expect(definition['@rules'][0].then).toHaveProperty('reason');
+            expect(definition.rules[0].then).toHaveProperty('reason');
         });
     });
 
@@ -362,9 +363,9 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.click(screen.getByRole('menuitem', {name: /use expression condition/i}));
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {'@rules': Array<{when?: unknown}>};
-            expect(definition['@rules'][0].when).not.toBe('true');
-            expect(typeof (definition['@rules'][0].when as {expression?: unknown}).expression).toBe('string');
+            const definition = service.get('risk') as {rules: Array<{when?: unknown}>};
+            expect(definition.rules[0].when).not.toMatchObject({expression: 'true'});
+            expect(typeof (definition.rules[0].when as {expression?: unknown}).expression).toBe('string');
         });
         // The row must still match exactly what it matched before the conversion.
         await expect(service.execute('decision')).resolves.toEqual({level: 'high', limit: 1000});
@@ -384,8 +385,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
             expect(screen.getByRole('alert')).toBeDefined();
         });
         expect(container.textContent).toContain('or');
-        const definition = service.get('risk.*') as {'@rules': Array<{when?: {expression?: string}}>};
-        expect(definition['@rules'][2].when?.expression).toBe('age >= 65 or segment = "premium"');
+        const definition = service.get('risk') as {rules: Array<{when?: {expression?: string}}>};
+        expect(definition.rules[2].when?.expression).toBe('age >= 65 or segment = "premium"');
     });
 
     it('DT-003: adding a duplicate output-column name is rejected without touching the model', async () => {
@@ -400,8 +401,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         expect(await screen.findByText(/already used/i)).toBeDefined();
         // Dialog stays open — the field is still there.
         expect(screen.getByLabelText('Output field name')).toBeDefined();
-        const definition = service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>};
-        expect(definition['@rules'][0].then).toMatchObject({level: "'high'", limit: 1000});
+        const definition = compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>};
+        expect(definition.rules[0].then).toMatchObject({level: '\"high\"', limit: 1000});
     });
 
     it('DT-005: adding a duplicate input-column name is rejected', async () => {
@@ -414,8 +415,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.click(screen.getByRole('button', {name: 'OK'}));
 
         expect(await screen.findByText(/already used/i)).toBeDefined();
-        const definition = service.get('risk.*') as {'@parameters': Record<string, unknown>};
-        expect(definition['@parameters'].age).toBe('number');
+        const definition = compact(service.get('risk')) as {parameters: Record<string, unknown>};
+        expect(definition.parameters.age).toBe('number');
     });
 
     it('DT-004: renaming an output column to an existing name is rejected instead of merging', async () => {
@@ -430,8 +431,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.click(screen.getByRole('button', {name: 'OK'}));
 
         expect(await screen.findByText(/already used/i)).toBeDefined();
-        const definition = service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>};
-        expect(definition['@rules'][0].then).toMatchObject({level: "'high'", limit: 1000});
+        const definition = compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>};
+        expect(definition.rules[0].then).toMatchObject({level: '\"high\"', limit: 1000});
     });
 
     it('DT-008: deleting a column requires confirmation and offers undo', async () => {
@@ -442,20 +443,20 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.click(screen.getByRole('menuitem', {name: /delete column/i}));
         // Not deleted yet — awaiting confirmation.
         expect(
-            (service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>})['@rules'][0].then,
+            (compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>}).rules[0].then,
         ).toHaveProperty('level');
 
         await user.click(screen.getByRole('button', {name: /delete column/i}));
         await waitFor(() => {
             expect(
-                (service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>})['@rules'][0].then,
+                (compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>}).rules[0].then,
             ).not.toHaveProperty('level');
         });
 
         await user.click(await screen.findByRole('button', {name: /undo/i}));
         await waitFor(() => {
             expect(
-                (service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>})['@rules'][0].then,
+                (compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>}).rules[0].then,
             ).toHaveProperty('level');
         });
     });
@@ -470,13 +471,13 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         // confirm the destructive change.
         await user.click(screen.getByRole('button', {name: /change policy/i}));
         await waitFor(() => {
-            expect((service.get('risk.*') as {'@default'?: unknown})['@default']).toBeUndefined();
+            expect((compact(service.get('risk')) as {default?: unknown})['default']).toBeUndefined();
         });
 
         await user.click(screen.getByRole('combobox', {name: 'Hit policy'}));
         await user.click(screen.getByRole('option', {name: /first match/i}));
         await waitFor(() => {
-            expect((service.get('risk.*') as {'@default'?: {level?: string}})['@default']?.level).toBe("'none'");
+            expect((compact(service.get('risk')) as {default?: {level?: string}})['default']?.level).toBe('\"none\"');
         });
     });
 
@@ -535,12 +536,9 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.click(screen.getByRole('menuitem', {name: /move right/i}));
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>};
-            expect(Object.keys(definition['@rules'][0].then).filter((key) => key !== '@kind')).toEqual([
-                'limit',
-                'level',
-            ]);
-            expect(definition['@rules'][0].then).toMatchObject({level: "'high'", limit: 1000});
+            const definition = compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>};
+            expect(Object.keys(definition.rules[0].then).filter((key) => key !== '@kind')).toEqual(['limit', 'level']);
+            expect(definition.rules[0].then).toMatchObject({level: '\"high\"', limit: 1000});
         });
     });
 
@@ -559,8 +557,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.type(input, '-3{Enter}');
 
         expect(await screen.findByText(/positive whole number/i)).toBeDefined();
-        const definition = service.get('tier.*') as {'@rules': Array<{priority?: number}>};
-        expect(definition['@rules'][0].priority).toBe(1);
+        const definition = compact(service.get('tier')) as {rules: Array<{priority?: number}>};
+        expect(definition.rules[0].priority).toBe(1);
     });
 
     it('DT-031: read-only cells are not exposed as buttons or left in the tab order', () => {
@@ -596,8 +594,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.click(screen.getByRole('button', {name: 'OK'}));
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {'@parameters': Record<string, unknown>};
-            expect(definition['@parameters'].note).toMatchObject({type: 'boolean'});
+            const definition = compact(service.get('risk')) as {parameters: Record<string, unknown>};
+            expect(definition.parameters.note).toMatchObject({type: 'boolean'});
         });
     });
 
@@ -613,8 +611,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
         await user.click(screen.getByRole('button', {name: 'OK'}));
 
         await waitFor(() => {
-            const definition = service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>};
-            expect(definition['@rules'][0].then.approved).toBe(false);
+            const definition = compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>};
+            expect(definition.rules[0].then.approved).toBe(false);
         });
     });
 
@@ -638,8 +636,8 @@ describe('DecisionTableEditor bug fixes (docs/boxed-editor/bugs-in-decision-tabl
 
         expect(await screen.findByText(/valid column name/i)).toBeDefined();
         expect(screen.getByLabelText('Output field name')).toBeDefined();
-        const definition = service.get('risk.*') as {'@rules': Array<{then: Record<string, unknown>}>};
-        expect(Object.keys(definition['@rules'][0].then).filter((key) => key !== '@kind')).toEqual(['level', 'limit']);
+        const definition = compact(service.get('risk')) as {rules: Array<{then: Record<string, unknown>}>};
+        expect(Object.keys(definition.rules[0].then).filter((key) => key !== '@kind')).toEqual(['level', 'limit']);
     });
 
     it('DT-023: Move up/down are disabled at the first/last row', async () => {

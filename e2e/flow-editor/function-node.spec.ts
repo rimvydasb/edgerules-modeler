@@ -123,7 +123,7 @@ test('renames the node and keeps the editor open', async ({page}) => {
     await name.fill('Risk tier');
     await name.press('Enter');
 
-    // The node title shows the '@node-name' annotation once the edit is committed.
+    // The node title shows the '@name' annotation once the edit is committed.
     await expect(name).toHaveCount(0);
     await expect(page.locator('strong', {hasText: 'Risk tier'})).toBeVisible();
 });

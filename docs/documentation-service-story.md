@@ -97,7 +97,7 @@ interface DocumentationService {
 }
 
 // One instance owns one model's descriptions, keyed by `modelName` (any stable string identifier for the model —
-// callers typically use the Portable model's own `@model-name`, but the service treats it as an opaque namespace).
+// callers typically use the project's model name, but the service treats it as an opaque namespace).
 // Not deduplicating: two calls with the same modelName return two independent instances with two independent
 // in-memory caches, both backed by the same IndexedDB rows (see Resolved Decisions #6). A host that wants several
 // components to share one cache/subscribe bus must construct the service once and pass that instance to all of them.

@@ -117,12 +117,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
         return {listeners: createListenerSet, onChange: () => sliceChanged(slice)};
     }
 
-    const engineHandle = createProjectEngine(
-        engineClass,
-        bundle.model,
-        () => sliceChanged('model'),
-        () => metadata,
-    );
+    const engineHandle = createProjectEngine(engineClass, bundle.model, () => sliceChanged('model'));
     const documentation = createDocumentationStore(contextFor('documentation'));
     const tests = createProjectTestsStore(contextFor('tests'));
     const flow = createFlowMetadataStore(contextFor('flow'));

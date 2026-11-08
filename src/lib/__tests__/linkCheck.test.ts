@@ -1,14 +1,14 @@
 import {MutableDecisionService} from '@edgerules/node/mutable';
-import type {PortableNode} from '@edgerules/portable';
+import type {PortableExpression, PortableSetValue} from '@edgerules/portable';
 import {describe, expect, it} from 'vitest';
 import {setWithLinkCheck} from '../linkCheck';
 import {isPortableError} from '../portable';
 
-const expression = (text: string) => ({'@kind': 'expression', expression: text}) as unknown as PortableNode;
+const expression = (text: string): PortableExpression => ({'@kind': 'expression', expression: text});
 
 function build() {
     const service = MutableDecisionService.fromCode('{ a: 1\n b: a + 1 }');
-    const portable = () => service.toPortable() as unknown as Record<string, PortableNode>;
+    const portable = () => service.toPortable().fields as unknown as Record<string, PortableSetValue>;
     return {service, portable};
 }
 
@@ -17,7 +17,7 @@ describe('setWithLinkCheck', () => {
         const {service, portable} = build();
         const result = setWithLinkCheck(service, 'b', expression('a + 10'), portable().b);
         expect(isPortableError(result)).toBe(false);
-        expect(portable().b).toEqual(expression('a + 10'));
+        expect(portable().b).toMatchObject(expression('a + 10'));
     });
 
     it('reverts a write that leaves the model unlinkable and returns the link error', () => {
@@ -38,8 +38,8 @@ describe('setWithLinkCheck', () => {
     it('keeps an unrelated write when the model already had the same link error', () => {
         const {service, portable} = build();
         service.set('c', expression('missing + 1'));
-        const result = setWithLinkCheck(service, 'a', 2 as unknown as PortableNode, portable().a);
+        const result = setWithLinkCheck(service, 'a', 2, portable().a);
         expect(isPortableError(result)).toBe(false);
-        expect(portable().a).toBe(2);
+        expect(portable().a).toMatchObject(expression('2'));
     });
 });

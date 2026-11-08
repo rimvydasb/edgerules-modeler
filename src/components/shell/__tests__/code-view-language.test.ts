@@ -1,12 +1,11 @@
 import {MutableDecisionService} from '@edgerules/node/mutable';
 import {describe, expect, it} from 'vitest';
-import {factsCode, factsPath} from '#lib/factsPaths';
 import type {CodeEditorService} from '../../code-editor';
 import {codeEmbedContext, modelScopedService} from '../views/codeViewLanguage';
 
 const engine = MutableDecisionService.fromCode(`{
     type Applicant: { age: <number>; income: <number> }
-    facts Applicant(a: Applicant): { isAdult: a.age >= 18 }
+    facts ApplicantFacts(a: Applicant): { isAdult: a.age >= 18 }
     func double(x: number): { result: x * 2 }
     rules: {
         limit: double(10)
@@ -25,7 +24,6 @@ const engine = MutableDecisionService.fromCode(`{
 const model = engine.getCode('*') as string;
 
 function codeOf(root: string): string {
-    if (root === factsPath('Applicant')) return factsCode(engine, 'Applicant') as string;
     return engine.getCode(root) as string;
 }
 
@@ -36,7 +34,7 @@ function scoped(root: string) {
 }
 
 describe('codeEmbedContext', () => {
-    it.each(['double', 'rules', 'rules.check', 'other.check', 'Applicant', factsPath('Applicant'), 'book'])(
+    it.each(['double', 'rules', 'rules.check', 'other.check', 'Applicant', 'ApplicantFacts', 'book'])(
         'places the code of %s at its place in the model',
         (root) => {
             const {context} = scoped(root);
@@ -65,7 +63,7 @@ describe('modelScopedService', () => {
         // On its own the code references an unknown type.
         expect(MutableDecisionService.diagnostics(code)).not.toEqual([]);
         expect(scoped('rules.check').service.diagnostics(code)).toEqual([]);
-        expect(scoped(factsPath('Applicant')).service.diagnostics(codeOf(factsPath('Applicant')))).toEqual([]);
+        expect(scoped('ApplicantFacts').service.diagnostics(codeOf('ApplicantFacts'))).toEqual([]);
         expect(scoped('rules').service.diagnostics(codeOf('rules'))).toEqual([]);
     });
 

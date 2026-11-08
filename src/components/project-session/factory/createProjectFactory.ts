@@ -1,4 +1,4 @@
-import type {PortableRootContext} from '@edgerules/portable';
+import type {PortableContext} from '@edgerules/portable';
 import {parseProjectBundle} from '../bundle/parseProjectBundle';
 import {
     DEFAULT_MODEL_SOURCE,
@@ -20,9 +20,9 @@ export interface ProjectBundleInput {
     name: string;
     description?: string;
     tags?: string[];
-    // DSL is kept as written; Portable is converted to canonical DSL. `name` and `version` default to the
-    // `@model-name` and `@model-version` of a Portable model.
-    model: ({dsl: string} | {portable: PortableRootContext}) & ModelMetadata;
+    // DSL is kept as written; Portable is converted to canonical DSL. The model has no name or version of its own:
+    // `name` and `version` are the only source.
+    model: ({dsl: string} | {portable: PortableContext}) & ModelMetadata;
     // Optional slices, in the form `exportBundle` produces them; each defaults to empty.
     documentation?: DocumentationDocument;
     tests?: TestSuitesDocument;
@@ -65,10 +65,7 @@ export function createProjectFactory({engine}: ProjectFactoryOptions): ProjectFa
 
     // The model name and version of the input; blank values are left out.
     function metadataOf(model: ProjectBundleInput['model']): ModelMetadata {
-        const root = 'portable' in model ? model.portable : undefined;
-        const name = model.name ?? (typeof root?.['@model-name'] === 'string' ? root['@model-name'] : undefined);
-        const version =
-            model.version ?? (typeof root?.['@model-version'] === 'string' ? root['@model-version'] : undefined);
+        const {name, version} = model;
         return {...(name?.trim() ? {name: name.trim()} : {}), ...(version?.trim() ? {version: version.trim()} : {})};
     }
 

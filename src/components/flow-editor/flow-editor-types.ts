@@ -45,7 +45,7 @@ export interface FlowEditorService {
     setCallee(field: string, method: string): PortableError | void; // keeps bindings with same name and type
     bindArgument(field: string, parameter: string, sourcePath: string): PortableError | void; // link-checked
     unbindArgument(field: string, parameter: string): void; // turns the node into a draft
-    setNodeName(field: string, name: string): PortableError | void; // '@node-name' only; '' clears it
+    setNodeName(field: string, name: string): PortableError | void; // '@name' only; '' clears it
     renameField(field: string, newName: string): PortableError | void; // rewrites wires; the caller moves the description
     duplicate(field: string): string | PortableError; // returns the new field name
     deleteField(field: string): PortableError | void; // remove(field), link-checked; a parameter: refused while the body reads it
@@ -57,7 +57,7 @@ export interface FlowEditorService {
     getObjectInputNode(field: string): ObjectInputNodeModel; // the record annotated @InputNode; no fields when it does not exist
     getListInputNode(field: string): ListInputNodeModel; // the list annotated @InputNode; no item fields when it does not exist
     getValueInputNode(field: string): ValueInputNodeModel; // the single value annotated @InputNode; no value when it does not exist
-    getExpressionNode(field: string): ExpressionNodeModel; // an expression no other node shows, with its `@variables`; no expression when it does not exist
+    getExpressionNode(field: string): ExpressionNodeModel; // an expression no other node shows, with its `variables`; no expression when it does not exist
     createExpressionNode(): string | PortableError; // a new field 'expression…' of the flow context with the expression `0`
     createInputNode(kind?: 'object-input' | 'list-input' | 'value-input'): string | PortableError; // a new '@InputNode': record 'input…' with one number field (default), list 'list…' of numbers or number 'value…'
     addInputField(field: string, after?: string): PortableError | void; // appends a number field; after = undefined appends

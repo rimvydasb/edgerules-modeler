@@ -26,7 +26,7 @@ export interface ObjectInputField {
 
 export interface ObjectInputNodeModel {
     field: string; // model field path
-    label?: string; // '@node-name'
+    label?: string; // '@name'
     fields: ObjectInputField[]; // one output pin per field of the record
 }
 

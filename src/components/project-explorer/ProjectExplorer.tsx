@@ -23,7 +23,7 @@ import {
     type TreeNodeData,
 } from '@mantine/core';
 import {IconChevronRight, IconLayoutSidebarLeftCollapse, IconPlus, IconSearch} from '@tabler/icons-react';
-import type {PortableContext, PortableError, PortableNode} from '@edgerules/portable';
+import type {PortableContext, PortableError, PortableNode, PortableSetValue} from '@edgerules/portable';
 import {cx} from '#ui/cx';
 import {isPortableError} from '#lib/portable';
 import {CREATE_OPTIONS, type CreateOption} from './create-templates';
@@ -39,12 +39,10 @@ import {
 } from './tree-model';
 import * as classes from './projectExplorer.module.css';
 
-type GetFilter = 'FIELDS' | 'TYPE_DEFINITIONS' | 'FUNCTION_DEFINITIONS' | 'EXTERNAL_DEFINITIONS' | 'ALL';
-
 interface ProjectExplorerService {
-    get(path: string, filter?: GetFilter): PortableNode | PortableError;
+    get(path: string): PortableNode | PortableError;
     // Creates the new types, methods, variables and workbooks; without it the explorer only reads.
-    set?(path: string, node: PortableNode): PortableNode | PortableError;
+    set?(path: string, node: PortableSetValue): PortableNode | PortableError;
 }
 
 /** The entry the user opened: its kind and its fully qualified model path (the subject ID of a test). */
@@ -221,26 +219,15 @@ export function ProjectExplorer({
 }: ProjectExplorerProps): ReactElement {
     // A create bumps it, so a host without a `revision` sees the new entity too.
     const [created, setCreated] = useState(0);
-    const {model, types} = useMemo(
-        () => ({
-            model: service.get(ROOT_FETCH_PATH),
-            types: service.get(ROOT_FETCH_PATH, 'TYPE_DEFINITIONS'),
-        }),
+    const model = useMemo(
+        () => service.get(ROOT_FETCH_PATH),
         // `revision` and `created` stand for model changes the service does not report.
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [service, revision, created],
     );
     const sections = useMemo(
-        () =>
-            isPortableError(model)
-                ? undefined
-                : buildSections(
-                      model as PortableContext,
-                      isPortableError(types) ? undefined : (types as PortableContext),
-                      testSubjects,
-                      documents,
-                  ),
-        [model, types, testSubjects, documents],
+        () => (isPortableError(model) ? undefined : buildSections(model as PortableContext, testSubjects, documents)),
+        [model, testSubjects, documents],
     );
     // The sections the explorer shows: Documents only for a host that lists documents.
     const shown = useMemo(

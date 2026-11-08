@@ -16,10 +16,9 @@ function explorer(page: Page) {
 test('the Project Explorer lists every entity of the model', async ({page}) => {
     await openStory(page, 'models-loan-origination--overview');
     const nav = explorer(page);
-    // `.first()`: a type with facts is listed again under Facts Library.
-    for (const entry of ['Applicant', 'Application']) {
-        await expect(nav.getByText(entry, {exact: true}).first(), entry).toBeVisible(SLOW);
-        await expect(nav.getByText(entry, {exact: true}), entry).toHaveCount(2);
+    // A type under Types, and its facts declaration, by its own name, under Facts Library.
+    for (const entry of ['Applicant', 'Application', 'ApplicantFacts', 'ApplicationFacts']) {
+        await expect(nav.getByText(entry, {exact: true}), entry).toHaveCount(1, SLOW);
     }
     for (const entry of [
         'LoanTerms',
@@ -139,11 +138,11 @@ test('the service tests of joint and single applications pass when run', async (
 test('the facts of a type open as their own root, not as the type', async ({page}) => {
     await openStory(page, 'models-loan-origination--overview');
     const factsSection = explorer(page).getByRole('treeitem', {name: /Facts Library/});
-    await factsSection.getByText('Applicant', {exact: true}).click(SLOW);
+    await factsSection.getByText('ApplicantFacts', {exact: true}).click(SLOW);
     await page.getByRole('radio', {name: 'Boxed'}).click();
     await expect(page.getByRole('navigation', {name: 'Model path'})).toContainText('facts');
-    await expect(page.getByTestId('row-Applicant.@facts')).toBeVisible();
+    await expect(page.getByTestId('row-ApplicantFacts')).toBeVisible();
     for (const field of ['age', 'disposableIncome']) {
-        await expect(page.getByTestId(`row-Applicant.@facts.${field}`), field).toBeVisible();
+        await expect(page.getByTestId(`row-ApplicantFacts.${field}`), field).toBeVisible();
     }
 });

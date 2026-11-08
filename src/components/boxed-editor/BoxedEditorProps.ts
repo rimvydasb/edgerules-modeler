@@ -1,5 +1,5 @@
 import type {CSSProperties} from 'react';
-import type {PortableRootContext} from '@edgerules/portable';
+import type {PortableContext} from '@edgerules/portable';
 import type {CodeEditorService} from '../code-editor';
 import type {DocumentationService} from '../documentation-service';
 import type {TestCasesService, TestSubjectId} from '../test-cases-service';
@@ -27,7 +27,7 @@ export interface BoxedEditorProps {
     // Disables name/value editing and ordering; navigation and visible handles remain.
     readOnly?: boolean;
     // Fired once per successful committed mutation.
-    onChange?: (snapshot: PortableRootContext) => void;
+    onChange?: (snapshot: PortableContext) => void;
     // Routes specialized nodes (types, rulesets, loops, nested boxed editors, code view) to another host editor.
     onOpenNode?: (target: BoxedEditorOpenTarget) => void;
 

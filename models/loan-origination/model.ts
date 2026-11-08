@@ -20,11 +20,11 @@ export const LOAN_ORIGINATION_DSL = `{
     type LoanTerms: { applicationDate: <date>; loanAmount: <number>; propertyValue: <number>; termYears: <number> }
 
     // Facts layer: the derived fields of every instance
-    facts Applicant(applicant: Applicant): {
+    facts ApplicantFacts(applicant: Applicant): {
         age: calendarDiff(applicant.birthDate, applicant.application.applicationDate).years
         disposableIncome: applicant.monthlyIncome - applicant.monthlyExpenses - applicant.monthlyDebtPayments
     }
-    facts Application(application: Application): {
+    facts ApplicationFacts(application: Application): {
         ltv: round(application.loanAmount / application.propertyValue, 4)
         householdIncome: sum(for applicant in application.applicants return applicant.monthlyIncome)
         householdExpenses: sum(for applicant in application.applicants return applicant.monthlyExpenses)

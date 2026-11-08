@@ -10,7 +10,7 @@ export interface ExpressionNodeModel {
     field: string; // model field path
     type: string; // the linked result type, for example 'number'; 'any' when the engine infers none
     expression?: string; // the expression text, for example 'amount * rate'; undefined when the field does not exist
-    variables: string[]; // the field paths the expression reads, as written: '@variables' of the engine
+    variables: string[]; // the field paths the expression reads, as written: `variables` of the engine
 }
 
 /** The inline edits of an ExpressionNode: the field name and the description. */

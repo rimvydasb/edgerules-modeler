@@ -31,7 +31,7 @@ test('the decision table opened as the root keeps its header row and its columns
     }
     // The default row spans the condition columns and lines up with the action columns.
     const tier = await page.getByTestId('column-pricingTier-tier').boundingBox();
-    const declined = await page.getByTestId('row-pricingTier.default').getByText("'declined'").boundingBox();
+    const declined = await page.getByTestId('row-pricingTier.default').getByText('"declined"').boundingBox();
     expect(Math.abs(declined!.x - tier!.x)).toBeLessThan(12);
 });
 

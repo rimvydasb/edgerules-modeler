@@ -63,8 +63,7 @@ describe('loan repayment model', () => {
     it('describes only paths the model has', () => {
         const service = engine();
         for (const path of Object.keys(LOAN_REPAYMENT_DOCUMENTATION.byPath)) {
-            // `ALL` also reads the type definitions.
-            expect(service.get(path, 'ALL'), path).not.toHaveProperty('@kind', 'error');
+            expect(service.get(path), path).not.toHaveProperty('@kind', 'error');
         }
     });
 
@@ -192,12 +191,12 @@ describe('loan repayment model', () => {
                 for (const sink of [...layout.outputs, ...(layout.charts ?? [])]) {
                     const {node, handle} = sink.source!;
                     expect(node.startsWith(`${root}.`), sink.label).toBe(true);
-                    const field = service.get(node) as {'@node'?: string; '@method'?: string};
+                    const field = service.get(node) as {'@node'?: string; method?: string};
                     expect(field['@node'], `${root} ${sink.label}`).toBe('FunctionNode');
                     const result = handle.slice('out:'.length);
                     if (result === 'result') continue;
-                    const callee = field['@method']!;
-                    expect(service.get(callee), `${node} ${handle}`).toHaveProperty(['@return', result]);
+                    const callee = field.method!;
+                    expect(service.get(callee), `${node} ${handle}`).toHaveProperty(['return', 'fields', result]);
                 }
             }
         });

@@ -7,12 +7,7 @@ import {MODEL_DSL} from '../testing/model.dsl';
 
 function sections(code: string, testSubjects: string[] = [], documents?: string[]) {
     const service = MutableDecisionService.fromCode(code);
-    return buildSections(
-        service.get('*') as PortableContext,
-        service.get('*', 'TYPE_DEFINITIONS') as PortableContext,
-        testSubjects,
-        documents,
-    );
+    return buildSections(service.get('*') as PortableContext, testSubjects, documents);
 }
 
 describe('buildSections', () => {
@@ -107,12 +102,12 @@ describe('buildSections documents', () => {
 
 describe('methodKind', () => {
     it('tells functions, decisions, services and rulesets apart, and is undefined for anything else', () => {
-        expect(methodKind({'@kind': 'function-schema'})).toBe('function');
+        expect(methodKind({'@kind': 'method-interface'})).toBe('function');
         expect(methodKind({'@kind': 'service'})).toBe('service');
-        expect(methodKind({'@kind': 'service-schema'})).toBe('service');
-        expect(methodKind({'@kind': 'decision-schema'})).toBe('decision');
+        expect(methodKind({'@kind': 'service-interface'})).toBe('service');
+        expect(methodKind({'@kind': 'decision-interface'})).toBe('decision');
         expect(methodKind({'@kind': 'decision'})).toBe('decision');
-        expect(methodKind({'@kind': 'ruleset-schema'})).toBe('ruleset');
+        expect(methodKind({'@kind': 'ruleset-interface'})).toBe('ruleset');
         expect(methodKind({'@kind': 'context'})).toBeUndefined();
         expect(methodKind(5)).toBeUndefined();
     });

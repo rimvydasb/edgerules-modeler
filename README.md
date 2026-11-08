@@ -107,7 +107,7 @@ in `<ProjectProvider session={…}>` when it reads the session through `useProje
 
 - [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web) for browser-side rule parsing, execution and CRUD
   against the EdgeRules Portable Format; [`@edgerules/portable`](https://www.npmjs.com/package/@edgerules/portable) for
-  the corresponding TypeScript types (`PortableNode`, `PortableError`, `PortableRootContext`).
+  the corresponding TypeScript types (`PortableNode`, `PortableError`, `PortableContext`).
 - [Mantine](https://mantine.dev) (`@mantine/core`, `@mantine/hooks`) for dialogs, menus, tooltips, selects, alerts,
   buttons and the Project Explorer tree; [Tabler Icons](https://tabler.io/icons) (`@tabler/icons-react`) for icons. Grid
   rows and cells are plain elements styled with CSS Modules (see `docs/architecture-adr.md`).

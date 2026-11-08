@@ -6,7 +6,7 @@
 Editor, Test Runner, Types Editor, Project Explorer — see [README.md](README.md)) published to npm as one package with a
 subpath export per component. It has **no rule-evaluation logic of its own** — execution is delegated to the WASM engine
 from the sibling `edgerules` repo, via `@edgerules/web` (browser decision service) and `@edgerules/portable` (shared TS
-types: `PortableNode`, `PortableError`, `PortableRootContext`).
+types: `PortableNode`, `PortableError`, `PortableContext`).
 
 ## Engine references (sibling repo, not in this checkout)
 

@@ -191,18 +191,19 @@ Every callable whose parameters are all typed is a decision-service entry point 
 depth — `library.eligibility` is as testable as a root-level `creditDecision`. Its `Inputs` rows are the parameters
 (complex parameter types expanded to leaves); its computed rows are the leaves of the return type.
 
-All four callable metaphors execute identically (`execute(dottedPath, args)`), but each is discovered differently:
+All four callable metaphors execute identically (`execute(dottedPath, args)`). One read finds them all:
+`get('*', ['context', ...interface kinds])`, recursing into nested contexts. An interface node has no body, so a
+callable declared inside another callable's body is never found.
 
-| Subject kind | Discovered by                                     | `@kind`           | Input rows    | Computed rows       |
-| ------------ | ------------------------------------------------- | ----------------- | ------------- | ------------------- |
-| `function`   | `get('*', 'ALL')`, recursing into nested contexts | `function-schema` | `@parameters` | leaves of `@return` |
-| `ruleset`    | `get('*', 'ALL')`, recursing into nested contexts | `ruleset-schema`  | `@parameters` | leaves of `@return` |
-| `loop`       | `get('*', 'ALL')`, recursing into nested contexts | `loop-schema`     | `@parameters` | leaves of `@return` |
-| `optimise`   | `get('*', 'EXTERNAL_DEFINITIONS')`                | `optimise`        | `@parameters` | leaves of `@result` |
+| Subject kind | `@kind` in the read                                           | Input rows                             | Computed rows      |
+| ------------ | ------------------------------------------------------------- | -------------------------------------- | ------------------ |
+| `function`   | `method-interface`, `decision-interface`, `service-interface` | `parameters` (`context` of a decision) | leaves of `return` |
+| `ruleset`    | `ruleset-interface`                                           | `parameters`                           | leaves of `return` |
+| `loop`       | `loop-interface`                                              | `parameters`                           | leaves of `return` |
+| `optimise`   | `optimise-interface`                                          | `parameters`                           | leaves of `return` |
 
-The last row is an engine quirk, not a design choice: an `optimise` declaration is absent from `FIELDS` and `ALL`
-entirely, so its catalog row lives only in `EXTERNAL_DEFINITIONS`. `optimise` is root-only by language rule; functions,
-rulesets, and loops nest.
+`return` is a linked key: the inferred result type. `optimise` is root-only by language rule; functions, rulesets, and
+loops nest.
 
 A callable declared inside **another callable's body** (`func outer(): { func inner(): … }`) is an implementation detail
 of its parent, not an entry point, and is not offered as a subject — even though the engine will happily execute
@@ -384,7 +385,7 @@ classDiagram
         <<engine>>
         +get(path, filter?) PortableNode|PortableError
         +execute(method, input?) Promise~unknown~
-        +toPortable() PortableRootContext
+        +toPortable() PortableContext
         +requiresSolver() boolean
         +solverHandler unknown?
     }
@@ -433,8 +434,8 @@ classDiagram
     TestsManager --> pathLanguage: Path cell diagnostics / completions
     TestRunner --> MutableDecisionService: execute(subjectId, input)
     TestRunner --> TestCasesService: saveResultSet
-    subjects --> MutableDecisionService: get ALL + EXTERNAL_DEFINITIONS + toPortable
-    rows --> MutableDecisionService: get ALL + EXTERNAL_DEFINITIONS
+    subjects --> MutableDecisionService: get * with the interface kinds
+    rows --> MutableDecisionService: get * + get subject
 ```
 
 ## Components
@@ -697,7 +698,7 @@ flowchart TD
     A["Model loaded / revision changed"] --> R{"TestCasesService hydrated?"}
     R -- " No " --> R2["Wait for the hydration notification"]
     R2 --> R
-    R -- " Yes " --> B["get ALL + get EXTERNAL_DEFINITIONS"]
+    R -- " Yes " --> B["get * + get subject"]
     B --> C["listTestSubjects — '*' plus every fully typed callable, by dotted path"]
     C --> D["deriveRows for the selected subject"]
     D --> DR["detectRenames vs persisted rows -> renamePath per unambiguous pair"]
@@ -718,26 +719,27 @@ flowchart TD
     N --> O
 ```
 
-Derivation rules for `deriveRows`, read off `get('*', 'ALL')` and `get('*', 'EXTERNAL_DEFINITIONS')`:
+Derivation rules for `deriveRows`, read off `get('*')` (the linked view, or the unlinked view when the model does not
+link) and `get(subject)`:
 
-- A `@kind: 'type'` node with `writeOnly: true` is an **input** leaf; otherwise it is a computed leaf. A
+- A `@kind: 'placeholder'` node with `writeOnly: true` is an **input** leaf; otherwise it is a computed leaf. A
   `@kind: 'expression'` node is a computed leaf.
-- Nested `@kind: 'context'` nodes are recursed into, joining segments with `.`.
-- A leaf whose `type` names a user-defined type is expanded into that type's own leaves, read from the same `ALL` view's
-  root-level `type-definition` entries — the engine does not resolve such paths itself (`get('credit.balance')` on a
+- The `fields` of nested `@kind: 'context'` nodes are recursed into, joining segments with `.`.
+- A leaf whose `type` names a user-defined type is expanded into that type's own leaves, read from the root-level
+  `@kind: 'type'` entries of the same view — the engine does not resolve such paths itself (`get('credit.balance')` on a
   `credit: <Credit>` hole returns `EntryNotFound`). Expansion recurses and is cycle-guarded.
 - An `array`-typed leaf yields its own row (whose cell holds the whole list as JSON) plus the leaves of element `[0]`,
   expanded recursively through `items` — see [Indexed paths](#indexed-paths).
-- `function-schema`, `ruleset-schema`, `loop-schema`, `optimise`, and `type-definition` entries are not rows of the `*`
+- `method`, `decision`, `service`, `ruleset`, `loop`, `optimise`, `facts`, and `type` entries are not rows of the `*`
   subject; they are subjects (or type sources) in their own right. A context that holds only callables therefore
   contributes no rows.
-- For a callable subject, input rows come from `@parameters` (same expansion rules) and computed rows from the leaves of
-  `@return` (`@result` for an `optimise`) — one row with path `''` when that is a scalar type name. A `loop`'s `@state`
-  is iteration bookkeeping, not part of the result, and produces no rows.
+- For a callable subject, input rows come from `parameters` (`context` of a decision; same expansion rules) and computed
+  rows from the leaves of the linked `return` — one row with path `''` when that is a scalar type name. A `loop`'s
+  `state` is iteration bookkeeping, not part of the result, and produces no rows.
 - Freshly derived computed rows always land in `Validations`; a persisted promotion to `Assertions` is preserved by
   `syncRows`, not by the derivation.
 
-Subject discovery excludes a callable with any untyped parameter: the engine reports those as `"any"` in `@parameters`,
+Subject discovery excludes a callable with any untyped parameter: the engine reports those as `null` in `parameters`,
 and a row with no declared type has no parsing rule.
 
 ### Renamed and removed paths

@@ -1,6 +1,6 @@
-import type {PortableNode, PortableTypedValue} from '@edgerules/portable';
+import type {PortableNode, PortablePlaceholderValue} from '@edgerules/portable';
 
-export const METADATA_KEYS = new Set(['@kind', '@description', '@node', '@node-name', '@model-name', '@model-version']);
+export const METADATA_KEYS = new Set(['@kind', '@node', '@name', 'linked']);
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -10,11 +10,51 @@ export function isMetadataKey(key: string): boolean {
     return key.startsWith('@') || METADATA_KEYS.has(key);
 }
 
+/**
+ * The `@kind`s whose user-named entries are in a `fields` map: a `context`, a root `workbook`, a `type` and a `facts`
+ * declaration.
+ */
+const FIELDS_KINDS = new Set(['context', 'workbook', 'type', 'facts']);
+
+/** True for a node whose user-named entries are in its `fields` map. */
+export function hasFields(value: unknown): value is Record<string, unknown> & {fields: Record<string, unknown>} {
+    return isRecord(value) && typeof value['@kind'] === 'string' && FIELDS_KINDS.has(value['@kind']);
+}
+
+/** A Portable object node: a record with an `@kind`. */
+export type PortableRecord = Record<string, unknown> & {'@kind': string};
+
+/** True for a `context` or a root `workbook` node. */
+export function isContextNode(value: unknown): value is PortableRecord {
+    return isRecord(value) && (value['@kind'] === 'context' || value['@kind'] === 'workbook');
+}
+
+/** The `fields` map of a node that has one, else undefined. */
+export function fieldsOf(value: unknown): Record<string, unknown> | undefined {
+    if (!hasFields(value)) return undefined;
+    return isRecord(value.fields) ? value.fields : {};
+}
+
+/**
+ * The user-named entries of `value`: the `fields` of a `context`, `workbook`, `type` or `facts` node, or the entries of
+ * a plain name map (`parameters`, `variables`, `constraints`, `state`, `do`). Any other node has none.
+ */
 export function authoredEntries(value: unknown): Array<[string, PortableNode]> {
     if (!isRecord(value)) return [];
-    return Object.entries(value)
-        .filter(([key, child]) => !isMetadataKey(key) && child !== undefined)
+    const fields = fieldsOf(value);
+    const map = fields ?? (value['@kind'] === undefined ? value : undefined);
+    if (!map) return [];
+    return Object.entries(map)
+        .filter(([key, child]) => !key.startsWith('@') && child !== undefined)
         .map(([key, child]) => [key, child as PortableNode]);
+}
+
+/** A `@kind: 'context'` node with `entries` as its fields. */
+export function contextNode(
+    entries: Record<string, unknown> = {},
+    kind: 'context' | 'workbook' = 'context',
+): Record<string, unknown> & {'@kind': 'context' | 'workbook'; fields: Record<string, unknown>} {
+    return {'@kind': kind, fields: entries};
 }
 
 export function childPath(parent: string, name: string): string {
@@ -59,31 +99,30 @@ export function lastPathName(path: string): string | undefined {
     return path.slice(dot + 1);
 }
 
-// The `@kind` of a callable whose body is a context or an expression: a `func`, a `decision`, a `facts` or a `service`.
-// A `facts` declaration is not a field: it lives under the `@facts` key of its type definition (`#lib/factsPaths`).
-const FUNCTION_DEFINITION_KINDS = new Set(['function', 'service', 'decision', 'facts']);
+// The `@kind` of a callable whose body is a context or an expression: a `func` (`method`), a `decision` or a `service`.
+const FUNCTION_DEFINITION_KINDS = new Set(['method', 'service', 'decision']);
 
-// The `@kind` of a layer declaration (definition or schema view): its one parameter, the decision context, is in
-// `@context`, not in `@parameters`.
-const LAYER_KINDS = new Set(['decision', 'decision-schema', 'facts', 'facts-schema']);
+// The `@kind` of a layer declaration (declaration or interface view): its one parameter, the decision context, is in
+// `context`, not in `parameters`.
+const LAYER_KINDS = new Set(['decision', 'decision-interface', 'facts']);
 
-/** A `func`, `decision`, `facts` or `service` definition: a `@parameters` (or `@context`) / `@body` callable. */
-export function isFunctionDefinition(value: unknown): value is Record<string, unknown> {
+/** A `func`, `decision` or `service` declaration: a `parameters` (or `context`) / `body` callable. */
+export function isFunctionDefinition(value: unknown): value is PortableRecord {
     return isRecord(value) && typeof value['@kind'] === 'string' && FUNCTION_DEFINITION_KINDS.has(value['@kind']);
 }
 
-/** True for a `decision` or `facts` declaration, in the authored or the schema view. */
+/** True for a `decision` or `facts` declaration, in the declaration or the interface view. */
 export function isLayerDeclaration(value: unknown): boolean {
     return isRecord(value) && typeof value['@kind'] === 'string' && LAYER_KINDS.has(value['@kind']);
 }
 
 /**
- * The parameters of a callable, definition or schema: `@context` for a `decision` / `facts` declaration (exactly one
- * entry, the decision context), `@parameters` for any other callable.
+ * The parameters of a callable, declaration or interface: `context` for a `decision` / `facts` declaration (exactly
+ * one entry, the decision context), `parameters` for any other callable.
  */
 export function callableParameters(value: unknown): unknown {
     if (!isRecord(value)) return undefined;
-    return isLayerDeclaration(value) ? value['@context'] : value['@parameters'];
+    return isLayerDeclaration(value) ? value.context : value.parameters;
 }
 
 function tokenizePath(path: string): Array<string | number> {
@@ -103,18 +142,10 @@ function portableChild(value: unknown, token: string | number): unknown {
     }
     if (!isRecord(value)) return undefined;
 
-    if (isFunctionDefinition(value) && token !== '*') {
-        return portableChild(value['@body'], token);
-    }
-    if (value['@kind'] === 'ruleset') {
-        if (token === 'rules') return value['@rules'];
-        if (token === 'default') return value['@default'];
-        if (token === 'hitPolicy') return value['@hitPolicy'];
-    }
-    if (value['@kind'] === 'optimise') {
-        const key = `@${token}`;
-        if (key in value) return value[key];
-    }
+    if (token === '*') return value;
+    if (isFunctionDefinition(value)) return portableChild(value.body, token);
+    const fields = fieldsOf(value);
+    if (fields) return fields[token];
     return value[token];
 }
 
@@ -131,17 +162,18 @@ function quoteKey(key: string): string {
     return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) ? key : JSON.stringify(key);
 }
 
-export function typedValueText(value: PortableTypedValue): string {
+export function typedValueText(value: PortablePlaceholderValue): string {
     const details: string[] = [];
     const item = value.items;
-    const type = value.type === 'array' ? `${typeof item === 'string' ? item : (item?.type ?? '')}[]` : value.type;
+    const itemType = typeof item === 'string' ? item : item?.['@kind'] === 'placeholder' ? item.type : '';
+    const type = value.type === 'array' ? `${itemType}[]` : value.type;
     details.push(type);
     for (const [key, child] of Object.entries(value)) {
         if (
-            key === '@kind' ||
+            key.startsWith('@') ||
+            key === 'linked' ||
             key === 'type' ||
             key === 'items' ||
-            key === 'readOnly' ||
             key === 'writeOnly' ||
             child === undefined
         ) {
@@ -162,10 +194,10 @@ export function formatPortableValue(value: unknown): string {
     switch (value['@kind']) {
         case 'expression':
             return formatPortableValue(value.expression);
-        case 'type':
-            return typedValueText(value as unknown as PortableTypedValue);
+        case 'placeholder':
+            return typedValueText(value as unknown as PortablePlaceholderValue);
         case 'invocation': {
-            const args = value['@arguments'];
+            const args = value.arguments;
             const argumentText = Array.isArray(args)
                 ? args.map(formatPortableValue).join(', ')
                 : isRecord(args)
@@ -173,7 +205,7 @@ export function formatPortableValue(value: unknown): string {
                         .map(([name, argument]) => `${quoteKey(name)}: ${formatPortableValue(argument)}`)
                         .join(', ')
                   : '';
-            return `${String(value['@method'] ?? '')}(${argumentText})`;
+            return `${String(value.method ?? '')}(${argumentText})`;
         }
         default: {
             const entries = authoredEntries(value)
@@ -187,9 +219,40 @@ export function formatPortableValue(value: unknown): string {
 export function typeText(value: unknown): string | undefined {
     if (typeof value === 'string') return value;
     if (!isRecord(value)) return undefined;
-    if (value['@kind'] === 'type-definition') return 'object';
+    if (value['@kind'] === 'type') return typeof value.alias === 'string' ? value.alias : 'object';
     if (typeof value.type !== 'string') return undefined;
     if (value.type !== 'array') return value.type;
-    // An inline record element (`items` is a type-definition) reads as `object[]`, as the engine's value types do.
+    // An inline record element (`items` is a structure `type`) reads as `object[]`, as the engine's value types do.
     return `${typeText(value.items) ?? ''}[]`;
+}
+
+function withChild(node: unknown, tokens: ReadonlyArray<string | number>, value: unknown): unknown {
+    if (tokens.length === 0) return value;
+    const [token, ...rest] = tokens;
+    if (typeof token === 'number') {
+        if (!Array.isArray(node)) return node;
+        const next = [...node];
+        next[token] = withChild(node[token], rest, value);
+        return next;
+    }
+    if (!isRecord(node)) return node;
+    const record: Record<string, unknown> = node;
+    if (isFunctionDefinition(node)) return {...record, body: withChild(record.body, tokens, value)};
+    const fields = fieldsOf(record);
+    if (fields) return {...record, fields: {...fields, [token]: withChild(fields[token], rest, value)}};
+    return {...record, [token]: withChild(record[token], rest, value)};
+}
+
+/** A copy of `root` with `value` at the model path `path` (the inverse of `portableAtPath`). */
+export function withPortableAt<T>(root: T, path: string, value: unknown): T {
+    return withChild(root, tokenizePath(path), value) as T;
+}
+
+/**
+ * The names of the entries directly under `node`, as model paths address them: the `fields` of a context, `type` or
+ * `facts`, the `body` fields of a `func`, `decision` or `service`, or the keys of a plain name map.
+ */
+export function childNames(node: unknown): string[] {
+    const owner = isFunctionDefinition(node) ? node.body : node;
+    return authoredEntries(owner).map(([name]) => name);
 }

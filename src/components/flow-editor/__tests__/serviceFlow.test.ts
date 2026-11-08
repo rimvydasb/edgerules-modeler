@@ -3,6 +3,7 @@ import {describe, expect, it} from 'vitest';
 import {isPortableError} from '#lib/portable';
 import {createFlowEditorService} from '../service/createFlowEditorService';
 import {SERVICE_MODEL} from '../testing/serviceModel';
+import {compactModel} from '#lib/testing/compactPortable';
 
 function build(model = SERVICE_MODEL, root = 'quote') {
     const mutable = MutableDecisionService.fromCode(model);
@@ -10,7 +11,7 @@ function build(model = SERVICE_MODEL, root = 'quote') {
 }
 
 const body = (mutable: MutableDecisionService) =>
-    (mutable.toPortable() as unknown as Record<string, {'@body': Record<string, unknown>}>).quote['@body'];
+    (compactModel(mutable) as unknown as Record<string, {body: Record<string, unknown>}>).quote.body;
 
 describe('FlowEditorService of a service', () => {
     it('lists the parameters first, then the function nodes and the return', () => {
@@ -67,16 +68,16 @@ describe('FlowEditorService of a service', () => {
             const {service, mutable} = build(`{ service f(a: number): { r: a } }`, 'f');
             expect(service.createParameter()).toBe('f.param');
             expect(service.listNodes().map((node) => node.field)).toContain('f.param');
-            expect(mutable.toPortable().f).toMatchObject({
+            expect(compactModel(mutable).f).toMatchObject({
                 '@kind': 'service',
-                '@parameters': {a: 'number', param: 'number'},
+                parameters: {a: 'number', param: 'number'},
             });
         });
 
         it('refuses a new parameter that a caller does not pass', () => {
             const {service, mutable} = build();
             expect(isPortableError(service.createParameter())).toBe(true);
-            expect(Object.keys((mutable.get('quote') as {'@parameters': object})['@parameters'])).toEqual([
+            expect(Object.keys((mutable.get('quote') as {parameters: object}).parameters)).toEqual([
                 'applicant',
                 'amount',
             ]);
@@ -91,7 +92,7 @@ describe('FlowEditorService of a service', () => {
                 text: 'person.age',
             });
             // The `service` kind and the named argument of the caller follow.
-            expect(mutable.toPortable().quote).toMatchObject({'@kind': 'service'});
+            expect(compactModel(mutable).quote).toMatchObject({'@kind': 'service'});
             expect(mutable.getCode('offer')).toContain('quote(person:');
             expect(await mutable.execute('offer')).toBe(100);
         });
@@ -195,7 +196,8 @@ describe('FlowEditorService of a service', () => {
             expect(service.setNodeName('quote.return', '')).toBeUndefined();
             expect(service.getReturnNode('quote.return').label).toBeUndefined();
             expect(service.listNodes().map((node) => node.kind)).toContain('return');
-            expect(body(mutable).return).toMatchObject({'@kind': 'context', score: {expression: 'score'}});
+            expect(body(mutable).return).toMatchObject({score: 'score'});
+            expect(body(mutable).return).not.toHaveProperty('@name');
         });
 
         it('creates the return context with every value the service returns now, so callers keep linking', async () => {
@@ -264,8 +266,8 @@ describe('FlowEditorService of a service: expression nodes', () => {
         const {service} = build();
         expect(service.getExpressionNode('quote.approved')).toEqual({
             field: 'quote.approved',
-            // A function body is not linked as a data context: the engine infers no type.
-            type: 'any',
+            // The linked view types the expressions of a function body too.
+            type: 'boolean',
             expression: 'score > 350',
             variables: ['score'],
         });

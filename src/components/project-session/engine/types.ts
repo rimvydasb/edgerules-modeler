@@ -1,19 +1,19 @@
-import type {PortableError, PortableNode, PortableRootContext} from '@edgerules/portable';
-import type {GetFilter, SolverHandler, SolverInfo} from '@edgerules/web';
+import type {Kind, PortableContext, PortableError, PortableNode, PortableSetValue} from '@edgerules/portable';
+import type {SolverHandler, SolverInfo} from '@edgerules/web';
 
 /**
  * Structural subset of one `MutableDecisionService` instance that a project uses. Declared locally so the
  * `@edgerules/web` and `@edgerules/node` builds, whose instance types differ only in their WASM handle, both fit.
  */
 export interface EngineService {
-    get(path: string, filter?: GetFilter): PortableNode | PortableError;
-    getCode(path: string, filter?: GetFilter): string | PortableError;
-    set(path: string, node: PortableNode): PortableNode | PortableError;
+    get(path: string, kinds?: readonly Kind[]): PortableNode | PortableError;
+    getCode(path: string): string | PortableError;
+    set(path: string, node: PortableSetValue): PortableNode | PortableError;
     setCode(path: string, code: string): PortableNode | PortableError;
     remove(path: string): void | PortableError;
     rename(path: string, newName: string): void | PortableError;
     link(): void;
-    toPortable(): PortableRootContext;
+    toPortable(): PortableContext;
     execute(method: string, input?: Record<string, unknown>): Promise<unknown>;
     registerSolver(handler: SolverHandler, info?: SolverInfo): () => void;
     requiresSolver(): boolean;
@@ -28,7 +28,7 @@ export interface EngineService {
  */
 export interface ProjectEngineClass {
     fromCode(code: string): EngineService;
-    fromPortable(model: PortableRootContext): EngineService;
+    fromPortable(model: PortableContext): EngineService;
 }
 
 /**

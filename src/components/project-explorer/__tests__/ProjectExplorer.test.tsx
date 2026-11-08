@@ -44,9 +44,10 @@ describe('ProjectExplorer sections', () => {
         expect(sectionCount('Workbooks')).toBe('1');
         expect(sectionCount('Tests')).toBe('1');
         expect(screen.getAllByText('riskScore(...)')).toHaveLength(1);
-        // A decision is listed apart from the methods; the facts of a type by the name of the type.
+        // A decision is listed apart from the methods; a facts declaration by its own name.
         expect(screen.getAllByText('Eligibility(...)')).toHaveLength(1);
-        expect(screen.getAllByText('Person')).toHaveLength(2);
+        expect(screen.getAllByText('Person')).toHaveLength(1);
+        expect(screen.getAllByText('PersonFacts')).toHaveLength(1);
     });
 
     it('filters the entries by the search, and hides the sections without matches', async () => {
@@ -96,11 +97,11 @@ describe('ProjectExplorer sections', () => {
         const getSpy = vi.spyOn(service, 'get');
         const user = userEvent.setup();
         render(<ProjectExplorer service={service} />);
-        // The model and its types.
-        expect(getSpy).toHaveBeenCalledTimes(2);
+        // The model, with its types.
+        expect(getSpy).toHaveBeenCalledTimes(1);
 
         await user.click(screen.getByText('loanBook'));
-        expect(getSpy).toHaveBeenCalledTimes(2);
+        expect(getSpy).toHaveBeenCalledTimes(1);
     });
 
     it('re-reads the model when the revision changes, keeping the sections expanded', () => {
@@ -139,7 +140,7 @@ describe('ProjectExplorer sections', () => {
 describe('ProjectExplorer open', () => {
     it.each([
         ['Types', 'Person', {kind: 'type', path: 'Person'}],
-        ['Facts Library', 'Person', {kind: 'facts', path: 'Person.@facts'}],
+        ['Facts Library', 'PersonFacts', {kind: 'facts', path: 'PersonFacts'}],
         ['Methods', 'nested.deep()', {kind: 'function', path: 'nested.deep'}],
         ['Decisions', 'Eligibility(...)', {kind: 'decision', path: 'Eligibility'}],
         ['Methods', 'risk(...)', {kind: 'ruleset', path: 'risk'}],
@@ -230,10 +231,10 @@ describe('ProjectExplorer create', () => {
     }
 
     it.each([
-        ['Types', undefined, 'NewType', {'@kind': 'type-definition'}, 'type'],
-        ['Methods', 'Function', 'newFunction', {'@kind': 'function-schema'}, 'function'],
-        ['Service Methods', undefined, 'newService', {'@kind': 'service-schema'}, 'service'],
-        ['Methods', 'Ruleset', 'newRuleset', {'@kind': 'ruleset-schema'}, 'ruleset'],
+        ['Types', undefined, 'NewType', {'@kind': 'type'}, 'type'],
+        ['Methods', 'Function', 'newFunction', {'@kind': 'method'}, 'function'],
+        ['Service Methods', undefined, 'newService', {'@kind': 'service'}, 'service'],
+        ['Methods', 'Ruleset', 'newRuleset', {'@kind': 'ruleset'}, 'ruleset'],
         ['Variables', 'Value', 'newValue', {'@kind': 'expression', type: 'number'}, 'variable'],
         ['Variables', 'Context', 'newContext', {'@kind': 'context'}, 'context'],
         ['Workbooks', undefined, 'newWorkbook', {'@kind': 'workbook'}, 'workbook'],
@@ -245,9 +246,8 @@ describe('ProjectExplorer create', () => {
 
         await create(user, section, item);
 
-        const filter = kind === 'type' ? 'TYPE_DEFINITIONS' : undefined;
-        expect(service.get(name, filter)).toMatchObject(node);
-        if (kind === 'service') expect(service.toPortable()[name]).toMatchObject({'@kind': 'service'});
+        expect(service.get(name)).toMatchObject(node);
+        if (kind === 'service') expect(service.toPortable().fields[name]).toMatchObject({'@kind': 'service'});
         expect(() => service.link()).not.toThrow();
         expect(onOpen).toHaveBeenCalledWith({kind, path: name});
         // The section expands and shows the new entry; a new ruleset has a `value` argument.

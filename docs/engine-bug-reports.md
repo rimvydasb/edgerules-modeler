@@ -7,38 +7,11 @@ Each entry has a label:
 
 Delete a [VALID] entry when the engine fixes it.
 
-All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.5-alpha.202611072026`** on
-**2026-11-07** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
+All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.6-alpha.202611081809`** on
+**2026-11-08** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
 
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
 [VALID]) or **Why it is not a bug** (for [NOT A BUG]).
-
-## [VALID] Root `set('*', …)` drops root metadata (`@model-name`, `@model-version`)
-
-> KNOWN ISSUE. IGNORE IT. This issue is well known and will be revisited in future stories.
-
-**Issue:** https://github.com/rimvydasb/edgerules/issues/62
-
-**What is wrong:** `MutableDecisionService.fromPortable({'@model-version': '1.4.0', ...})` keeps `@model-version`
-(`API_SPEC.md` "Limitations" #3: only `@model-version` round-trips; `@model-name` is accepted on parse but not
-persisted). A root `set('*', …)` on a service that already exists drops **both** keys. The rest of the write commits. So
-a mutable service can set `@model-version` at construction, but it can never change it or set it later.
-
-```ts
-const service = MutableDecisionService.fromCode('{ amount: 10 }');
-service.set('*', {...service.toPortable(), '@model-version': '2.0'});
-service.toPortable();
-// { '@kind': 'context', amount: 10 }  — '@model-version' is missing; 'amount' did commit
-```
-
-The DSL has no syntax for either key, so `getCode('*')` drops both as well. The `Shell` settings dialog
-(`docs/specs/shell-spec.md`) works around it: the project manifest keeps `model.name` and `model.version`, and the
-session engine adds them to the model root as `@model-name` and `@model-version`.
-
-Still reproduces on `0.2.5-alpha.202611072026`.
-
-**Expected behaviour:** a root `set('*', …)` persists `@model-version` exactly as `fromPortable` does. For
-`@model-name`, it persists the key or rejects the write (the sibling gap in `API_SPEC.md`).
 
 ## [VALID] Built-in function signatures are only available as lossy completion `detail` strings
 
@@ -63,39 +36,37 @@ MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
 //  'coalesce | (any) -> any', ...]
 ```
 
-Still reproduces on `0.2.5-alpha.202611072026`: the statics are still only `fromCode`, `fromPortable`, `diagnostics` and
+Still reproduces on `0.2.6-alpha.202611081809`: the statics are still only `fromCode`, `fromPortable`, `diagnostics` and
 `completions`, with the same `detail` strings.
 
-**Expected behaviour:** a structured built-in catalog, for example `get('*', 'BUILTIN_DEFINITIONS')` or a static
-`builtins()`. It returns `PortableFunctionSchema`-shaped entries with named `@parameters`, optional/variadic markers per
-parameter (or one entry per overload), and `@return`. `get('*', 'ALL')` + `get('*', 'EXTERNAL_DEFINITIONS')` already
-cover user callables.
+**Expected behaviour:** a structured built-in catalog, for example a static `builtins()`. It returns
+`PortableMethodInterface`-shaped entries with named `parameters`, optional/variadic markers per parameter (or one entry
+per overload), and `return`. `get('*', Kinds.INVOCABLE_INTERFACES)` already covers user callables.
 
-## [VALID] A `facts` declaration has no path, and `getCode(type)` leaves out its facts
+## [VALID] A path into the result of an invocation has no node, and the linked `type` of an invocation names no fields
 
-**What is wrong:** the authored model keeps a `facts` declaration under the `@facts` key of its type definition
-(`PortableTypeDefinition['@facts']`), but no API addresses it on its own:
-
-1. `get`, `set`, `getCode` and `remove` reject `Applicant.@facts` (`EntryNotFound` / `WrongFieldPath`).
-2. `getCode('Applicant')` returns the type without its facts.
-
-`set(type, …)` writes a changed `@facts`, and `remove(type)` removes the facts with the type. A definition without
-`@facts` keeps the declared facts (by design), so the only ways to remove a facts declaration are a root `set('*', …)`
-or a removal of the type.
+**What is wrong:** since `0.2.6-alpha.202611081809`, `get` has no node for a path into the record that an invocation
+returns, and the linked `type` of the invocation is only `'object'`. `0.2.5-alpha.202611072026` returned the typed node
+of such a path. So a GUI cannot read the declared type of `idle.tasks` from its path:
 
 ```ts
-const service = MutableDecisionService.fromCode('{ type A: {age: <number>}\n facts A(a: A): { old: a.age > 60 } }');
-service.get('A.@facts'); // { '@kind': 'error', type: 'EntryNotFound', message: 'entry not found: A.@facts' }
-service.getCode('A'); // "type A: {\n    age: <number>\n}"  — no facts
+const service = MutableDecisionService.fromCode(`{
+  type Task: { worker: <number>; startsAt: <string> }
+  func noTasks(base: number): { tasks: <Task[], []> }
+  idle: noTasks(base: 1)
+}`);
+service.get('idle.tasks'); // { '@kind': 'error', type: 'EntryNotFound', message: 'entry not found: idle.tasks' }
+service.get('idle'); // { '@kind': 'invocation', method: 'noTasks', arguments: { base: 1 }, type: 'object', linked: true }
 ```
 
-`#lib/factsPaths` works around it: it addresses facts as `<Type>.@facts`, removes them with a root `set('*', …)`, and
-cuts their code from `getCode('*')`.
+An `expression` node gives its structure in `items` (`type: 'array'`), but `PortableInvocation` has only
+`type?: PortableTypeReference`, so a record result has no structure.
 
-Reproduces on `0.2.5-alpha.202611072026`.
+The Flow Editor (`declaredTypeAt` in `createFlowEditorService.ts`) works around it: it reads the `return` of the callee
+and walks its structure `fields`.
 
-**Expected behaviour:** `getCode(type)` returns the facts with the type, or the engine offers a path for the facts
-declaration (`get`, `getCode`, `remove`).
+**Expected behaviour:** `get('idle.tasks')` returns the linked node of the path (as on `0.2.5-alpha.202611072026`), or
+the linked view of an invocation gives the structure of a record result, as `items` does for an expression.
 
 ## [NOT A BUG] `getCode('*')` drops source comments
 

@@ -19,7 +19,7 @@ export type CalleeKind = 'function' | 'ruleset';
 export interface CalleeRef {
     path: string; // dotted callee path, for example 'risk' or 'group.nested'
     kind: CalleeKind;
-    parameters: SignatureParameter[]; // from get(path, 'FIELDS')
+    parameters: SignatureParameter[]; // from get(path)
     returnLabel: string; // 'number' or '{ level, limit }'
 }
 
@@ -39,7 +39,7 @@ export interface NodeResult {
 
 export interface FunctionNodeModel {
     field: string; // model field path
-    label?: string; // '@node-name'
+    label?: string; // '@name'
     callee?: CalleeRef; // undefined while no callee is picked
     arguments: NodeArgument[]; // one per callee parameter, in signature order
     results: NodeResult[]; // record fields, or one unnamed 'result'

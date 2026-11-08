@@ -26,9 +26,8 @@ export interface ProjectManifest {
     model: {format: 'dsl'; source: string} & ModelMetadata; // one model per project
 }
 
-// The root metadata of the model. The DSL has no syntax for it and the engine drops `@model-name`, so the manifest
-// keeps it; the session engine reports it as the `@model-name` and `@model-version` of the model root.
-// Engine bug: a root `set('*', …)` does not persist `@model-version` — https://github.com/rimvydasb/edgerules/issues/62
+// The root metadata of the model. Neither the DSL nor the Portable format has a key for it, so the manifest keeps it;
+// read it from the `model` slice snapshot (`session.getSlice('model').metadata`).
 export interface ModelMetadata {
     name?: string;
     version?: string;

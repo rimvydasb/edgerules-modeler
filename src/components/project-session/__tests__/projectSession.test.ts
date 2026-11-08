@@ -281,12 +281,11 @@ describe('ProjectSession — commands', () => {
 });
 
 describe('ProjectSession — model metadata', () => {
-    it('loads the model name and version of the manifest and reports them on the model root', async () => {
+    it('loads the model name and version of the manifest into the model slice, never into the model', async () => {
         const {session} = await openFixtureProject({model: {dsl: '{ a: 1 }', name: 'Risk desk', version: '1.0.0'}});
         expect(session.getSlice('model').metadata).toEqual({name: 'Risk desk', version: '1.0.0'});
-        expect(session.engine.toPortable()).toMatchObject({'@model-name': 'Risk desk', '@model-version': '1.0.0'});
-        expect(session.engine.get('*')).toMatchObject({'@model-name': 'Risk desk', '@model-version': '1.0.0'});
-        // Only the root has the metadata, and the DSL never does.
+        // The Portable format has no key for the metadata, and the DSL has no syntax for it.
+        expect(JSON.stringify(session.engine.toPortable())).not.toContain('Risk desk');
         expect(session.engine.exportDsl()).not.toContain('Risk desk');
     });
 
@@ -320,7 +319,6 @@ describe('ProjectSession — model metadata', () => {
 
         session.execute({type: 'setModelMetadata', metadata: {name: '  ', version: '1'}});
         expect(session.getSlice('model').metadata).toEqual({version: '1'});
-        expect(session.engine.toPortable()).not.toHaveProperty('@model-name');
     });
 
     it('rolls the metadata back with a failed transaction', async () => {

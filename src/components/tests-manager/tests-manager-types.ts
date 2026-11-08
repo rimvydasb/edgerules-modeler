@@ -1,7 +1,5 @@
-import type {PortableError, PortableNode, PortableRootContext} from '@edgerules/portable';
+import type {Kind, PortableContext, PortableError, PortableNode} from '@edgerules/portable';
 import type {TestResultSet, TestSubjectId, Unsubscribe} from '../test-cases-service';
-
-export type GetFilter = 'FIELDS' | 'TYPE_DEFINITIONS' | 'FUNCTION_DEFINITIONS' | 'EXTERNAL_DEFINITIONS' | 'ALL';
 
 /**
  * Structural subset of `MutableDecisionService` the runner and model derivation need — pass the
@@ -10,9 +8,9 @@ export type GetFilter = 'FIELDS' | 'TYPE_DEFINITIONS' | 'FUNCTION_DEFINITIONS' |
  * `DecisionTableEditor`'s and `BoxedEditor`'s own local redeclarations.
  */
 export interface MutableDecisionService {
-    get(path: string, filter?: GetFilter): PortableNode | PortableError;
+    get(path: string, kinds?: readonly Kind[]): PortableNode | PortableError;
     execute(method: string, input?: Record<string, unknown>): Promise<unknown>;
-    toPortable(): PortableRootContext;
+    toPortable(): PortableContext;
     requiresSolver(): boolean;
     // Set by the host via `registerSolver(...)`; `TestRunner` only ever reads it, to pre-flight a run
     // against an `optimise`-declaring model with no solver registered.
@@ -24,7 +22,7 @@ export type TestSubjectKind = 'model' | 'function' | 'ruleset' | 'optimise' | 'l
 export interface TestSubject {
     id: TestSubjectId; // '*' or the callable's dotted path.
     kind: TestSubjectKind;
-    name: string; // Label in the Path column header: the model name for '*', otherwise the dotted path.
+    name: string; // Label in the Path column header: 'Model' for '*', otherwise the dotted path.
 }
 
 export interface TestRunner {

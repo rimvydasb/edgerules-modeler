@@ -2,7 +2,8 @@ import {Alert} from '@mantine/core';
 import {useCallback, useEffect, useMemo, useRef, useState, type ReactElement} from 'react';
 import {listCallables, untypedParameters} from '#lib/callables';
 import {isPortableError} from '#lib/portable';
-import {callableParameters, isRecord} from '#lib/portableUtils';
+import {callableParameters, isRecord, portableAtPath} from '#lib/portableUtils';
+import type {PortableNode} from '@edgerules/portable';
 import {cx} from '#ui/cx';
 import {createBoxedEditorService, type BoxedEditorOpenTarget} from '../boxed-editor';
 import {createFlowEditorService, type FlowEditorOpenTarget, type FlowFocusRequest} from '../flow-editor';
@@ -51,9 +52,7 @@ interface BoxedColumns {
 
 // The parameters of the callable at `path` of `model` (`@context` for a `decision`).
 function parametersAt(model: unknown, path: string): Record<string, unknown> {
-    let node = model;
-    for (const name of path.split('.')) node = isRecord(node) ? node[name] : undefined;
-    const parameters = callableParameters(node);
+    const parameters = callableParameters(portableAtPath(model as PortableNode, path));
     return isRecord(parameters) ? parameters : {};
 }
 
@@ -80,7 +79,7 @@ export function Shell({
     style,
 }: ShellProps): ReactElement {
     const session = useProjectSession();
-    const {version} = useProjectSlice('model');
+    const {version, metadata} = useProjectSlice('model');
     const {subjects} = useProjectSlice('tests');
     const testSubjects = useMemo(() => Object.keys(subjects), [subjects]);
     const {dslValidity} = useProjectSnapshot();
@@ -150,13 +149,13 @@ export function Shell({
     const {rootLabel, hasSettings, modelView} = useMemo(() => {
         const model = session.engine.toPortable();
         return {
-            rootLabel: modelName(model),
+            rootLabel: modelName(metadata),
             hasSettings: !isDocument && hasRootSettings(model, root),
             // The model has a Flow view only when it has a workbook, a service or a README.
             modelView: (hasModelFlow(model, readmeExists) ? 'flow' : 'boxed') as ShellView,
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session, root, version, isDocument, readmeExists]);
+    }, [session, root, version, metadata, isDocument, readmeExists]);
 
     // The Flow view of the model root offers the workbooks and the services to open, when the model has workbooks.
     // A new workbook must not take a root name.
@@ -169,18 +168,21 @@ export function Shell({
             ...(descriptions[workbook] !== undefined && {description: descriptions[workbook]}),
             ...workbookNodeCounts(model, workbook),
         }));
-        const services: ServiceSummary[] = buildSections(model, undefined, []).services.map((entry) => ({
+        const services: ServiceSummary[] = buildSections(model, []).services.map((entry) => ({
             path: entry.path,
             label: entry.label,
             ...(descriptions[entry.path] !== undefined && {description: descriptions[entry.path]}),
             arguments: Object.keys(parametersAt(model, entry.path)).length,
         }));
-        const taken = new Set(Object.keys(model).filter((name) => !name.startsWith('@')));
+        const taken = new Set(Object.keys(model.fields));
         return {workbooks, services, taken};
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session, root, version, descriptions]);
 
-    const boxedService = useMemo(() => createBoxedEditorService(session.engine), [session]);
+    const boxedService = useMemo(
+        () => createBoxedEditorService(session.engine, {modelName: () => session.getSlice('model').metadata.name}),
+        [session],
+    );
     const flowService = useMemo(() => createFlowEditorService(session.engine, {root}), [session, root]);
 
     // Uncommitted code of context and function paths; the session keeps the draft of '*'.

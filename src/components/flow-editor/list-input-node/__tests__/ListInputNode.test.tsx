@@ -77,7 +77,7 @@ describe('ListInputNode', () => {
     it('counts the items again after the list changes', async () => {
         const {mutable, service} = renderList('scores');
         expect(await screen.findByText('number[] · 3 items')).toBeInTheDocument();
-        mutable.set('scores', {...(mutable.toPortable().scores as object), expression: '[1, 2]'} as never);
+        mutable.set('scores', {...(mutable.toPortable().fields.scores as object), expression: '[1, 2]'} as never);
         service.setNodeName('scores', 'Scores'); // a committed change notifies the nodes
         expect(await screen.findByText('number[] · 2 items')).toBeInTheDocument();
     });

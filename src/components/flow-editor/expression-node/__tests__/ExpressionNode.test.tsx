@@ -2,6 +2,7 @@ import {fireEvent, screen, waitFor} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import type {FlowEditorOpenTarget} from '../../flow-editor-types';
 import {renderNode} from '../../testing/renderNode';
+import {compactModel} from '#lib/testing/compactPortable';
 
 // A literal and two expressions that read it, one through the other.
 const EXPRESSION_MODEL = `{
@@ -53,7 +54,7 @@ describe('ExpressionNode', () => {
         const {mutable, documentation} = renderExpression('rate');
         documentation.setDescription('rate', 'The tax rate');
         await renameTo('taxRate');
-        await waitFor(() => expect(mutable.toPortable()).toHaveProperty('taxRate'));
+        await waitFor(() => expect(compactModel(mutable)).toHaveProperty('taxRate'));
         expect(documentation.getDescription('taxRate')).toBe('The tax rate');
     });
 
