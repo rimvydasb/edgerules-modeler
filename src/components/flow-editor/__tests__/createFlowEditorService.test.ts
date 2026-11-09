@@ -3,6 +3,7 @@ import {describe, expect, it, vi} from 'vitest';
 import {isPortableError} from '#lib/portable';
 import {createFlowEditorService} from '../service/createFlowEditorService';
 import {SAMPLE_MODEL, sampleService} from '../testing/sampleModel';
+import {compactModel} from '#lib/testing/compactPortable';
 
 function build() {
     const {mutable, portable} = sampleService();
@@ -112,9 +113,9 @@ describe('FlowEditorService drafts', () => {
         expect(service.bindArgument(field, 'segment', 'applicant.segment')).toBeUndefined();
         expect(portable()[field]).toMatchObject({
             '@kind': 'invocation',
-            '@method': 'risk',
+            method: 'risk',
             '@node': 'FunctionNode',
-            '@arguments': {age: 'applicant.age', income: 'applicant.income', segment: 'applicant.segment'},
+            arguments: {age: 'applicant.age', income: 'applicant.income', segment: 'applicant.segment'},
         });
         expect(service.getFunctionNode(field).draft).toBe(false);
     });
@@ -137,9 +138,11 @@ describe('FlowEditorService binding errors', () => {
         const result = service.bindArgument('payment', 'amount', 'applicant.segment');
         expect(isPortableError(result)).toBe(true);
         // The engine keeps the `@node` annotation of a rejected write; the arguments are restored.
-        expect(portable().payment).toMatchObject({'@arguments': (before as {'@arguments': unknown})['@arguments']});
+        expect(portable().payment).toMatchObject({arguments: (before as {arguments: unknown}).arguments});
         expect(service.getFunctionNode('payment').error).toMatchObject({parameter: 'amount'});
-        expect(service.getFunctionNode('payment').error?.message).toContain('type mismatch');
+        expect(service.getFunctionNode('payment').error?.message).toContain(
+            "argument 'amount' expects number, found string",
+        );
     });
 
     it('removes a new field whose last binding is mistyped and keeps the draft', () => {
@@ -223,7 +226,7 @@ const CONSUMERS = `
 
 function buildWithConsumers(extra = CONSUMERS) {
     const mutable = MutableDecisionService.fromCode(SAMPLE_MODEL.replace(/\}$/, `${extra}}`));
-    const portable = () => mutable.toPortable() as unknown as Record<string, Record<string, unknown>>;
+    const portable = () => compactModel(mutable) as unknown as Record<string, Record<string, unknown>>;
     return {mutable, portable, service: createFlowEditorService(mutable)};
 }
 
@@ -277,23 +280,7 @@ describe('FlowEditorService.renameResult', () => {
     });
 });
 
-describe('FlowEditorService.removeFromFlow and deleteField', () => {
-    it('removeFromFlow keeps the field', () => {
-        const {service, portable, mutable} = build();
-        expect(service.removeFromFlow('decision')).toBeUndefined();
-        // The invocation stays in the model without the node annotation.
-        expect(portable().decision).toMatchObject({'@kind': 'invocation', '@method': 'risk'});
-        expect((portable().decision as Record<string, unknown>)['@node']).toBeUndefined();
-        expect(() => mutable.link()).not.toThrow();
-    });
-
-    it('removeFromFlow drops a draft', () => {
-        const {service} = build();
-        const field = service.createDraftNode();
-        expect(service.removeFromFlow(field)).toBeUndefined();
-        expect(service.getFunctionNode(field).callee).toBeUndefined();
-    });
-
+describe('FlowEditorService.deleteField', () => {
     it('deleteField removes the field', () => {
         const {service, portable} = build();
         expect(service.deleteField('score')).toBeUndefined();
@@ -304,7 +291,7 @@ describe('FlowEditorService.removeFromFlow and deleteField', () => {
         const {service, portable} = buildWithConsumers();
         const result = service.deleteField('decision');
         expect(isPortableError(result)).toBe(true);
-        expect(portable().decision).toMatchObject({'@method': 'risk'});
+        expect(portable().decision).toMatchObject({method: 'risk'});
     });
 });
 
@@ -317,7 +304,7 @@ describe('FlowEditorService parameter edits', () => {
         const names = service.getFunctionNode('payment').arguments.map((arg) => arg.name);
         expect(names).toEqual(['amount', 'arg']);
         for (const field of ['payment', 'payment2']) {
-            expect(Object.keys(portable()[field]['@arguments'] as object)).toEqual(['amount', 'arg']);
+            expect(Object.keys(portable()[field].arguments as object)).toEqual(['amount', 'arg']);
         }
         expect(() => mutable.link()).not.toThrow();
     });
@@ -369,7 +356,7 @@ describe('FlowEditorService parameter edits', () => {
         service.addArgument('payment');
         expect(service.removeArgument('payment', 'arg')).toBeUndefined();
         for (const field of ['payment', 'extra2']) {
-            expect(Object.keys(portable()[field]['@arguments'] as object)).toEqual(['amount']);
+            expect(Object.keys(portable()[field].arguments as object)).toEqual(['amount']);
         }
     });
 });
@@ -379,7 +366,7 @@ describe('FlowEditorService node edits', () => {
         const {service, portable} = build();
         expect(service.setNodeName('decision', 'Risk decision')).toBeUndefined();
         expect(service.getFunctionNode('decision').label).toBe('Risk decision');
-        expect((portable().decision as Record<string, unknown>)['@node-name']).toBe('Risk decision');
+        expect((portable().decision as unknown as Record<string, unknown>)['@name']).toBe('Risk decision');
         service.setNodeName('decision', '');
         expect(service.getFunctionNode('decision').label).toBeUndefined();
     });
@@ -387,7 +374,7 @@ describe('FlowEditorService node edits', () => {
     it('renames a field and the wires that read it', () => {
         const {service, portable, mutable} = buildWithConsumers();
         expect(service.renameField('decision', 'riskDecision')).toBeUndefined();
-        expect(portable().riskDecision).toMatchObject({'@method': 'risk'});
+        expect(portable().riskDecision).toMatchObject({method: 'risk'});
         expect(expressionText(portable().levelOf)).toBe('riskDecision.level');
         expect(() => mutable.link()).not.toThrow();
     });
@@ -410,7 +397,7 @@ describe('FlowEditorService node edits', () => {
         const {service, portable} = build();
         const copy = service.duplicate('decision');
         expect(copy).toBe('decision2');
-        expect(portable().decision2).toMatchObject({'@method': 'risk', '@node': 'FunctionNode'});
+        expect(portable().decision2).toMatchObject({method: 'risk', '@node': 'FunctionNode'});
         expect(service.getFunctionNode('decision2').arguments[0].binding?.text).toBe('applicant.age');
     });
 });
@@ -423,7 +410,7 @@ describe('FlowEditorService.renameArgument', () => {
         service.addArgument('payment');
         expect(service.renameArgument('payment', 'arg', 'months')).toBeUndefined();
         for (const field of ['payment', 'payment2']) {
-            expect(Object.keys(portable()[field]['@arguments'] as object)).toEqual(['amount', 'months']);
+            expect(Object.keys(portable()[field].arguments as object)).toEqual(['amount', 'months']);
         }
     });
 
@@ -435,40 +422,18 @@ describe('FlowEditorService.renameArgument', () => {
 });
 
 describe('ObjectInputNode service', () => {
-    it('lists record fields that are not yet an input node', () => {
-        const {service} = build();
-        const fields = () => service.listInputCandidates().map((candidate) => candidate.field);
-        expect(fields().sort()).toEqual(['applicant', 'application']);
-        service.addInputNode('applicant');
-        expect(service.listInputCandidates()).toEqual([{field: 'application', kind: 'object-input'}]);
-    });
-
-    it('addInputNode annotates the record and keeps its values', () => {
-        const {service, portable} = build();
-        expect(service.addInputNode('applicant')).toBeUndefined();
-        expect(portable().applicant).toMatchObject({'@kind': 'context', '@node': 'InputNode', age: 23});
-    });
-
-    it('refuses a field that is not a record', () => {
-        const {service} = build();
-        expect(isPortableError(service.addInputNode('decision') as never)).toBe(true);
-        expect(isPortableError(service.addInputNode('missing') as never)).toBe(true);
-    });
-
     it('reads the typed fields of the record', () => {
         const {service} = build();
-        service.addInputNode('applicant');
         expect(service.getObjectInputNode('applicant').fields).toEqual([
             {name: 'age', type: 'number', value: '23', used: true},
             {name: 'income', type: 'number', value: '25000', used: true},
-            {name: 'segment', type: 'string', value: "'retail'", used: true},
+            {name: 'segment', type: 'string', value: '\"retail\"', used: true},
         ]);
     });
 
     describe('setInputFieldValue', () => {
         it('writes the expression and recalculates what reads the field', async () => {
             const {service, portable} = build();
-            service.addInputNode('applicant');
             expect(await service.readOutput('decision.level')).toEqual({value: 'high', type: 'string'});
             const listener = vi.fn();
             service.subscribe(listener);
@@ -476,14 +441,13 @@ describe('ObjectInputNode service', () => {
             expect(service.setInputFieldValue('applicant', 'age', '30')).toBeUndefined();
 
             expect(listener).toHaveBeenCalled();
-            expect(portable().applicant).toMatchObject({'@node': 'InputNode', age: 30});
+            expect(portable().applicant).toMatchObject({age: 30});
             expect(service.getObjectInputNode('applicant').fields[0]).toMatchObject({name: 'age', value: '30'});
             expect(await service.readOutput('decision.level')).toEqual({value: 'medium', type: 'string'});
         });
 
         it('accepts an expression that reads another field', async () => {
             const {service} = build();
-            service.addInputNode('applicant');
             expect(service.setInputFieldValue('applicant', 'age', '20 + 10')).toBeUndefined();
             expect(service.getObjectInputNode('applicant').fields[0].value).toBe('20 + 10');
             expect(await service.readOutput('decision.level')).toEqual({value: 'medium', type: 'string'});
@@ -491,7 +455,6 @@ describe('ObjectInputNode service', () => {
 
         it('refuses invalid text and keeps the previous value', () => {
             const {service, portable} = build();
-            service.addInputNode('applicant');
             expect(isPortableError(service.setInputFieldValue('applicant', 'age', '30 +') as never)).toBe(true);
             expect(isPortableError(service.setInputFieldValue('applicant', 'age', '  ') as never)).toBe(true);
             expect(portable().applicant).toMatchObject({age: 23});
@@ -499,45 +462,39 @@ describe('ObjectInputNode service', () => {
 
         it('reverts a value whose type breaks a reader', () => {
             const {service, portable} = build();
-            service.addInputNode('applicant');
-            expect(isPortableError(service.setInputFieldValue('applicant', 'age', "'old'") as never)).toBe(true);
+            expect(isPortableError(service.setInputFieldValue('applicant', 'age', '\"old\"') as never)).toBe(true);
             expect(portable().applicant).toMatchObject({age: 23});
         });
 
         it('refuses a missing field or node', () => {
             const {service} = build();
-            service.addInputNode('applicant');
             expect(isPortableError(service.setInputFieldValue('applicant', 'missing', '1') as never)).toBe(true);
-            expect(isPortableError(service.setInputFieldValue('application', 'amount', '1') as never)).toBe(true);
+            expect(isPortableError(service.setInputFieldValue('missing', 'amount', '1') as never)).toBe(true);
         });
     });
 
     it('inputValueContext wraps the value in the model text around it', () => {
         const {service} = build();
-        service.addInputNode('applicant');
         const {prefix, suffix} = service.inputValueContext('applicant', 'age');
         expect(prefix).toMatch(/applicant: \{ age: $/);
         expect(suffix).toMatch(/^; income: 25000/);
     });
 
-    it('returns no fields for a record that is not an input node', () => {
+    it('returns no fields for a field that is not a record', () => {
         const {service} = build();
-        expect(service.getObjectInputNode('applicant').fields).toEqual([]);
+        expect(service.getObjectInputNode('decision').fields).toEqual([]);
     });
 
     it('sets and clears the node name', () => {
         const {service, portable} = build();
-        service.addInputNode('applicant');
         expect(service.setNodeName('applicant', 'Applicant')).toBeUndefined();
         expect(service.getObjectInputNode('applicant').label).toBe('Applicant');
         service.setNodeName('applicant', '');
-        expect(portable().applicant).not.toHaveProperty('@node-name');
-        expect(portable().applicant).toHaveProperty('@node', 'InputNode');
+        expect(portable().applicant).not.toHaveProperty('@name');
     });
 
     it('renames a field and migrates only the references to it', () => {
         const {service, portable} = build();
-        service.addInputNode('applicant');
         expect(isPortableError(service.renameInputField('applicant', 'age', 'income') as never)).toBe(true);
         expect(isPortableError(service.renameInputField('applicant', 'age', '1x') as never)).toBe(true);
         expect(service.renameInputField('applicant', 'age', 'years')).toBeUndefined();
@@ -548,14 +505,13 @@ describe('ObjectInputNode service', () => {
         ]);
         // The wire follows the field; the argument keeps its own name.
         expect(portable().decision).toMatchObject({
-            '@arguments': {age: 'applicant.years', income: 'applicant.income', segment: 'applicant.segment'},
+            arguments: {age: 'applicant.years', income: 'applicant.income', segment: 'applicant.segment'},
         });
-        expect(portable().score).toMatchObject({'@arguments': {age: 'applicant.years'}});
+        expect(portable().score).toMatchObject({arguments: {age: 'applicant.years'}});
     });
 
     it('a field rename leaves same-named callee parameters and rules alone', () => {
         const {service, portable} = build();
-        service.addInputNode('applicant');
         const before = JSON.stringify(portable().risk);
         service.renameInputField('applicant', 'age', 'years');
         expect(JSON.stringify(portable().risk)).toBe(before);
@@ -569,13 +525,11 @@ describe('ObjectInputNode service', () => {
 
     it('a field rename keeps the model annotations and the other entries', () => {
         const {service, portable} = build();
-        service.addInputNode('applicant');
         service.setNodeName('applicant', 'Applicant');
         service.renameInputField('applicant', 'segment', 'channel');
         expect(portable().applicant).toMatchObject({
-            '@node': 'InputNode',
-            '@node-name': 'Applicant',
-            channel: "'retail'",
+            '@name': 'Applicant',
+            channel: '\"retail\"',
         });
         expect(Object.keys(portable().applicant)).toEqual(expect.arrayContaining(['age', 'income', 'channel']));
         expect(portable().application).toMatchObject({amount: 32000});
@@ -584,7 +538,6 @@ describe('ObjectInputNode service', () => {
     it('a field rename is reverted when the model no longer links', () => {
         const mutable = MutableDecisionService.fromCode('{ rec: { a: 1; b: a + 1 } }');
         const service = createFlowEditorService(mutable);
-        service.addInputNode('rec');
         const before = JSON.stringify(mutable.toPortable());
         // `b` reads its sibling `a` by a bare name, which a path-based rewrite does not reach.
         expect(isPortableError(service.renameInputField('rec', 'a', 'z') as never)).toBe(true);
@@ -593,7 +546,6 @@ describe('ObjectInputNode service', () => {
 
     it('marks a field that an expression reads as used', () => {
         const {service} = build();
-        service.addInputNode('applicant');
         expect(service.getObjectInputNode('applicant').fields.map((item) => item.used)).toEqual([true, true, true]);
         service.addInputField('applicant');
         expect(service.getObjectInputNode('applicant').fields.at(-1)?.used).toBe(false);
@@ -601,7 +553,6 @@ describe('ObjectInputNode service', () => {
 
     it('adds, moves and removes fields and keeps the annotations', () => {
         const {service, portable} = build();
-        service.addInputNode('applicant');
         service.setNodeName('applicant', 'Applicant');
         const names = () => service.getObjectInputNode('applicant').fields.map((item) => item.name);
         expect(service.addInputField('applicant', 'age')).toBeUndefined();
@@ -610,69 +561,49 @@ describe('ObjectInputNode service', () => {
         expect(names()).toEqual(['age', 'income', 'field', 'segment']);
         expect(service.removeInputField('applicant', 'field')).toBeUndefined();
         expect(names()).toEqual(['age', 'income', 'segment']);
-        expect(portable().applicant).toMatchObject({'@node': 'InputNode', '@node-name': 'Applicant'});
+        expect(portable().applicant).toMatchObject({'@name': 'Applicant'});
     });
 
     it('removeInputField reverts when an expression reads the field', () => {
         const {service} = build();
-        service.addInputNode('applicant');
         expect(isPortableError(service.removeInputField('applicant', 'age') as never)).toBe(true);
         expect(service.getObjectInputNode('applicant').fields.map((item) => item.name)).toContain('age');
     });
 
-    it('duplicates the record with its annotation', () => {
+    it('duplicates the record', () => {
         const {service, portable} = build();
-        service.addInputNode('applicant');
         const copy = service.duplicate('applicant');
         expect(copy).toBe('applicant2');
-        expect(portable().applicant2).toMatchObject({'@node': 'InputNode', age: 23});
-    });
-
-    it('removeFromFlow keeps the record and drops the annotation', () => {
-        const {service, portable} = build();
-        service.addInputNode('applicant');
-        service.setNodeName('applicant', 'Applicant');
-        expect(service.removeFromFlow('applicant')).toBeUndefined();
-        expect(portable().applicant).toMatchObject({'@kind': 'context', age: 23});
-        expect(portable().applicant).not.toHaveProperty('@node');
-        expect(portable().applicant).not.toHaveProperty('@node-name');
+        expect(portable().applicant2).toMatchObject({age: 23});
     });
 
     it('deleteField reverts when another field still reads the record', () => {
         const {service, portable} = build();
-        service.addInputNode('applicant');
         expect(isPortableError(service.deleteField('applicant') as never)).toBe(true);
-        expect(portable().applicant).toMatchObject({'@node': 'InputNode'});
+        expect(portable().applicant).toMatchObject({age: 23});
     });
 
     it('deleteField removes a record that nothing reads', () => {
         const mutable = MutableDecisionService.fromCode('{ spare: { a: 1 }\n  other: 2 }');
         const service = createFlowEditorService(mutable);
-        service.addInputNode('spare');
         expect(service.deleteField('spare')).toBeUndefined();
-        expect(mutable.toPortable()).not.toHaveProperty('spare');
+        expect(compactModel(mutable)).not.toHaveProperty('spare');
     });
 });
 
 describe('FlowEditorService flow nodes', () => {
-    it('lists annotated fields in model order, then the drafts', () => {
+    it('lists every field in model order, annotated or not, then the drafts', () => {
         const {service} = build();
-        expect(service.listNodes()).toEqual([]);
-        service.addInputNode('applicant');
-        service.setCallee('decision', 'risk'); // writes @node: FunctionNode
         const draft = service.createDraftNode();
         expect(service.listNodes()).toEqual([
             {field: 'applicant', kind: 'object-input'},
+            {field: 'application', kind: 'object-input'},
             {field: 'decision', kind: 'function'},
+            {field: 'score', kind: 'function'},
+            {field: 'payment', kind: 'function'},
+            {field: 'eligibility', kind: 'function'},
             {field: draft, kind: 'function'},
         ]);
-    });
-
-    it('drops a node that is removed from the flow', () => {
-        const {service} = build();
-        service.addInputNode('applicant');
-        service.removeFromFlow('applicant');
-        expect(service.listNodes()).toEqual([]);
     });
 
     it('creates a new input record with one number field and notifies', () => {
@@ -681,7 +612,7 @@ describe('FlowEditorService flow nodes', () => {
         service.subscribe(listener);
         const field = service.createInputNode();
         expect(field).toBe('input');
-        expect(portable().input).toMatchObject({'@kind': 'context', '@node': 'InputNode', value: 0});
+        expect(portable().input).toMatchObject({'@node': 'InputNode', value: 0});
         expect(service.getObjectInputNode('input').fields).toEqual([
             {name: 'value', type: 'number', value: '0', used: false},
         ]);
@@ -729,7 +660,7 @@ describe('FlowEditorService value inputs', () => {
         const listener = vi.fn();
         service.subscribe(listener);
         expect(service.setInputValue('age', '12')).toBeUndefined();
-        expect(mutable.toPortable().age).toMatchObject({expression: '12', '@node': 'InputNode', '@node-name': 'Age'});
+        expect(compactModel(mutable).age).toMatchObject({expression: '12', '@node': 'InputNode', '@name': 'Age'});
         expect(await service.readOutput('adult')).toEqual({value: false, type: 'boolean'});
         expect(listener).toHaveBeenCalledTimes(1);
     });
@@ -738,21 +669,14 @@ describe('FlowEditorService value inputs', () => {
         const {mutable, service} = valueService();
         expect(isPortableError(service.setInputValue('age', ' ') as never)).toBe(true);
         expect(isPortableError(service.setInputValue('age', 'age +') as never)).toBe(true);
-        expect(mutable.toPortable().age).toMatchObject({expression: '23'});
-    });
-
-    it('does not annotate an existing single value or a computed one', () => {
-        const {service} = valueService();
-        expect(isPortableError(service.addInputNode('plain') as never)).toBe(true);
-        expect(isPortableError(service.addInputNode('adult') as never)).toBe(true);
-        expect(service.listInputCandidates()).toEqual([]);
+        expect(compactModel(mutable).age).toMatchObject({expression: '23'});
     });
 
     it('creates a new list input and a new value input', async () => {
         const {mutable, service} = valueService();
         expect(service.createInputNode('list-input')).toBe('list');
         expect(service.createInputNode('value-input')).toBe('value');
-        expect(mutable.toPortable()).toMatchObject({
+        expect(compactModel(mutable)).toMatchObject({
             list: {'@kind': 'expression', expression: '[1, 2, 3]', '@node': 'InputNode'},
             value: {'@kind': 'expression', expression: '0', '@node': 'InputNode'},
         });
@@ -782,12 +706,14 @@ describe('FlowEditorService list inputs', () => {
         return {mutable, service: createFlowEditorService(mutable)};
     };
 
-    it('lists an annotated list as a list input, and the other lists as expressions', () => {
+    it('lists every list literal as a list input, annotated or not, and a computed list as an expression', () => {
         const {service} = listService();
         expect(service.listNodes()).toEqual([
             {field: 'people', kind: 'list-input'},
-            {field: 'scores', kind: 'expression'},
+            {field: 'scores', kind: 'list-input'},
             {field: 'doubled', kind: 'expression'},
+            // A built-in call is an expression, not a function node.
+            {field: 'total', kind: 'expression'},
         ]);
     });
 
@@ -795,52 +721,28 @@ describe('FlowEditorService list inputs', () => {
         const {service} = listService();
         const model = service.getListInputNode('people');
         expect(model).toMatchObject({field: 'people', label: 'People', type: 'object[]'});
-        // The engine returns the inferred item fields in name order, not in the authored order.
-        expect(model.itemFields).toEqual(
-            expect.arrayContaining([
-                {name: 'id', type: 'string'},
-                {name: 'age', type: 'number'},
-            ]),
-        );
-        expect(model.itemFields).toHaveLength(2);
+        // The inferred item fields keep the authored order of the first item.
+        expect(model.itemFields).toEqual([
+            {name: 'id', type: 'string'},
+            {name: 'age', type: 'number'},
+        ]);
         expect(service.getListInputNode('total')).toEqual({field: 'total', type: 'any[]', itemFields: []});
     });
 
-    it('offers list literals as candidates, but not a computed list', () => {
+    it('renames the node and duplicates it', () => {
         const {service} = listService();
-        expect(service.listInputCandidates()).toEqual([{field: 'scores', kind: 'list-input'}]);
-    });
-
-    it('annotates a list literal and keeps its items', async () => {
-        const {mutable, service} = listService();
-        expect(service.addInputNode('scores')).toBeUndefined();
-        expect(mutable.toPortable().scores).toMatchObject({'@kind': 'expression', '@node': 'InputNode'});
-        expect(service.getListInputNode('scores')).toMatchObject({type: 'number[]', itemFields: []});
-        expect(await service.readOutput('scores')).toEqual({value: [1, 2, 3], type: 'number[]'});
-        expect(isPortableError(service.addInputNode('total') as never)).toBe(true);
-    });
-
-    it('renames the node, removes it from the flow, where it stays as an expression, and duplicates it', () => {
-        const {mutable, service} = listService();
         expect(service.setNodeName('people', 'Prospects')).toBeUndefined();
         expect(service.getListInputNode('people').label).toBe('Prospects');
         const copy = service.duplicate('people');
         expect(copy).toBe('people2');
         expect(service.getListInputNode('people2').itemFields).toHaveLength(2);
-        expect(service.removeFromFlow('people')).toBeUndefined();
-        expect(mutable.toPortable().people).not.toHaveProperty('@node');
-        expect(service.listNodes()).toEqual([
-            {field: 'people', kind: 'expression'},
-            {field: 'scores', kind: 'expression'},
-            {field: 'doubled', kind: 'expression'},
-            {field: 'people2', kind: 'list-input'},
-        ]);
+        expect(service.listNodes().map((node) => node.field)).toContain('people2');
     });
 
     it('refuses to delete a list that an expression reads', () => {
         const {mutable, service} = listService();
         expect(isPortableError(service.deleteField('people') as never)).toBe(true);
-        expect(mutable.toPortable()).toHaveProperty('people');
+        expect(compactModel(mutable)).toHaveProperty('people');
     });
 });
 
@@ -865,12 +767,11 @@ describe('FlowEditorService root', () => {
 
     it('lists only the direct fields of the root as nodes', () => {
         const {mutable, service} = rooted('applicant');
-        createFlowEditorService(mutable).addInputNode('applicant');
-        service.addInputNode('applicant.profile');
         service.setCallee('applicant.score', 'riskScore');
 
         expect(service.listNodes()).toEqual([
             {field: 'applicant.income', kind: 'expression'},
+            {field: 'applicant.address', kind: 'object-input'},
             {field: 'applicant.profile', kind: 'object-input'},
             {field: 'applicant.score', kind: 'function'},
         ]);
@@ -881,23 +782,17 @@ describe('FlowEditorService root', () => {
         ]);
     });
 
-    it('offers the records of the root context as input candidates', () => {
-        const {service} = rooted('applicant');
-        expect(service.listInputCandidates()).toEqual([
-            {field: 'applicant.address', kind: 'object-input'},
-            {field: 'applicant.profile', kind: 'object-input'},
-        ]);
-        expect(rooted().service.listInputCandidates()).toEqual([{field: 'applicant', kind: 'object-input'}]);
-    });
-
     it('creates drafts and inputs as fields of the root', () => {
         const {mutable, service} = rooted('applicant');
         expect(service.createDraftNode()).toBe('applicant.node');
         expect(service.createDraftNode()).toBe('applicant.node2');
         expect(service.createInputNode()).toBe('applicant.input');
-        expect(mutable.toPortable()).not.toHaveProperty('input');
+        expect(compactModel(mutable)).not.toHaveProperty('input');
         expect(service.listNodes().map((node) => node.field)).toEqual([
             'applicant.income',
+            'applicant.address',
+            'applicant.profile',
+            'applicant.score',
             'applicant.input',
             'applicant.node',
             'applicant.node2',
@@ -907,8 +802,8 @@ describe('FlowEditorService root', () => {
     it('uses the body of a function root', () => {
         const {mutable, service} = rooted('applicant.adjust');
         expect(service.createInputNode()).toBe('applicant.adjust.input');
-        const body = (mutable.toPortable() as any).applicant.adjust['@body'];
-        expect(body.input).toMatchObject({'@kind': 'context', '@node': 'InputNode', value: 0});
+        const body = (compactModel(mutable) as any).applicant.adjust.body;
+        expect(body.input).toMatchObject({'@node': 'InputNode', value: 0});
         expect(service.listNodes()).toEqual([
             {field: 'applicant.adjust.base', kind: 'expression'},
             {field: 'applicant.adjust.result', kind: 'expression'},
@@ -940,7 +835,6 @@ describe('FlowEditorService root', () => {
 
     it('keeps the path from the model root when binding in a nested context', () => {
         const {service} = rooted('applicant');
-        service.addInputNode('applicant.profile');
         service.setCallee('applicant.score', 'riskScore');
         expect(service.bindArgument('applicant.score', 'income', 'applicant.profile.tier')).toBeUndefined();
         expect(service.getFunctionNode('applicant.score').arguments[0].binding?.text).toBe('applicant.profile.tier');
@@ -969,10 +863,7 @@ describe('FlowEditorService root', () => {
         const {service} = rooted('applicant');
         const draft = service.createDraftNode();
         expect(service.renameField(draft, 'step')).toBeUndefined();
-        expect(service.listNodes()).toEqual([
-            {field: 'applicant.income', kind: 'expression'},
-            {field: 'applicant.step', kind: 'function'},
-        ]);
+        expect(service.listNodes().map((node) => node.field)).toContain('applicant.step');
         expect(isPortableError(service.renameField('applicant.step', 'income'))).toBe(true);
     });
 });
@@ -1111,34 +1002,24 @@ describe('FlowEditorService expression nodes', () => {
         expect(service.getExpressionNode('nope')).toEqual({field: 'nope', type: 'any', variables: []});
     });
 
-    it('is always on the flow: removing it from the flow is refused', () => {
-        const {service} = expressionService();
-        expect(isPortableError(service.removeFromFlow('tax') as never)).toBe(true);
-        expect(service.listNodes()).toContainEqual({field: 'tax', kind: 'expression'});
-    });
-
     it('duplicates, renames and deletes an expression, link-checked', () => {
         const {mutable, service} = expressionService();
         expect(service.duplicate('tax')).toBe('tax2');
-        expect(mutable.toPortable()).toMatchObject({
-            tax2: {'@kind': 'expression', expression: 'applicant.income * rate'},
-        });
+        expect(compactModel(mutable)).toMatchObject({tax2: 'applicant.income * rate'});
         expect(service.duplicate('rate')).toBe('rate2');
         expect(service.getExpressionNode('rate2')).toMatchObject({type: 'number', expression: '0.2'});
         expect(service.renameField('tax2', 'levy')).toBeUndefined();
         expect(service.listNodes()).toContainEqual({field: 'levy', kind: 'expression'});
         // `net` reads `tax`: deleting it would break the link.
         expect(isPortableError(service.deleteField('tax') as never)).toBe(true);
-        expect(mutable.toPortable()).toHaveProperty('tax');
+        expect(compactModel(mutable)).toHaveProperty('tax');
         expect(service.deleteField('levy')).toBeUndefined();
-        expect(mutable.toPortable()).not.toHaveProperty('levy');
+        expect(compactModel(mutable)).not.toHaveProperty('levy');
     });
 
-    it('becomes a list input when a list literal is annotated', () => {
+    it('shows a list literal as a list input, without an annotation', () => {
         const mutable = MutableDecisionService.fromCode(`{ scores: [1, 2, 3] }`);
         const service = createFlowEditorService(mutable);
-        expect(service.listNodes()).toEqual([{field: 'scores', kind: 'expression'}]);
-        expect(service.addInputNode('scores')).toBeUndefined();
         expect(service.listNodes()).toEqual([{field: 'scores', kind: 'list-input'}]);
     });
 });

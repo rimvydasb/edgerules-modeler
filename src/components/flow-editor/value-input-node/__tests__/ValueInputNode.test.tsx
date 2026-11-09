@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
 import type {FlowEditorOpenTarget} from '../../flow-editor-types';
 import {renderNode} from '../../testing/renderNode';
+import {compactModel} from '#lib/testing/compactPortable';
 
 // A single number and a single string, each read by an expression.
 const VALUE_MODEL = `{
@@ -51,7 +52,7 @@ describe('ValueInputNode', () => {
             expect(await service.readOutput('adult')).toEqual({value: true, type: 'boolean'});
             await typeValue('12');
             await waitFor(() => expect(screen.getByRole('button', {name: 'Value of age'})).toHaveTextContent('12'));
-            expect(mutable.toPortable()).toMatchObject({age: {expression: '12', '@node': 'InputNode'}});
+            expect(compactModel(mutable)).toMatchObject({age: {expression: '12', '@node': 'InputNode'}});
             expect(await service.readOutput('adult')).toEqual({value: false, type: 'boolean'});
         });
 
@@ -60,7 +61,7 @@ describe('ValueInputNode', () => {
             await typeValue('30 +');
             expect(await screen.findByRole('alert')).toBeInTheDocument();
             expect(screen.getByTestId('value-editor-age')).toBeInTheDocument();
-            expect(mutable.toPortable()).toMatchObject({age: {expression: '23'}});
+            expect(compactModel(mutable)).toMatchObject({age: {expression: '23'}});
         });
 
         it('is read-only in read-only mode', () => {
@@ -75,7 +76,7 @@ describe('ValueInputNode', () => {
         renderValue('age', {onOpenNode});
         fireEvent.click(screen.getByRole('button', {name: 'Node actions'}));
         await screen.findByRole('menu');
-        for (const name of ['Rename node', 'Rename field', 'Duplicate', 'Remove from flow', 'Delete']) {
+        for (const name of ['Rename node', 'Rename field', 'Duplicate', 'Delete']) {
             expect(screen.getByRole('menuitem', {name})).toBeInTheDocument();
         }
         fireEvent.click(screen.getByRole('menuitem', {name: 'Open in boxed editor'}));

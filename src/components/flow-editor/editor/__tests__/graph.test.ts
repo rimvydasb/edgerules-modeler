@@ -32,7 +32,6 @@ describe('resolveSource', () => {
 describe('modelWires', () => {
     it('draws one wire per path binding whose source is on the canvas, colored by argument type', () => {
         const service = createFlowEditorService(MutableDecisionService.fromCode(SAMPLE_MODEL));
-        service.addInputNode('applicant');
         service.setCallee('decision', 'risk');
         service.setCallee('payment', 'monthly'); // an expression binding: no wire
         const wires = modelWires(service.listNodes(), (field) => service.getFunctionNode(field));
@@ -40,6 +39,9 @@ describe('modelWires', () => {
             ['decision:age', 'applicant', 'out:age', 'in:age', 'number'],
             ['decision:income', 'applicant', 'out:income', 'in:income', 'number'],
             ['decision:segment', 'applicant', 'out:segment', 'in:segment', 'string'],
+            ['score:age', 'applicant', 'out:age', 'in:age', 'number'],
+            ['score:income', 'applicant', 'out:income', 'in:income', 'number'],
+            ['eligibility:person', 'applicant', 'out:*', 'in:person', 'record'],
         ]);
     });
 
@@ -57,6 +59,35 @@ describe('modelWires', () => {
             ['quote.score', 'out:result', 'quote.return', 'in:score'],
             ['quote.installment', 'out:result', 'quote.return', 'in:installment'],
         ]);
+    });
+
+    it('wires a return field that reads a derived member or a computed value from the parameter', () => {
+        const service = createFlowEditorService(
+            MutableDecisionService.fromCode(`{
+                type Order: { qty: <number> }
+                facts OrderFacts(order: Order): { double: order.qty * 2 }
+                service price(order: Order): {
+                    return: {
+                        double: order.double
+                        doubles: for x in [order] return x.double
+                        qty: order.qty
+                    }
+                }
+            }`),
+            {root: 'price'},
+        );
+        const wires = modelWires(
+            service.listNodes(),
+            (field) => service.getFunctionNode(field),
+            (field) => service.getReturnNode(field),
+            (field) => service.getExpressionNode(field),
+            (field) => service.getParameterNode(field),
+        );
+        const into = (name: string) =>
+            wires.filter((wire) => wire.targetHandle === `in:${name}`).map((wire) => [wire.source, wire.sourceHandle]);
+        expect(into('double')).toEqual([['price.order', 'out:*']]);
+        expect(into('qty')).toEqual([['price.order', 'out:qty']]);
+        expect(into('doubles')).toEqual([['price.order', 'out:*']]);
     });
 
     it('wires every variable of an expression into its one input pin, from the nearest pin of its path', () => {

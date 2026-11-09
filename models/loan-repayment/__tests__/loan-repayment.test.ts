@@ -4,7 +4,13 @@ import {describe, expect, it} from 'vitest';
 import {openFixtureProject} from '../../../src/components/project-session/testing/sessionFixture';
 import {createTestRunner} from '../../../src/components/tests-manager/runner/createTestRunner';
 import {matches} from '../../../src/components/tests-manager/model/values';
-import {LOAN_REPAYMENT_DOCUMENTATION, LOAN_REPAYMENT_DSL, LOAN_REPAYMENT_FLOW, LOAN_REPAYMENT_PROJECT} from '..';
+import {
+    LOAN_REPAYMENT_DOCUMENTATION,
+    LOAN_REPAYMENT_DSL,
+    LOAN_REPAYMENT_FLOW,
+    LOAN_REPAYMENT_PROJECT,
+    LOAN_REPAYMENT_README,
+} from '..';
 
 interface Installment {
     period: number;
@@ -42,14 +48,22 @@ describe('loan repayment model', () => {
         const {session} = await openFixtureProject(LOAN_REPAYMENT_PROJECT);
         expect(session.getSlice('tests').subjects).toHaveProperty('loanRepayment');
         expect(Object.keys(session.getSlice('flow').layouts)).toEqual(['mortgageBook', 'termComparisonBook']);
-        expect(session.engine.getCode('loanRepayment')).toContain('@Service');
+        expect(session.engine.getCode('loanRepayment')).toMatch(/^service /);
+    });
+
+    it('has an authored README whose model: links open paths the model has', async () => {
+        const {session} = await openFixtureProject(LOAN_REPAYMENT_PROJECT);
+        expect(session.getSlice('readme')).toBe(LOAN_REPAYMENT_README);
+        const links = [...LOAN_REPAYMENT_README.matchAll(/\(model:([^)]+)\)/g)].map((match) => match[1]!);
+        expect(links.length).toBeGreaterThan(0);
+        const service = engine();
+        for (const path of links) expect(service.get(path), path).not.toHaveProperty('@kind', 'error');
     });
 
     it('describes only paths the model has', () => {
         const service = engine();
         for (const path of Object.keys(LOAN_REPAYMENT_DOCUMENTATION.byPath)) {
-            // `ALL` also reads the type definitions.
-            expect(service.get(path, 'ALL'), path).not.toHaveProperty('@kind', 'error');
+            expect(service.get(path), path).not.toHaveProperty('@kind', 'error');
         }
     });
 
@@ -177,12 +191,12 @@ describe('loan repayment model', () => {
                 for (const sink of [...layout.outputs, ...(layout.charts ?? [])]) {
                     const {node, handle} = sink.source!;
                     expect(node.startsWith(`${root}.`), sink.label).toBe(true);
-                    const field = service.get(node) as {'@node'?: string; '@method'?: string};
+                    const field = service.get(node) as {'@node'?: string; method?: string};
                     expect(field['@node'], `${root} ${sink.label}`).toBe('FunctionNode');
                     const result = handle.slice('out:'.length);
                     if (result === 'result') continue;
-                    const callee = field['@method']!;
-                    expect(service.get(callee), `${node} ${handle}`).toHaveProperty(['@return', result]);
+                    const callee = field.method!;
+                    expect(service.get(callee), `${node} ${handle}`).toHaveProperty(['return', 'fields', result]);
                 }
             }
         });

@@ -20,7 +20,7 @@ export interface ReturnField {
  */
 export interface ReturnNodeModel {
     field: string; // node id: '<service>.return'
-    label?: string; // '@node-name' of its `@ReturnNode` annotation
+    label?: string; // '@name' of its `@ReturnNode` annotation
     fields: ReturnField[]; // a context: one input pin each; empty for an expression
     expression?: string; // an expression: its text, for example 'score > 350'; undefined for a context
     type?: string; // an expression: the linked return type; 'any' when the model does not link

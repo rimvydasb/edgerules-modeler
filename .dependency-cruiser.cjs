@@ -8,8 +8,11 @@ const COMPONENT = '^src/components/';
 // Test code and fixtures: may use dev-only packages and other components' internals.
 const TEST_CODE = '(^|/)(__tests__|testing)/|\\.test\\.tsx?$';
 
-/** Forbids `component` from importing any other component except `allowed`. */
-function componentAllowlist(component, allowed, section) {
+/**
+ * Forbids `component` from importing any other component except `allowed`. `sharedPaths` are folders of other
+ * components it may still import, such as the shared code-editor language tooling.
+ */
+function componentAllowlist(component, allowed, section, sharedPaths = []) {
   const others = allowed.length ? `only ${allowed.join(', ')}` : 'no other component';
   return {
     name: `component-deps-${component}`,
@@ -21,7 +24,10 @@ function componentAllowlist(component, allowed, section) {
     from: {path: `${COMPONENT}${component}/`, pathNot: TEST_CODE},
     to: {
       path: COMPONENT,
-      pathNot: [component, ...allowed].map((name) => `${COMPONENT}${name}/`),
+      pathNot: [
+        ...[component, ...allowed].map((name) => `${COMPONENT}${name}/`),
+        ...sharedPaths.map((p) => `${COMPONENT}${p}`),
+      ],
     },
   };
 }
@@ -85,6 +91,7 @@ module.exports = {
     componentAllowlist('code-editor', [], 'Main React components'),
     componentAllowlist('code-editor-cell', ['code-editor'], 'Main React components'),
     componentAllowlist('project-explorer', [], 'Shell owns cross-editor navigation'),
+    componentAllowlist('markdown-view', [], 'Main React components', ['code-editor/language/']),
     componentAllowlist('documentation-service', [], 'Main React components'),
     componentAllowlist('test-cases-service', [], 'Main React components'),
     componentAllowlist('decision-table', ['code-editor', 'code-editor-cell'], 'Main React components'),
@@ -112,6 +119,7 @@ module.exports = {
       'shell',
       [
         'code-editor',
+        'markdown-view',
         'boxed-editor',
         'flow-editor',
         'project-explorer',
@@ -166,6 +174,13 @@ module.exports = {
       ['src/components/flow-editor/'],
       'it is an optional peer dependency of the flow-editor subpath; importing it elsewhere makes every ' +
         'consumer of that other subpath install it.',
+    ),
+    packageOwner(
+      'peer-tanstack-markdown-only-in-markdown-view',
+      '@tanstack/markdown/',
+      ['src/components/markdown-view/'],
+      'it is an optional peer dependency of the markdown-view subpath. Other components render MarkdownView ' +
+        'instead of using the Markdown renderer directly.',
     ),
     packageOwner(
       'peer-codemirror-only-in-code-editors',

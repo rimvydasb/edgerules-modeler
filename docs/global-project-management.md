@@ -174,11 +174,11 @@ revision always identifies the DSL revision from which it was generated.
 interface MutableDecisionService {
   // Construction
   static fromCode(source: string): MutableDecisionService;
-  static fromPortable(model: PortableRootContext): MutableDecisionService;
+  static fromPortable(model: PortableContext): MutableDecisionService;
 
   // Deterministic serialization
   toCode(options?: { format?: 'canonical' }): string;
-  toPortable(): PortableRootContext;
+  toPortable(): PortableContext;
 
   // Existing semantic operations
   get(path: string, filter?: PortableFilter): PortableNode | PortableError;

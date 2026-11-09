@@ -23,7 +23,7 @@ export const EXPRESSION_PIN = 'in:*';
 /**
  * The EdgeRules ExpressionNode: one computed field of the flow context that no other node shows, so that every value a
  * node reads is on the canvas. A one-row header: the tile, the field name and the node menu. The input pin takes one
- * wire per field the expression reads (its `@variables`); the output pin feeds what reads the field. The wires into it
+ * wire per field the expression reads (its `variables`); the output pin feeds what reads the field. The wires into it
  * follow the expression text: edit it in the boxed or code editor.
  */
 export function ExpressionNode({id, data, selected}: NodeProps<ExpressionNodeType>): ReactElement {

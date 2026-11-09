@@ -52,6 +52,8 @@ describe('ProjectSession — open', () => {
         ).toEqual(['Young']);
         expect(session.flow.getLayout('*').positions).toEqual({decision: {x: 1, y: 2}});
         expect(session.getSlice('tests')).toEqual(RISK_TESTS);
+        expect(session.readme.exportDocument()).toBe('# Loans\n');
+        expect(session.getSlice('readme')).toBe('# Loans\n');
     });
 });
 
@@ -279,12 +281,11 @@ describe('ProjectSession — commands', () => {
 });
 
 describe('ProjectSession — model metadata', () => {
-    it('loads the model name and version of the manifest and reports them on the model root', async () => {
+    it('loads the model name and version of the manifest into the model slice, never into the model', async () => {
         const {session} = await openFixtureProject({model: {dsl: '{ a: 1 }', name: 'Risk desk', version: '1.0.0'}});
         expect(session.getSlice('model').metadata).toEqual({name: 'Risk desk', version: '1.0.0'});
-        expect(session.engine.toPortable()).toMatchObject({'@model-name': 'Risk desk', '@model-version': '1.0.0'});
-        expect(session.engine.get('*')).toMatchObject({'@model-name': 'Risk desk', '@model-version': '1.0.0'});
-        // Only the root has the metadata, and the DSL never does.
+        // The Portable format has no key for the metadata, and the DSL has no syntax for it.
+        expect(JSON.stringify(session.engine.toPortable())).not.toContain('Risk desk');
         expect(session.engine.exportDsl()).not.toContain('Risk desk');
     });
 
@@ -318,7 +319,6 @@ describe('ProjectSession — model metadata', () => {
 
         session.execute({type: 'setModelMetadata', metadata: {name: '  ', version: '1'}});
         expect(session.getSlice('model').metadata).toEqual({version: '1'});
-        expect(session.engine.toPortable()).not.toHaveProperty('@model-name');
     });
 
     it('rolls the metadata back with a failed transaction', async () => {
@@ -360,6 +360,38 @@ describe('ProjectSession — save', () => {
 
         expect(phases[0]).toBe('saving');
         expect(session.getSnapshot()).toMatchObject({phase: 'ready', dirtySlices: ['documentation', 'flow']});
+    });
+
+    it('saves a README edit and a model edit as one revision', async () => {
+        const {session, repository, locator} = await openFixtureProject();
+        const listener = vi.fn();
+        session.readme.subscribe(listener);
+
+        session.readme.setMarkdown('# Loans\n\nRisk by [age](model:applicant.age).\n');
+        session.readme.setMarkdown('# Loans\n\nRisk by [age](model:applicant.age).\n'); // equal text is no change
+        session.engine.set('unused', {'@kind': 'expression', expression: '8'});
+        expect(listener).toHaveBeenCalledTimes(1);
+        expect(session.getSnapshot().dirtySlices).toEqual(['model', 'readme']);
+
+        const result = await session.save();
+
+        expect(result.revision).toBe('2');
+        expect(session.getSnapshot().dirtySlices).toEqual([]);
+        const stored = await repository.load(locator);
+        expect(stored.revision).toBe('2');
+        expect(stored.bundle.readme).toBe('# Loans\n\nRisk by [age](model:applicant.age).\n');
+        expect(stored.bundle.model).toContain('unused: 8');
+    });
+
+    it('rolls the README back with a failed transaction', async () => {
+        const {session} = await openFixtureProject({readme: '# Authored\n'});
+        const result = session.transaction(() => {
+            session.readme.setMarkdown('# Changed\n');
+            throw new Error('stop');
+        });
+        expect(result.ok).toBe(false);
+        expect(session.getSlice('readme')).toBe('# Authored\n');
+        expect(session.getSnapshot().dirtySlices).toEqual([]);
     });
 
     it('enters the conflict phase when the stored revision moved on', async () => {

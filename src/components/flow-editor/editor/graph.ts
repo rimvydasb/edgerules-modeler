@@ -4,6 +4,7 @@ import {typeKind} from '../core-node';
 import type {ExpressionNodeModel} from '../expression-node/types';
 import type {FlowNodeRef} from '../flow-editor-types';
 import type {FunctionNodeModel} from '../function-node/types';
+import type {ParameterNodeModel} from '../parameter-node/types';
 import type {ReturnNodeModel} from '../return-node/types';
 import type {FlowOutput} from './types';
 
@@ -88,6 +89,7 @@ export function modelWires(
     functionModel: (field: string) => FunctionNodeModel,
     returnModel?: (field: string) => ReturnNodeModel,
     expressionModel?: (field: string) => ExpressionNodeModel,
+    parameterModel?: (field: string) => ParameterNodeModel,
 ): Wire[] {
     const models = new Map(
         refs.filter((ref) => ref.kind === 'function').map((ref) => [ref.field, functionModel(ref.field)]),
@@ -97,9 +99,28 @@ export function modelWires(
             .filter((ref) => ref.kind !== 'return')
             .map((ref) => [ref.field, {whole: models.get(ref.field)?.results.some((result) => result.whole)}]),
     );
+    // The pins of a parameter node are the fields of its record type. A read of a derived member (a fact or a decision
+    // of the type) or a deeper path comes from the nearest pin on its path, or else from the whole-value pin.
+    const pinsOf = new Map<string, Set<string>>();
+    if (parameterModel) {
+        for (const ref of refs) {
+            if (ref.kind === 'parameter')
+                pinsOf.set(ref.field, new Set(parameterModel(ref.field).fields.map((f) => f.name)));
+        }
+    }
+    const resolve = (text: string) => {
+        const direct = resolveSource(text, sources);
+        let best: string | undefined;
+        for (const id of pinsOf.keys()) {
+            if ((text === id || text.startsWith(`${id}.`)) && (!best || id.length > best.length)) best = id;
+        }
+        if (!best || text === best) return direct;
+        const member = text.slice(best.length + 1).split(/[.[]/, 1)[0];
+        return {node: best, handle: pinsOf.get(best)!.has(member) ? `out:${member}` : 'out:*'};
+    };
     const wires: Wire[] = [];
     const wire = (field: string, pin: string, text: string, type: string, id = `${field}:${pin}`) => {
-        const source = resolveSource(qualifyBinding(text.trim(), field, sources), sources);
+        const source = resolve(qualifyBinding(text.trim(), field, sources));
         if (!source || source.node === field) return;
         // Two variables of one source pin, `a.x` and `a.x.y`, are one wire.
         if (
@@ -130,7 +151,7 @@ export function modelWires(
         for (const variable of variables) {
             // A read deeper than any pin, such as `applicant.address.city`, comes from the nearest pin on its path.
             let path = variable.trim();
-            while (!resolveSource(qualifyBinding(path, field, sources), sources)) {
+            while (!resolve(qualifyBinding(path, field, sources))) {
                 const cut = Math.max(path.lastIndexOf('.'), path.lastIndexOf('['));
                 if (cut <= 0) break;
                 path = path.slice(0, cut);
@@ -144,7 +165,15 @@ export function modelWires(
         // A returned expression wires like an expression node: one wire per field it reads into its one pin.
         if (model.expression !== undefined) wireVariables(ref.field, model.variables);
         for (const item of model.fields) {
-            if (item.value !== undefined) wire(ref.field, item.name, item.value, item.type);
+            if (item.value === undefined) continue;
+            if (resolve(qualifyBinding(item.value.trim(), ref.field, sources))) {
+                wire(ref.field, item.name, item.value, item.type);
+                continue;
+            }
+            // A computed value, such as `for x in a.items return x.b`: one wire per node path it reads.
+            for (const path of item.value.match(/[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*/g) ?? []) {
+                wire(ref.field, item.name, path, item.type, `${ref.field}:${item.name}:${path}`);
+            }
         }
     }
     for (const ref of refs) {

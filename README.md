@@ -6,7 +6,11 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
 [`edgerules`](../edgerules) repository. It includes:
 
 - [x] EdgeRules Code Editor (syntax highlighting, engine diagnostics, Ctrl+Space completion, Ctrl+Click / F12
-      go-to-definition, Shift-Alt-F formatting)
+      go-to-definition, Shift-Alt-F formatting); `language: 'markdown'` edits Markdown source (optional peer
+      `@codemirror/lang-markdown`)
+- [x] Markdown View (`edgerules-react/markdown-view`): read-only GitHub Flavored Markdown with `@tanstack/markdown`,
+      such as the project README. Raw HTML is dropped; only `https`, `mailto`, `model:` and relative URLs are kept;
+      `edgerules` fences are highlighted; a `model:` link calls `onModelLink(path)`
 - [x] EdgeRules Code Editor Cell (the same language tooling in a compact cell control for the Boxed and Decision Table
       editors; commits on Enter/blur, cancels on Escape, analyzes the cell in the scope of its surrounding model via an
       embed context)
@@ -20,10 +24,13 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
   - [x] FlowEditor canvas ([spec](docs/stories/completed/flow-editor-story.md#flow-editor-canvas)): node palette with
         drag or click to add, wires from the model, automatic layout, zoom, minimap. The host imports
         `@xyflow/react/dist/style.css`.
-  - [x] ObjectInputNode / ListInputNode / ValueInputNode / TermsNode
+  - [x] ObjectInputNode / ListInputNode / ValueInputNode
         ([spec](docs/stories/completed/flow-editor-story.md#flow-editor-objectinputnode),
         [list](docs/stories/completed/flow-editor-story.md#flow-editor-listinputnode))
-  - [x] FunctionNode / RulesetNode ([spec and story](docs/stories/completed/flow-editor-story.md))
+  - [x] FunctionNode: an invocation of a function or a ruleset
+        ([spec and story](docs/stories/completed/flow-editor-story.md))
+  - [x] The flow of a `service` or a `workbook` shows every element of it, annotated or not; a typed hole of a workbook
+        (`applicant: <Applicant>`) is a ParameterNode
   - [x] ExpressionNode ([story](docs/stories/service-flow.md)): every other expression of a workbook or service flow,
         one header row with a wire from each field it reads (`@variables`), so no wire skips a computed value
   - [x] OutputNode (shows the engine value of the wired result; no model writes)
@@ -34,14 +41,18 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
       any fully typed `func`/`ruleset`/`optimise`/`loop`, backed by the engine-free `test-cases-service` package and the
       `TestRunner` execution service)
 - [ ] EdgeRules Types Editor
-- [EdgeRules Project Explorer](docs/stories/completed/project-explorer-story.md)
+- [EdgeRules Project Explorer](docs/stories/completed/project-explorer-story.md): Documents, Types, Methods, Service
+  Methods, Variables, Workbooks and Tests. The host lists the documents (`documents={['README.md']}`); an entry opens as
+  `doc:README.md`
 - [x] [EdgeRules Project Session](docs/project-session-story.md) (`edgerules-react/project-session`, no GUI): loads a
-      project bundle — model DSL, documentation, tests and flow layout — into one `ProjectSession` that owns the engine
-      and the slice stores, and saves it back as one revision. `LocalProjectRepository` keeps device-local projects in
-      IndexedDB; `ProjectProvider` and `useProjectSlice` hand the session to a React subtree.
+      project bundle — model DSL, documentation, tests, flow layout and `README.md` — into one `ProjectSession` that
+      owns the engine and the slice stores, and saves it back as one revision. `LocalProjectRepository` keeps
+      device-local projects in IndexedDB; `ProjectProvider` and `useProjectSlice` hand the session to a React subtree.
 - [x] [EdgeRules Shell](docs/specs/shell-spec.md) (`edgerules-react/shell`): one part of the open project's model — the
       whole model, a context or a function — in the Code, Boxed or Flow view, with a breadcrumb of the root path and
-      drill-down from the editors. Renders inside a `ProjectProvider`.
+      drill-down from the editors. Renders inside a `ProjectProvider`. The document root `doc:README.md`
+      ([story](docs/stories/model-readme-story.md)) shows the project README in the Preview view (`MarkdownView`) and
+      its Markdown source in the Code view; the Flow view of the model shows a README panel above the workbooks.
 
 ## Preview
 
@@ -76,8 +87,10 @@ export const Default: Story = {
 };
 ```
 
-Pass a `ProjectBundleInput` instead of a DSL string to seed documentation, tests or a flow layout. Wrap the story in
-`<ProjectProvider session={…}>` when it reads the session through `useProjectSession`, `useProjectSnapshot` or
+Pass a `ProjectBundleInput` instead of a DSL string to seed documentation, tests, a flow layout or a README.
+`openStoredStoryProject(key, input)` reopens the stored project of `key` instead, so a reload of the story keeps what
+the last save stored; an e2e spec passes a fresh `key` through the story args (`&args=projectKey:<key>`). Wrap the story
+in `<ProjectProvider session={…}>` when it reads the session through `useProjectSession`, `useProjectSnapshot` or
 `useProjectSlice`.
 
 ## Other Links
@@ -94,7 +107,7 @@ Pass a `ProjectBundleInput` instead of a DSL string to seed documentation, tests
 
 - [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web) for browser-side rule parsing, execution and CRUD
   against the EdgeRules Portable Format; [`@edgerules/portable`](https://www.npmjs.com/package/@edgerules/portable) for
-  the corresponding TypeScript types (`PortableNode`, `PortableError`, `PortableRootContext`).
+  the corresponding TypeScript types (`PortableNode`, `PortableError`, `PortableContext`).
 - [Mantine](https://mantine.dev) (`@mantine/core`, `@mantine/hooks`) for dialogs, menus, tooltips, selects, alerts,
   buttons and the Project Explorer tree; [Tabler Icons](https://tabler.io/icons) (`@tabler/icons-react`) for icons. Grid
   rows and cells are plain elements styled with CSS Modules (see `docs/architecture-adr.md`).
@@ -124,10 +137,11 @@ they actually import — a project that only uses the Code Editor never has to i
 │   │   ├── documentation-service/ # Persistence for path-keyed free-text descriptions (no engine, no GUI) — see
 │   │   │                          #   documentation-service-story.md; shared by boxed-editor, decision-table, etc.
 │   │   ├── flow-editor/           # Flow Editor (ReactFlow-based)
+│   │   ├── markdown-view/         # Read-only GitHub Flavored Markdown (the project README)
 │   │   ├── project-explorer/      # Project Explorer
 │   │   ├── project-session/       # Project bundle, repositories, ProjectSession and its React provider (no GUI) —
 │   │   │                          #   see project-session-story.md
-│   │   ├── shell/                 # Shell: Code, Boxed and Flow views of one root path of the session model
+│   │   ├── shell/                 # Shell: Code, Boxed and Flow views of one root path; Preview and Code of the README
 │   │   ├── test-cases-service/    # Persistence for test cases/rows/results (no engine, no GUI) — see
 │   │   │                          #   tests-manager-spec.md (docs/specs); used by tests-manager, designed for boxed-editor too
 │   │   ├── tests-manager/         # Tests Manager grid + TestRunner (the execution service; see
@@ -157,11 +171,12 @@ since they exercise built, running instances of the components rather than isola
   (`edgerules-react/code-editor`, `edgerules-react/flow-editor`, ...) plus a root entry (`edgerules-react`) that
   re-exports everything for convenience.
 - **Peer dependencies**: `react`, `react-dom`, `@mantine/core`, `@mantine/hooks` and other heavy, component-specific
-  libraries (`reactflow`, `@tanstack/charts`, `@codemirror/state`/`@codemirror/view`/`@codemirror/lint`,
-  `@tabler/icons-react`) are declared as `peerDependencies` (most marked optional via `peerDependenciesMeta`), never
-  bundled, so consuming apps control their own versions and bundle size. Wrap the app in Mantine's `MantineProvider` and
-  import `@mantine/core/styles.css` once; the library's own CSS Modules are injected at runtime, so no stylesheet of
-  ours needs importing. Components take `className`/`style` (not `sx`) for host styling.
+  libraries (`reactflow`, `@tanstack/charts`, `@tanstack/markdown`, `@codemirror/state`/`@codemirror/view`/
+  `@codemirror/lint`, `@codemirror/lang-markdown`, `@tabler/icons-react`) are declared as `peerDependencies` (most
+  marked optional via `peerDependenciesMeta`), never bundled, so consuming apps control their own versions and bundle
+  size. Wrap the app in Mantine's `MantineProvider` and import `@mantine/core/styles.css` once; the library's own CSS
+  Modules are injected at runtime, so no stylesheet of ours needs importing. Components take `className`/`style` (not
+  `sx`) for host styling.
 - **Build output**: `tsdown` builds dual ESM/CJS bundles with generated `.d.ts` files, one per component entry point,
   enabling tree-shaking. `sideEffects: false` is set in `package.json` (CSS files excluded) so bundlers can drop unused
   components entirely.

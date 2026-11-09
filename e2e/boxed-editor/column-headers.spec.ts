@@ -72,7 +72,7 @@ test.describe('Boxed Editor / column headers', () => {
         for (const type of ['number', 'string', 'boolean', 'date', 'Type', 'number[]', '<number, required: true>']) {
             await retypeHeader(page, 'function', 'arg', type);
         }
-        await expectLiveModel(page, /"arg":\{"@kind":"type","type":"number","required":true\}/);
+        await expectLiveModel(page, /"arg":\{"@kind":"placeholder","type":"number","required":true\}/);
     });
 
     test("changes a condition column's type and keeps every rule cell valid", async ({page}) => {

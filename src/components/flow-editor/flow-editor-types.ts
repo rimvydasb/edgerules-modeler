@@ -26,8 +26,10 @@ export interface FlowEditorProviderProps {
 
 /**
  * One model field that the canvas draws as a node; the node id is the field path. A service flow adds a node per
- * parameter of the service ('<service>.<parameter>') and its return ('<service>.return'). Every other expression of
- * the flow context is an expression node.
+ * parameter of the service ('<service>.<parameter>') and its return ('<service>.return'). A typed hole of a workbook
+ * (`applicant: <Applicant>`) is a parameter node. The flow of a service or a workbook shows every field: an
+ * unannotated invocation is a function node and an unannotated record an object input. Every other expression of the
+ * flow context is an expression node.
  */
 export interface FlowNodeRef {
     field: string;
@@ -35,18 +37,17 @@ export interface FlowNodeRef {
 }
 
 export interface FlowEditorService {
-    listNodes(): FlowNodeRef[]; // a service: its parameters, then '@node' annotated fields and expressions in model order, then the drafts
-    isService(): boolean; // the root is a `@Service` function: its flow has parameter nodes and a return node
+    listNodes(): FlowNodeRef[]; // a service: its parameters first; a service or a workbook: every field in model order; other flows: '@node' annotated fields and expressions; then the drafts
+    isService(): boolean; // the root is a `service` declaration: its flow has parameter nodes and a return node
     listCallees(): CalleeRef[]; // user func and ruleset entries with only typed parameters
     getFunctionNode(field: string): FunctionNodeModel; // committed invocation plus any draft overlay
     createDraftNode(): string; // new field name from uniqueName('node', …); no callee, nothing written
     setCallee(field: string, method: string): PortableError | void; // keeps bindings with same name and type
     bindArgument(field: string, parameter: string, sourcePath: string): PortableError | void; // link-checked
     unbindArgument(field: string, parameter: string): void; // turns the node into a draft
-    setNodeName(field: string, name: string): PortableError | void; // '@node-name' only; '' clears it
+    setNodeName(field: string, name: string): PortableError | void; // '@name' only; '' clears it
     renameField(field: string, newName: string): PortableError | void; // rewrites wires; the caller moves the description
     duplicate(field: string): string | PortableError; // returns the new field name
-    removeFromFlow(field: string): PortableError | void; // a write without `@node`; the field stays; refused for an expression and the return
     deleteField(field: string): PortableError | void; // remove(field), link-checked; a parameter: refused while the body reads it
     addArgument(field: string, after?: string): PortableError | void; // after = undefined appends
     moveArgument(field: string, parameter: string, direction: 'up' | 'down'): PortableError | void;
@@ -56,10 +57,8 @@ export interface FlowEditorService {
     getObjectInputNode(field: string): ObjectInputNodeModel; // the record annotated @InputNode; no fields when it does not exist
     getListInputNode(field: string): ListInputNodeModel; // the list annotated @InputNode; no item fields when it does not exist
     getValueInputNode(field: string): ValueInputNodeModel; // the single value annotated @InputNode; no value when it does not exist
-    getExpressionNode(field: string): ExpressionNodeModel; // an expression no other node shows, with its `@variables`; no expression when it does not exist
+    getExpressionNode(field: string): ExpressionNodeModel; // an expression no other node shows, with its `variables`; no expression when it does not exist
     createExpressionNode(): string | PortableError; // a new field 'expression…' of the flow context with the expression `0`
-    listInputCandidates(): FlowNodeRef[]; // records and list literals of the model that are not yet an input node
-    addInputNode(field: string): PortableError | void; // annotates an existing record or list with '@node: InputNode'
     createInputNode(kind?: 'object-input' | 'list-input' | 'value-input'): string | PortableError; // a new '@InputNode': record 'input…' with one number field (default), list 'list…' of numbers or number 'value…'
     addInputField(field: string, after?: string): PortableError | void; // appends a number field; after = undefined appends
     moveInputField(field: string, name: string, direction: 'up' | 'down'): PortableError | void;

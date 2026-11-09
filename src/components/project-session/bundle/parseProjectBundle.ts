@@ -1,5 +1,5 @@
 import {ProjectError} from '../errors';
-import {PROJECT_FORMAT_VERSION, type ProjectBundle, type ProjectLocator} from './types';
+import {PROJECT_FORMAT_VERSION, generateReadme, type ProjectBundle, type ProjectLocator} from './types';
 
 type Raw = Record<string, unknown>;
 
@@ -12,6 +12,13 @@ const MIGRATIONS: ProjectMigrations = {
         ...bundle,
         flow: isRecord(flow) ? {schemaVersion: 2, layouts: flow.layout === undefined ? {} : {'*': flow.layout}} : flow,
     }),
+    // Format 3 adds `README.md`; a project without one gets the README a new project gets.
+    2: (bundle) => {
+        const manifest = isRecord(bundle.manifest) ? bundle.manifest : {};
+        if (typeof manifest.name !== 'string') return bundle;
+        const description = typeof manifest.description === 'string' ? manifest.description : undefined;
+        return {...bundle, readme: generateReadme(manifest.name, description)};
+    },
 };
 
 const SECTIONS = new Set(['inputs', 'assertions', 'validations']);
@@ -197,6 +204,7 @@ export function parseProjectBundle(
     checkDocumentation(c, bundle.documentation);
     checkTests(c, bundle.tests);
     checkFlow(c, bundle.flow);
+    c.string(bundle.readme, 'readme');
     if (c.issues.length > 0) {
         throw new ProjectError('invalid-bundle', `Invalid project bundle: ${c.issues[0]}`, {issues: c.issues});
     }

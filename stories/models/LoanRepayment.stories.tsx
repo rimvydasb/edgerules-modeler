@@ -3,8 +3,8 @@ import {LOAN_REPAYMENT_PROJECT} from '../../models/loan-repayment';
 import {renderShellHost, SHELL_HOST_ARG_TYPES, ShellHost} from '../support/ShellHost';
 import {openStoryProject} from '../support/storyProject';
 
-// The loan repayment project of models/loan-repayment in the Shell: a decision table, functions, a `@Service`, two
-// workbooks with charts, and tests. Each story opens one entity of it; the controls open any other path or view.
+// The loan repayment project of models/loan-repayment in the Shell: a README, a decision table, functions, a `service`,
+// two workbooks with charts, and tests. Each story opens one entity of it; the controls open any other path or view.
 const meta: Meta<typeof ShellHost> = {
     title: 'Models/Loan Repayment',
     component: ShellHost,
@@ -18,8 +18,14 @@ export default meta;
 
 type Story = StoryObj<typeof ShellHost>;
 
-/** The whole project with the Project Explorer open. */
-export const Overview: Story = {};
+/** The whole project with the Project Explorer open: the README panel above the workbooks and the service methods. */
+export const Overview: Story = {args: {defaultView: 'flow'}};
+
+/**
+ * The `README.md` of the project, opened from the Documents section of the Project Explorer: the rendered Markdown in
+ * the Preview view, its source in the Code view. A `model:` link opens that model path.
+ */
+export const Readme: Story = {args: {defaultPath: 'doc:README.md', defaultView: 'preview'}};
 
 /** The `pricingTier` decision table: the credit score and the term select the price tier. */
 export const DecisionTable: Story = {args: {defaultPath: 'pricingTier'}};

@@ -5,9 +5,11 @@
 export const KIND_COLORS = {
     model: '#17191c',
     function: '#1976d2',
-    service: '#d49b00', // a function with `@Service`: gold
+    service: '#d49b00', // a `service` declaration: gold
     ruleset: '#6a1b9a',
     complexType: '#ed6c02',
+    decision: '#00897b', // a `decision` declaration: teal
+    facts: '#8d6e63', // a `facts` declaration of a type: brown
     optimisation: '#1e88e5',
     test: '#2f9e44',
 } as const;

@@ -1,13 +1,12 @@
 import {Modal, TextInput, Textarea, Tooltip} from '@mantine/core';
-import type {PortableNode} from '@edgerules/portable';
+import type {PortableSetValue} from '@edgerules/portable';
 import {IconSettings} from '@tabler/icons-react';
 import {useState, type ReactElement} from 'react';
-import {setWithLinkCheck} from '#lib/linkCheck';
 import {isPortableError} from '#lib/portable';
 import {portableAtPath} from '#lib/portableUtils';
 import {cx} from '#ui/cx';
 import {useProjectSession} from '../project-session';
-import {annotationAt} from './shell-path';
+import {annotationAt, rootPathSegments} from './shell-path';
 import * as classes from './shell.module.css';
 
 export interface ShellSettingsProps {
@@ -30,9 +29,18 @@ const FIELD_CLASSES = {
     input: classes.settingsInput,
 };
 
+const KIND_LABELS: Record<string, string> = {workbook: 'Workbook', service: 'Service'};
+
+// What the settings dialog calls the entity: its node annotation, else its kind.
+function entityLabel(model: unknown, root: string, node: string | undefined): string {
+    if (node !== undefined) return node;
+    return KIND_LABELS[rootPathSegments(model, root).at(-1)?.kind ?? ''] ?? 'Entity';
+}
+
 /**
  * The header cell left of the view switch that opens the settings of the root path: the model ('*') or an annotated
- * entity such as a `@Workbook`. The dialog edits the name (the model name, or the `name` of the annotation), the
+ * entity: a `workbook`, a `service` or an annotated node. The dialog edits the name (the model name, or the
+ * `@Name` / `name` of the annotation, `@name` in Portable), the
  * model version (the model only) and the description of the documentation store. The dialog is a sheet of glass in
  * the drawing of a Flow node: a one-step header with the kind tile, sharp 1px ruled rows, and a row of step cells at
  * the bottom; the page behind it shows through, blurred.
@@ -44,17 +52,14 @@ export function ShellSettings({root}: ShellSettingsProps): ReactElement {
     const [error, setError] = useState<string | undefined>();
     const model = session.engine.toPortable();
     const annotation = annotationAt(model, root);
-    const title = isModel ? 'Model settings' : `${annotation?.node ?? 'Entity'} settings`;
+    const title = isModel ? 'Model settings' : `${entityLabel(model, root, annotation?.node)} settings`;
 
     const open = () => {
         const current = session.engine.toPortable();
+        const metadata = session.getSlice('model').metadata;
         setForm({
-            name: isModel
-                ? typeof current['@model-name'] === 'string'
-                    ? current['@model-name']
-                    : ''
-                : (annotationAt(current, root)?.name ?? ''),
-            version: isModel && typeof current['@model-version'] === 'string' ? current['@model-version'] : '',
+            name: isModel ? (metadata.name ?? '') : (annotationAt(current, root)?.name ?? ''),
+            version: isModel ? (metadata.version ?? '') : '',
             description: session.documentation.getDescription(root) ?? '',
         });
         setError(undefined);
@@ -68,12 +73,18 @@ export function ShellSettings({root}: ShellSettingsProps): ReactElement {
                 const command = session.execute({type: 'setModelMetadata', metadata});
                 if (!command.ok) throw command.error;
             } else {
-                const previous = portableAtPath(session.engine.toPortable(), root) as Record<string, unknown>;
-                const {'@node-name': _name, ...rest} = previous;
+                const previous = portableAtPath(session.engine.toPortable(), root) as unknown as Record<
+                    string,
+                    unknown
+                >;
                 const name = values.name.trim();
-                const next = (name === '' ? rest : {...rest, '@node-name': name}) as unknown as PortableNode;
                 if (name !== (annotation?.name ?? '')) {
-                    const written = setWithLinkCheck(session.engine, root, next, previous as unknown as PortableNode);
+                    // An annotation-only `set` value updates the label and keeps the node; `null` removes the label.
+                    // An annotation never changes whether the model links.
+                    const written = session.engine.set(root, {
+                        '@kind': previous['@kind'],
+                        '@name': name === '' ? null : name,
+                    } as PortableSetValue);
                     if (isPortableError(written)) throw new Error(written.message);
                 }
             }

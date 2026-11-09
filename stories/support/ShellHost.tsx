@@ -1,9 +1,14 @@
 import '@xyflow/react/dist/style.css';
 import {useState, type ReactElement} from 'react';
-import {Code, Group, Text} from '@mantine/core';
+import {Button, Code, Group, Text} from '@mantine/core';
 import type {ArgTypes, Meta} from '@storybook/react-vite';
 import {MutableDecisionService} from '@edgerules/web/mutable';
-import {ProjectProvider, type ProjectSession} from '../../src/components/project-session';
+import {
+    ProjectProvider,
+    useProjectSession,
+    useProjectSnapshot,
+    type ProjectSession,
+} from '../../src/components/project-session';
 import {Shell, type ShellView} from '../../src/components/shell';
 
 export interface ShellHostArgs {
@@ -12,6 +17,24 @@ export interface ShellHostArgs {
     readOnly?: boolean;
     defaultExplorerOpen?: boolean;
     controlled?: boolean; // the host holds the path and the view, and prints them
+    saveable?: boolean; // the host has a Save button and prints the save state of the session
+    projectKey?: string; // with `openStoredStoryProject`: the stored project the story reopens after a reload
+}
+
+/** The Save button of a host page, and the save state of the session: its revision and its dirty slices. */
+function SaveBar(): ReactElement {
+    const session = useProjectSession();
+    const {revision, dirtySlices, phase} = useProjectSnapshot();
+    return (
+        <Group gap="md" mb="xs">
+            <Button size="compact-sm" disabled={dirtySlices.length === 0} onClick={() => void session.save()}>
+                Save
+            </Button>
+            <Text size="xs" data-testid="host-save-state">
+                {phase} · revision <Code>{revision}</Code> · dirty: {dirtySlices.join(', ') || 'none'}
+            </Text>
+        </Group>
+    );
 }
 
 /** The Shell as a host page embeds it: full height, with the host state printed above it when `controlled`. */
@@ -21,6 +44,7 @@ export function ShellHost({
     readOnly,
     defaultExplorerOpen,
     controlled,
+    saveable,
 }: ShellHostArgs): ReactElement {
     const [path, setPath] = useState(defaultPath ?? '*');
     const [view, setView] = useState<ShellView>(defaultView ?? 'boxed');
@@ -42,6 +66,7 @@ export function ShellHost({
                     )}
                 </Group>
             )}
+            {saveable && <SaveBar />}
             <div style={{flex: 1, minHeight: 0}}>
                 <Shell
                     languageService={MutableDecisionService}
@@ -59,11 +84,16 @@ export function ShellHost({
 
 /** Controls of the Shell's initial state: changing one remounts the Shell over the same project session. */
 export const SHELL_HOST_ARG_TYPES: Partial<ArgTypes<ShellHostArgs>> = {
-    defaultPath: {control: 'text', description: 'The model path the Shell opens: `*`, `applicant`, `riskScore`…'},
-    defaultView: {control: 'inline-radio', options: ['boxed', 'code', 'flow', 'tests']},
+    defaultPath: {
+        control: 'text',
+        description: 'The path the Shell opens: `*`, `applicant`, `riskScore`…, or the document `doc:README.md`',
+    },
+    defaultView: {control: 'inline-radio', options: ['boxed', 'code', 'flow', 'tests', 'preview']},
     readOnly: {control: 'boolean'},
     defaultExplorerOpen: {control: 'boolean'},
     controlled: {table: {disable: true}},
+    saveable: {table: {disable: true}},
+    projectKey: {control: 'text', description: 'The stored project a reload reopens'},
 };
 
 /** Renders a story's Shell over the project session its loader opened (`loaded.session`). */

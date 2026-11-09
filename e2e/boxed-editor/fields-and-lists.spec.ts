@@ -28,7 +28,7 @@ test.describe('Boxed Editor / fields and lists', () => {
         await expect(page.getByTestId(`row-${affordabilityScore}`)).toHaveCount(1);
         await expect(valueCell(page, affordabilityScore)).toHaveText('application.loanAmount / 10');
         await expect(page.getByTestId(`row-${riskBand}`)).toHaveCount(1);
-        await expect(valueCell(page, riskBand)).toHaveText("'medium'");
+        await expect(valueCell(page, riskBand)).toHaveText('"medium"');
 
         await page.getByTestId('append-application').click();
         const termMonths = await renameRow(page, 'application.field', 'termMonths');
@@ -42,7 +42,7 @@ test.describe('Boxed Editor / fields and lists', () => {
 
         await commitExpression(page, 'payment', 'application.loanAmount / 6');
         await expect(valueCell(page, affordabilityScore)).toHaveText('application.loanAmount / 10');
-        await expect(valueCell(page, riskBand)).toHaveText("'medium'");
+        await expect(valueCell(page, riskBand)).toHaveText('"medium"');
         await expect(valueCell(page, termMonths)).toHaveText('12');
         await expect(valueCell(page, creditLimit)).toContainText('<number, required: true>');
         await expect(page.getByTestId('boxed-change-count')).toHaveText('Changes: 13');
@@ -114,14 +114,14 @@ test.describe('Boxed Editor / fields and lists', () => {
         const stringListPath = await addList(page, 'boundaryStrings');
         await appendListItem(page, stringListPath, 0, '""');
         await appendListItem(page, stringListPath, 1, '"quoted value"');
-        await expect(valueCell(page, `${stringListPath}[0]`)).toHaveText("''");
-        await expect(valueCell(page, `${stringListPath}[1]`)).toHaveText("'quoted value'");
+        await expect(valueCell(page, `${stringListPath}[0]`)).toHaveText('""');
+        await expect(valueCell(page, `${stringListPath}[1]`)).toHaveText('"quoted value"');
     });
 
     test('appends compatible defaults to string, number, and boolean lists', async ({page}) => {
         await openBoxedEditorStory(page, 'blank-model');
         for (const [name, seed, expected] of [
-            ['strings', '"seed"', "''"],
+            ['strings', '"seed"', '""'],
             ['numbers', '7', '0'],
             ['booleans', 'true', 'false'],
         ] as const) {
@@ -165,7 +165,7 @@ test.describe('Boxed Editor / fields and lists', () => {
         await page.getByTestId('row-field').getByRole('button', {name: 'Open row actions'}).click();
         page.once('dialog', (dialog) => dialog.accept());
         await page.getByRole('menuitem', {name: 'Convert to field', exact: true}).click();
-        await expect(valueCell(page, 'field')).toHaveText("''");
+        await expect(valueCell(page, 'field')).toHaveText('""');
     });
 
     test('read-only story does not expose mutation controls or expression editing', async ({page}) => {

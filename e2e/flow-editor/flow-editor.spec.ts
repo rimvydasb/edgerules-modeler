@@ -62,12 +62,16 @@ test.describe('canvas', () => {
     test('draws the flow nodes of the model, their wires and the output values', async ({page}) => {
         await openSeeded(page);
 
-        await expect(page.getByTestId('object-input-node-applicant')).toBeVisible();
-        await expect(page.getByTestId('function-node-score')).toBeVisible();
+        // Every field of the model is a node, annotated or not.
+        for (const id of ['object-input-node-applicant', 'object-input-node-application', 'function-node-score']) {
+            await expect(page.getByTestId(id)).toBeVisible();
+        }
+        await expect(page.getByTestId('function-node-payment')).toBeVisible();
+        await expect(page.getByTestId('function-node-eligibility')).toBeVisible();
         await expect(page.getByTestId('output-node-output')).toContainText("'high'");
         await expect(page.getByTestId('output-node-output2')).toContainText('371');
-        // decision: 3 arguments, score: 2 arguments, 2 outputs.
-        await expect(page.locator('.react-flow__edge')).toHaveCount(7);
+        // decision: 3 arguments, score: 2 arguments, eligibility: 1 argument, 2 outputs; payment binds a value.
+        await expect(page.locator('.react-flow__edge')).toHaveCount(8);
         await expect(page.getByTestId('flow-editor-empty')).toHaveCount(0);
     });
 
@@ -93,7 +97,7 @@ test.describe('canvas', () => {
         await expectColumnLayout(page);
     });
 
-    test('shows the empty state on a model without flow nodes', async ({page}) => {
+    test('shows the empty state on a model without fields', async ({page}) => {
         await open(page, 'empty');
         await expect(page.getByTestId('flow-editor-empty')).toContainText('This flow has no nodes yet');
         await expect(page.locator('.react-flow__node')).toHaveCount(0);
@@ -121,8 +125,6 @@ test.describe('palette', () => {
             'Add object input',
             'Add list input',
             'Add value input',
-            'Add input applicant',
-            'Add input application',
             'Add invocation',
             'Add output',
             'Add chart',
@@ -136,8 +138,8 @@ test.describe('palette', () => {
         await open(page, 'empty');
         const search = page.getByRole('textbox', {name: 'Search nodes'});
 
-        await search.fill('applicant');
-        await expect(paletteItem(page, 'Add input applicant')).toBeVisible();
+        await search.fill('list');
+        await expect(paletteItem(page, 'Add list input')).toBeVisible();
         await expect(paletteItem(page, 'Add invocation')).toHaveCount(0);
         await expect(page.getByRole('region', {name: 'Outputs'})).toHaveCount(0);
 
@@ -148,10 +150,10 @@ test.describe('palette', () => {
         await expect(paletteItem(page, 'Add invocation')).toBeVisible();
     });
 
-    test('a record that becomes an input leaves the palette', async ({page}) => {
+    test('offers no existing record: every record of the model is on the canvas', async ({page}) => {
         await openSeeded(page);
-        await expect(paletteItem(page, 'Add input application')).toBeVisible();
-        await expect(paletteItem(page, 'Add input applicant')).toHaveCount(0);
+        await expect(page.getByTestId('object-input-node-application')).toBeVisible();
+        await expect(page.getByRole('button', {name: /^Add input /})).toHaveCount(0);
     });
 
     test('collapses to a rail and expands again', async ({page}) => {
@@ -208,22 +210,21 @@ test.describe('adding nodes', () => {
         expect(second.y).toBeGreaterThan(first.y);
     });
 
-    test('dragging an existing record onto the canvas drops an input node there', async ({page}) => {
+    test('dragging an input onto the canvas drops the node there', async ({page}) => {
         await open(page, 'empty');
         const canvas = await box(page.locator('.react-flow__pane'));
         const target = {x: canvas.x + canvas.width - 300, y: canvas.y + 60};
 
-        await paletteItem(page, 'Add input application').dragTo(page.locator('.react-flow__pane'), {
+        await paletteItem(page, 'Add object input').dragTo(page.locator('.react-flow__pane'), {
             targetPosition: {x: target.x - canvas.x, y: target.y - canvas.y},
         });
 
-        const added = node(page, 'application');
+        const added = node(page, 'input');
         await expect(added).toBeVisible({timeout: 15_000});
         const dropped = await box(added);
         // The node's top-left corner lands on the drop point, snapped to the 20px grid.
         expect(Math.abs(dropped.x - target.x)).toBeLessThan(30);
         expect(Math.abs(dropped.y - target.y)).toBeLessThan(30);
-        await expect(paletteItem(page, 'Add input application')).toHaveCount(0);
     });
 
     test('dragging Object input creates a record with one field', async ({page}) => {
@@ -264,8 +265,8 @@ test.describe('adding nodes', () => {
         const pane = page.locator('.react-flow__pane');
         const canvas = await box(pane);
 
-        await paletteItem(page, 'Add input application').dragTo(pane, {targetPosition: {x: 40, y: 60}});
-        await expect(node(page, 'application')).toBeVisible({timeout: 15_000});
+        await paletteItem(page, 'Add value input').dragTo(pane, {targetPosition: {x: 40, y: 60}});
+        await expect(node(page, 'value')).toBeVisible({timeout: 15_000});
         await paletteItem(page, 'Add invocation').dragTo(pane, {targetPosition: {x: 420, y: 60}});
         await expect(node(page, 'node')).toBeVisible({timeout: 15_000});
         await pickCallee(page, 'node', 'monthly');
@@ -274,33 +275,33 @@ test.describe('adding nodes', () => {
         });
         await expect(node(page, 'output')).toBeVisible({timeout: 15_000});
 
-        await handle(page, 'application', 'out:amount').dragTo(handle(page, 'node', 'in:amount'));
+        await handle(page, 'value', 'out:*').dragTo(handle(page, 'node', 'in:amount'));
         await expect(page.getByTestId('function-node-node').getByText('draft', {exact: true})).toHaveCount(0);
         await handle(page, 'node', 'out:result').dragTo(handle(page, 'output', 'in:value'));
 
         await expect(page.locator('.react-flow__edge')).toHaveCount(2);
-        await expect(page.getByTestId('output-value')).toContainText('2666.66');
+        // The value input starts at 0: 0 / 12.
+        await expect(page.getByTestId('output-value')).toContainText('0');
     });
 });
 
 test.describe('removing', () => {
-    test('Delete removes a node from the flow; its record is offered again', async ({page}) => {
+    test('the Delete key keeps a model node: every field is on the flow', async ({page}) => {
         await openSeeded(page);
 
         await page.getByTestId('object-input-node-applicant').locator('strong').first().click();
         await page.keyboard.press('Delete');
 
-        await expect(node(page, 'applicant')).toHaveCount(0);
-        await expect(paletteItem(page, 'Add input applicant')).toBeVisible();
-        // The field stays in the model, so the bindings and the output values stay.
+        await expect(node(page, 'applicant')).toBeVisible();
         await expect(page.getByTestId('output-node-output')).toContainText("'high'");
-        await expect(page.locator('.react-flow__edge')).toHaveCount(2);
+        await expect(page.locator('.react-flow__edge')).toHaveCount(8);
     });
 
     test('deleting a wire unbinds the argument and the node turns into a draft', async ({page}) => {
         await openSeeded(page);
 
-        await page.locator('[data-testid="rf__edge-score:income"]').click({force: true});
+        // The canvas shows every field, so other nodes may cover the wire: select it by its own element.
+        await page.locator('[data-testid="rf__edge-score:income"]').dispatchEvent('click');
         await page.keyboard.press('Delete');
 
         await expect(page.locator('[data-testid="rf__edge-score:income"]')).toHaveCount(0);

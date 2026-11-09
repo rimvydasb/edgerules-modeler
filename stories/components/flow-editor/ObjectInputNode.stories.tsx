@@ -52,7 +52,6 @@ function Canvas({
 }): ReactElement {
     const service = useMemo(() => {
         const created = createFlowEditorService(MutableDecisionService.fromCode(model) as never);
-        created.addInputNode(field);
         if (wired) created.setCallee('decision', 'risk'); // writes the same invocation with @node: FunctionNode, keeping its bindings
         return created;
     }, [field, model, wired]);

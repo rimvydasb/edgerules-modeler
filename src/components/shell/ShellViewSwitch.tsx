@@ -1,15 +1,28 @@
 import {Menu} from '@mantine/core';
-import {IconCode, IconFlask, IconPlus, IconSchema, IconTable, type Icon} from '@tabler/icons-react';
+import {IconCode, IconEye, IconFlask, IconPlus, IconSchema, IconTable, type Icon} from '@tabler/icons-react';
 import {Fragment, type KeyboardEvent, type ReactElement} from 'react';
 import {cx} from '#ui/cx';
 import type {ShellView} from './shell-types';
 import * as classes from './shell.module.css';
 
-const VIEWS: {label: string; value: ShellView; icon: Icon}[] = [
+interface ViewCell {
+    label: string;
+    value: ShellView;
+    icon: Icon;
+}
+
+// The cells of a model or entity root path.
+const MODEL_VIEWS: ViewCell[] = [
     {label: 'Flow', value: 'flow', icon: IconSchema},
     {label: 'Boxed', value: 'boxed', icon: IconTable},
     {label: 'Code', value: 'code', icon: IconCode},
     {label: 'Tests', value: 'tests', icon: IconFlask},
+];
+
+// The cells of a document root path: Flow, Boxed and Tests are hidden.
+const DOCUMENT_VIEWS: ViewCell[] = [
+    {label: 'Preview', value: 'preview', icon: IconEye},
+    {label: 'Code', value: 'code', icon: IconCode},
 ];
 
 export interface ShellViewSwitchProps {
@@ -19,6 +32,7 @@ export interface ShellViewSwitchProps {
     untypedArguments?: readonly string[]; // the root path is a generic function: these arguments have no type
     hasTests?: boolean; // the root path has a test suite; without one, the Tests cell offers to create it
     onCreateTests?: () => void; // creates the test suite of the root path; omitted when read-only
+    document?: boolean; // the root path is a document: only the Preview and Code cells
 }
 
 // What a click on the Tests cell does.
@@ -54,16 +68,17 @@ function UntypedHint({names}: {names: readonly string[]}): ReactElement {
 /**
  * Picks the view of the Shell body; the root path stays. One header cell per view, like a radio group: Flow, Boxed and
  * Code show the root path in an editor, Tests shows the tests of the root path. A view that cannot show the root path
- * is disabled. The Tests cell of a subject without tests opens a menu that creates them; the Tests cell of a generic
+ * is disabled. A document root path has only two cells: Preview, its rendered Markdown, and Code, its source. The Tests cell of a subject without tests opens a menu that creates them; the Tests cell of a generic
  * function opens a menu that tells which arguments need a type.
  */
 export function ShellViewSwitch(props: ShellViewSwitchProps): ReactElement {
-    const {view, onChange, views, untypedArguments = [], onCreateTests} = props;
+    const {view, onChange, views, untypedArguments = [], onCreateTests, document} = props;
+    const cells = document ? DOCUMENT_VIEWS : MODEL_VIEWS;
     const tests = testsCell(props);
     const isDisabled = (value: ShellView): boolean =>
         value === 'tests' ? tests === 'disabled' : !views.includes(value);
     // Arrow keys move the selection, as in a native radio group; they skip a disabled cell and a menu.
-    const selectable = VIEWS.filter(({value}) => !isDisabled(value) && !(value === 'tests' && tests !== 'open'));
+    const selectable = cells.filter(({value}) => !isDisabled(value) && !(value === 'tests' && tests !== 'open'));
     const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
         const step =
             event.key === 'ArrowRight' || event.key === 'ArrowDown'
@@ -80,7 +95,7 @@ export function ShellViewSwitch(props: ShellViewSwitchProps): ReactElement {
     };
     return (
         <div role="radiogroup" aria-label="View" className={classes.viewSwitch} onKeyDown={onKeyDown}>
-            {VIEWS.map(({label, value, icon: ViewIcon}) => {
+            {cells.map(({label, value, icon: ViewIcon}) => {
                 const checked = value === view;
                 const menu = value === 'tests' && (tests === 'create' || tests === 'untyped');
                 const cell = (

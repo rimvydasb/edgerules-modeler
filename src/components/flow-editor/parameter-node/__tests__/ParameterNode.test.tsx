@@ -4,6 +4,7 @@ import {describe, expect, it, vi} from 'vitest';
 import type {FlowEditorOpenTarget} from '../../flow-editor-types';
 import {renderNode} from '../../testing/renderNode';
 import {SERVICE_MODEL} from '../../testing/serviceModel';
+import {compactModel} from '#lib/testing/compactPortable';
 
 const renderParameter = (field = 'quote.applicant', options: Parameters<typeof renderNode>[1] = {}) =>
     renderNode(field, {model: SERVICE_MODEL, root: 'quote', service: 'parameter', ...options});
@@ -41,15 +42,13 @@ describe('ParameterNode', () => {
         const user = userEvent.setup();
         await user.clear(input);
         await user.type(input, 'person{Enter}');
-        await waitFor(() =>
-            expect(mutable.toPortable()).toMatchObject({quote: {'@parameters': {person: 'Applicant'}}}),
-        );
+        await waitFor(() => expect(compactModel(mutable)).toMatchObject({quote: {parameters: {person: 'Applicant'}}}));
         expect(JSON.stringify(mutable.toPortable())).toContain('quote(person:');
     });
 
     it('changes the type in the summary line', async () => {
         const {service} = renderNode('f.a', {
-            model: '{ @Service func f(a: number): { r: 1 } }',
+            model: '{ service f(a: number): { r: 1 } }',
             root: 'f',
             service: 'parameter',
         });

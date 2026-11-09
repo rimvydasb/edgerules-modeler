@@ -39,7 +39,7 @@ export function renderNode(
     options: {
         model?: string;
         draft?: boolean;
-        input?: 'object' | 'list' | 'value'; // render an input node; the record, list or value at `field` is annotated first
+        input?: 'object' | 'list' | 'value'; // render the input node of the record, list or value at `field`
         service?: 'parameter' | 'return'; // render a node of the service flow of `root`
         expression?: boolean; // render the expression at `field`
         root?: string; // the flow root of the service; defaults to '*'
@@ -50,7 +50,6 @@ export function renderNode(
     const mutable = MutableDecisionService.fromCode(options.model ?? SAMPLE_MODEL);
     const service = createFlowEditorService(mutable, {root: options.root});
     const documentation = createDocumentationService(`fn-${Math.random()}`);
-    if (options.input) service.addInputNode(field);
     const nodeField = options.draft ? service.createDraftNode() : field;
     render(
         <ReactFlowProvider>

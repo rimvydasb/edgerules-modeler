@@ -8,9 +8,10 @@ export const MODEL_DSL = `{
         name: <string>; age: <number>; tags: <string[]>
     }
     type PeopleList: <Person[]>
+    facts PersonFacts(person: Person): { adult: person.age >= 18 }
+    decision Eligibility(person: Person): { eligible: person.adult }
     func riskScore(income: number): { score: income / 100 }
-    @Service
-    func processApplication(income: number): { result: riskScore(income).score }
+    service processApplication(income: number): { result: riskScore(income).score }
     ruleset risk(age: number): {
         hitPolicy: "first-match"
         rules: [
@@ -26,8 +27,7 @@ export const MODEL_DSL = `{
         }
     }
     list: [{a: 1}, {a: 2}]
-    @Workbook
-    loanBook: {
+    workbook loanBook: {
         @InputNode(name: "Applicant")
         applicant: { income: 5000 }
         @FunctionNode

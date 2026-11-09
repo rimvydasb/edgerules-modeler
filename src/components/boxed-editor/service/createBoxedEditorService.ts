@@ -1,25 +1,41 @@
-import type {PortableContext, PortableError, PortableNode, PortableRootContext} from '@edgerules/portable';
+import type {Kind, PortableContext, PortableError, PortableNode, PortableSetValue} from '@edgerules/portable';
 import {setWithLinkCheck} from '#lib/linkCheck';
 import {isPortableError} from '#lib/portable';
 import type {BoxedEditorService, BoxedRowData} from '../boxed-editor-types';
 import {denormalize, denormalizeTypeField} from './denormalize';
 import {normalizeNode, normalizeRoot} from './normalize';
-import {authoredEntries, childPath, isRecord, lastPathName, parentPath, portableAtPath} from '#lib/portableUtils';
+import {
+    authoredEntries,
+    callableParameters,
+    childNames,
+    childPath,
+    fieldsOf,
+    hasFields,
+    isFunctionDefinition,
+    isRecord,
+    lastPathName,
+    parentPath,
+    portableAtPath,
+    withPortableAt,
+} from '#lib/portableUtils';
 import {createRowCache, type CachedRows} from './rowCache';
 
-type GetFilter = 'FIELDS' | 'TYPE_DEFINITIONS' | 'FUNCTION_DEFINITIONS' | 'EXTERNAL_DEFINITIONS' | 'ALL';
-
 interface MutableDecisionService {
-    get(path: string, filter?: GetFilter): PortableNode | PortableError;
-    set(path: string, node: PortableNode): PortableNode | PortableError;
+    get(path: string, kinds?: readonly Kind[]): PortableNode | PortableError;
+    set(path: string, node: PortableSetValue): PortableNode | PortableError;
     remove(path: string): void | PortableError;
     rename(path: string, newName: string): void | PortableError;
-    toPortable(): PortableRootContext;
+    toPortable(): PortableContext;
     link(): void;
 }
 
+/** The engine reads a `set` value from any node the model holds. */
+function asSetValue(node: unknown): PortableSetValue {
+    return node as PortableSetValue;
+}
+
 function readAuthored(mutable: MutableDecisionService, path: string): {node?: PortableNode; schema?: PortableNode} {
-    const schema = mutable.get(path, 'ALL');
+    const schema = mutable.get(path);
     if (isPortableError(schema)) return {};
     if (path.endsWith(']')) return {node: schema, schema};
     const root = mutable.toPortable();
@@ -31,7 +47,7 @@ function readAuthored(mutable: MutableDecisionService, path: string): {node?: Po
     ) {
         const items: PortableNode[] = [];
         for (let index = 0; ; index += 1) {
-            const item = mutable.get(`${path}[${index}]`, 'ALL');
+            const item = mutable.get(`${path}[${index}]`);
             if (isPortableError(item)) break;
             items.push(item);
         }
@@ -64,7 +80,7 @@ function materializeArrays(
     if (isRecord(schema) && (schema as unknown as Record<string, unknown>).type === 'array' && isAuthoredArray(node)) {
         const items: PortableNode[] = [];
         for (let index = 0; ; index += 1) {
-            const item = mutable.get(`${path}[${index}]`, 'ALL');
+            const item = mutable.get(`${path}[${index}]`);
             if (isPortableError(item)) break;
             items.push(item);
         }
@@ -72,43 +88,43 @@ function materializeArrays(
     }
     if (!isRecord(node) || !isRecord(schema)) return node;
     const nodeRecord = node as unknown as Record<string, unknown>;
-    const result = {...nodeRecord};
-    if (nodeRecord['@kind'] === 'function' && isRecord(nodeRecord['@body'])) {
-        const definition = mutable.get(`${path}.*`, 'ALL');
-        if (
-            !isPortableError(definition) &&
-            isRecord(definition) &&
-            isRecord((definition as unknown as Record<string, unknown>)['@body'])
-        ) {
-            result['@body'] = materializeArrays(
+    const schemaRecord = schema as unknown as Record<string, unknown>;
+    if (isFunctionDefinition(nodeRecord) && isRecord(nodeRecord.body) && isRecord(schemaRecord.body)) {
+        return {
+            ...nodeRecord,
+            body: materializeArrays(
                 mutable,
-                nodeRecord['@body'] as PortableNode,
-                (definition as unknown as Record<string, unknown>)['@body'] as PortableNode,
+                nodeRecord.body as unknown as PortableNode,
+                schemaRecord.body as unknown as PortableNode,
                 path,
-            );
-        }
+            ),
+        } as unknown as PortableNode;
     }
+    const fields = fieldsOf(nodeRecord);
+    const schemaFields = fieldsOf(schemaRecord);
+    if (!fields || !schemaFields) return node;
+    const nextFields: Record<string, unknown> = {...fields};
     for (const [name, child] of authoredEntries(node)) {
-        const childSchema = (schema as unknown as Record<string, unknown>)[name];
+        const childSchema = schemaFields[name];
         if (childSchema !== undefined) {
-            result[name] = materializeArrays(mutable, child, childSchema as PortableNode, childPath(path, name));
+            nextFields[name] = materializeArrays(mutable, child, childSchema as PortableNode, childPath(path, name));
         }
     }
-    return result as unknown as PortableNode;
+    return {...nodeRecord, fields: nextFields} as unknown as PortableNode;
 }
 
-function loadRows(mutable: MutableDecisionService, path: string): CachedRows {
+function loadRows(mutable: MutableDecisionService, path: string, modelName?: string): CachedRows {
     const {node, schema} = readAuthored(mutable, path);
     if (path === '*') {
         if (node === undefined) return {rows: []};
-        const row = normalizeRoot(node as PortableContext, schema);
+        const row = normalizeRoot(node as PortableContext, schema, modelName);
         return {row: {...row, children: undefined}, rows: row.children ?? []};
     }
 
     const rulesMatch = /^(.*)\.rules\[\d+\]$/.exec(path);
     const containingPath = rulesMatch?.[1] ?? parentPath(path);
     if (containingPath !== undefined) {
-        const containing = loadRows(mutable, containingPath);
+        const containing = loadRows(mutable, containingPath, modelName);
         const match = findNormalizedRow(containing.rows, path);
         if (match) {
             return {
@@ -141,15 +157,17 @@ function notifyAll(listeners: Set<() => void>): void {
     for (const listener of [...listeners]) listener();
 }
 
+// Inserts the entry `name` at `index` of the `fields` of a context-like node, or of a plain name map.
 function insertIntoObject(
     destination: Record<string, unknown>,
     name: string,
     node: PortableNode,
     index: number,
 ): Record<string, unknown> {
-    const metadata = Object.entries(destination).filter(([key]) => key.startsWith('@'));
     const entries = authoredEntries(destination).filter(([key]) => key !== name);
     entries.splice(Math.max(0, Math.min(index, entries.length)), 0, [name, node]);
+    if (hasFields(destination)) return {...destination, fields: Object.fromEntries(entries)};
+    const metadata = Object.entries(destination).filter(([key]) => key.startsWith('@'));
     return Object.fromEntries([...metadata, ...entries]);
 }
 
@@ -170,16 +188,16 @@ function insertChild(
     const record = destination as unknown as Record<string, unknown>;
 
     if (record['@kind'] === 'ruleset') {
-        const rules: unknown[] = Array.isArray(record['@rules']) ? [...record['@rules']] : [];
+        const rules: unknown[] = Array.isArray(record.rules) ? [...record.rules] : [];
         if (removeIndex !== undefined) rules.splice(removeIndex, 1);
         rules.splice(Math.max(0, Math.min(index, rules.length)), 0, source);
-        return {...record, '@rules': rules} as unknown as PortableNode;
+        return {...record, rules} as unknown as PortableNode;
     }
-    if (record['@kind'] === 'function') {
-        const body = isRecord(record['@body']) ? record['@body'] : {'@kind': 'context'};
+    if (isFunctionDefinition(record)) {
+        const body = hasFields(record.body) ? record.body : {'@kind': 'context', fields: {}};
         return {
             ...record,
-            '@body': insertIntoObject(body, sourceName ?? 'result', source, index),
+            body: insertIntoObject(body, sourceName ?? 'result', source, index),
         } as unknown as PortableNode;
     }
     return insertIntoObject(record, sourceName ?? `item${index + 1}`, source, index) as unknown as PortableNode;
@@ -195,11 +213,11 @@ interface OptimisationOwner {
     node: PortableNode;
 }
 
-function optimisationOwner(root: PortableRootContext, path: string): OptimisationOwner | undefined {
+function optimisationOwner(root: PortableContext, path: string): OptimisationOwner | undefined {
     if (path === '*') return undefined;
     const name = /^[^.[\]]+/.exec(path)?.[0];
     if (!name) return undefined;
-    const node = root[name];
+    const node = root.fields[name];
     if (!isRecord(node) || (node as unknown as Record<string, unknown>)['@kind'] !== 'optimise') {
         return undefined;
     }
@@ -207,8 +225,7 @@ function optimisationOwner(root: PortableRootContext, path: string): Optimisatio
 }
 
 function optimisationPathKeys(ownerPath: string, path: string): string[] {
-    const relative = path.slice(ownerPath.length + 1).split('.');
-    return relative.map((name, index) => (index === 0 ? `@${name}` : name));
+    return path.slice(ownerPath.length + 1).split('.');
 }
 
 function updateNestedRecord(
@@ -228,13 +245,13 @@ function updateNestedRecord(
         result[key] = visit(child, index + 1);
         return result;
     };
-    return visit(value as unknown as Record<string, unknown>, 0) as PortableNode;
+    return visit(value as unknown as Record<string, unknown>, 0) as unknown as PortableNode;
 }
 
 function setOptimisationChild(owner: OptimisationOwner, path: string, node: PortableNode): PortableNode {
     const keys = optimisationPathKeys(owner.path, path);
     let value: unknown = node;
-    if (keys.length === 1 && (keys[0] === '@variables' || keys[0] === '@constraints') && isRecord(node)) {
+    if (keys.length === 1 && (keys[0] === 'variables' || keys[0] === 'constraints') && isRecord(node)) {
         value = Object.fromEntries(authoredEntries(node));
     }
     return updateNestedRecord(owner.node, keys, (record, key) => {
@@ -274,28 +291,32 @@ interface ComplexTypeOwner {
 
 /**
  * The top-level named `type X: {...}` a nested member path belongs to, if any. The engine only
- * exposes a `type-definition` as one atomic whole (`set_user_type` replaces its whole `TypeBody`);
+ * exposes a `type` as one atomic whole (`set_user_type` replaces its whole `TypeBody`);
  * no member path inside it — however deeply nested through inline anonymous object types — is
  * itself addressable by `set`/`remove`/`rename` (each rejects with `WrongFieldPath`). So every
  * member edit is coalesced into a whole-parent rewrite of this owner, the same shape
  * `optimisationOwner` already gives `@optimise` settings.
  */
-function complexTypeOwner(root: PortableRootContext, path: string): ComplexTypeOwner | undefined {
+function complexTypeOwner(root: PortableContext, path: string): ComplexTypeOwner | undefined {
     if (path === '*') return undefined;
     const name = /^[^.[\]]+/.exec(path)?.[0];
     if (!name) return undefined;
-    const node = root[name];
-    if (!isRecord(node) || (node as unknown as Record<string, unknown>)['@kind'] !== 'type-definition') {
+    const node = root.fields[name];
+    if (!isRecord(node) || (node as unknown as Record<string, unknown>)['@kind'] !== 'type') {
         return undefined;
     }
     return {path: name, node: node as PortableNode};
 }
 
+// The keys of a member path inside a `type` node: each member is an entry of the `fields` of its structure type.
 function complexTypePathKeys(ownerPath: string, path: string): string[] {
-    return path.slice(ownerPath.length + 1).split('.');
+    return path
+        .slice(ownerPath.length + 1)
+        .split('.')
+        .flatMap((name) => ['fields', name]);
 }
 
-function setComplexTypeChild(owner: ComplexTypeOwner, path: string, node: PortableNode): PortableNode {
+function setComplexTypeChild(owner: ComplexTypeOwner, path: string, node: unknown): PortableNode {
     return updateNestedRecord(owner.node, complexTypePathKeys(owner.path, path), (record, key) => {
         record[key] = node;
     });
@@ -333,24 +354,23 @@ function complexTypeSiblingRecord(owner: ComplexTypeOwner, path: string): Record
 
 function setChangedTopLevelWithLinkCheck(
     mutable: MutableDecisionService,
-    previousRoot: PortableRootContext,
-    nextRoot: PortableRootContext,
+    previousRoot: PortableContext,
+    nextRoot: PortableContext,
 ): PortableNode | PortableError {
-    const previous = previousRoot as unknown as Record<string, PortableNode>;
-    const next = nextRoot as unknown as Record<string, PortableNode>;
+    const previous = previousRoot.fields;
+    const next = nextRoot.fields;
     const changed = new Set([...Object.keys(previous), ...Object.keys(next)]);
-    changed.delete('@kind');
     const paths = [...changed].filter((path) => JSON.stringify(previous[path]) !== JSON.stringify(next[path]));
 
     const rollback = (): void => {
         for (const path of paths) {
             if (previous[path] === undefined) mutable.remove(path);
-            else mutable.set(path, previous[path]);
+            else mutable.set(path, asSetValue(previous[path]));
         }
     };
 
     for (const path of paths) {
-        const result = next[path] === undefined ? mutable.remove(path) : mutable.set(path, next[path]);
+        const result = next[path] === undefined ? mutable.remove(path) : mutable.set(path, asSetValue(next[path]));
         if (isPortableError(result)) {
             rollback();
             return result;
@@ -396,22 +416,39 @@ function containsIdentifier(node: PortableNode, name: string): boolean {
         return true;
     }
     return Object.entries(node).some(
-        ([key, child]) => key !== '@parameters' && containsIdentifier(child as PortableNode, name),
+        ([key, child]) => key !== 'parameters' && key !== 'context' && containsIdentifier(child as PortableNode, name),
     );
 }
+
+// The keys of a Portable node whose entries are user-named: renaming an entry renames its key there.
+const NAME_MAP_KEYS = new Set([
+    'fields',
+    'parameters',
+    'context',
+    'state',
+    'do',
+    'variables',
+    'constraints',
+    'when',
+    'arguments',
+]);
+
+// The keys of a Portable node whose string value is never DSL text, nor a name of the model.
+const NON_DSL_KEYS = new Set(['@kind', '@node', '@name', 'hitPolicy', 'using']);
 
 function rewriteIdentifier(node: PortableNode, from: string, to: string, parentKey?: string): PortableNode {
     if (Array.isArray(node)) {
         return node.map((child) => rewriteIdentifier(child, from, to, parentKey)) as unknown as PortableNode;
     }
     if (typeof node === 'string') {
-        if (parentKey === '@kind') return node;
-        return node.replace(identifierPattern(from), `$1${to}`) as unknown as PortableNode;
+        if (parentKey !== undefined && NON_DSL_KEYS.has(parentKey)) return node;
+        return (node as string).replace(identifierPattern(from), `$1${to}`) as unknown as PortableNode;
     }
     if (!isRecord(node)) return node;
+    const renamesKeys = parentKey !== undefined && NAME_MAP_KEYS.has(parentKey);
     return Object.fromEntries(
         Object.entries(node).map(([key, child]) => [
-            key === from ? to : key,
+            renamesKeys && key === from ? to : key,
             rewriteIdentifier(child as PortableNode, from, to, key),
         ]),
     ) as unknown as PortableNode;
@@ -434,7 +471,7 @@ function renameWithLinkCheck(mutable: MutableDecisionService, path: string, newN
             renamedRoot as unknown as PortableNode,
             oldName,
             newName,
-        ) as PortableRootContext;
+        ) as unknown as PortableContext;
         if (JSON.stringify(migrated) !== JSON.stringify(renamedRoot)) {
             const setResult = mutable.set('*', migrated);
             if (isPortableError(setResult)) {
@@ -463,16 +500,16 @@ function renameWithLinkCheck(mutable: MutableDecisionService, path: string, newN
 
 type CallableParameterChange =
     | {kind: 'rename'; from: string; to: string}
-    | {kind: 'add'; name: string; value: PortableNode}
+    | {kind: 'add'; name: string; value: unknown}
     | {kind: 'remove'; name: string};
 
-function parameterSeed(type: unknown): PortableNode {
+function parameterSeed(type: unknown): unknown {
     const name = typeof type === 'string' ? type : isRecord(type) ? type.type : undefined;
     if (name === 'number') return 0;
     if (name === 'boolean') return false;
-    if (name === 'date') return '@"1970-01-01"' as unknown as PortableNode;
-    if (name === 'datetime') return '@"1970-01-01T00:00:00Z"' as unknown as PortableNode;
-    return '""' as unknown as PortableNode;
+    if (name === 'date') return '@"1970-01-01"';
+    if (name === 'datetime') return '@"1970-01-01T00:00:00Z"';
+    return '""';
 }
 
 function callableParameterChange(
@@ -481,7 +518,7 @@ function callableParameterChange(
 ): CallableParameterChange | undefined {
     if ((row.kind !== 'function' && row.kind !== 'ruleset' && row.kind !== 'optimisation') || !isRecord(previous))
         return undefined;
-    const oldParameters = previous['@parameters'];
+    const oldParameters = callableParameters(previous);
     if (!isRecord(oldParameters)) return undefined;
     const oldNames = Object.keys(oldParameters);
     const newNames =
@@ -489,7 +526,7 @@ function callableParameterChange(
     if (newNames.length === oldNames.length + 1) {
         const name = newNames.find((candidate) => !oldNames.includes(candidate));
         const next = denormalize(row);
-        const parameters = isRecord(next) ? next['@parameters'] : undefined;
+        const parameters = callableParameters(next);
         if (name && isRecord(parameters)) {
             return {kind: 'add', name, value: parameterSeed(parameters[name])};
         }
@@ -518,47 +555,42 @@ function rewriteInvocationArguments(
             rewriteInvocationArguments(child as PortableNode, functionPath, change),
         ]),
     ) as Record<string, unknown>;
-    if (result['@kind'] === 'invocation' && result['@method'] === functionPath && isRecord(result['@arguments'])) {
-        const args = {...result['@arguments']} as Record<string, unknown>;
+    if (result['@kind'] === 'invocation' && result.method === functionPath && isRecord(result.arguments)) {
+        const args = {...result.arguments} as Record<string, unknown>;
         if (change.kind === 'rename' && Object.prototype.hasOwnProperty.call(args, change.from)) {
-            result['@arguments'] = Object.fromEntries(
+            result.arguments = Object.fromEntries(
                 Object.entries(args).map(([name, value]) => [name === change.from ? change.to : name, value]),
             );
         } else if (change.kind === 'add') {
             args[change.name] = change.value;
-            result['@arguments'] = args;
+            result.arguments = args;
         } else if (change.kind === 'remove') {
             delete args[change.name];
-            result['@arguments'] = args;
+            result.arguments = args;
         }
     }
-    return result as PortableNode;
+    return result as unknown as PortableNode;
 }
 
 function containsInvocation(node: PortableNode, functionPath: string): boolean {
     if (Array.isArray(node)) return node.some((child) => containsInvocation(child, functionPath));
     if (!isRecord(node)) return false;
     const record = node as unknown as Record<string, unknown>;
-    if (record['@kind'] === 'invocation' && record['@method'] === functionPath) return true;
+    if (record['@kind'] === 'invocation' && record.method === functionPath) return true;
     return Object.values(record).some((child) => containsInvocation(child as PortableNode, functionPath));
 }
 
-function replacePortablePath(root: PortableRootContext, path: string, value: PortableNode): PortableRootContext {
-    const keys = path.split('.');
-    const next = structuredClone(root) as unknown as Record<string, unknown>;
-    let current = next;
-    for (const key of keys.slice(0, -1)) {
-        const child = current[key];
-        if (!isRecord(child)) return root;
-        current = child as unknown as Record<string, unknown>;
-    }
-    current[keys.at(-1)!] = value;
-    return next as unknown as PortableRootContext;
+export interface BoxedEditorServiceOptions {
+    /** The heading of the model row (`'*'`); 'Model' when it gives none. The model itself has no name. */
+    modelName?: () => string | undefined;
 }
 
-export function createBoxedEditorService(mutable: MutableDecisionService): BoxedEditorService {
+export function createBoxedEditorService(
+    mutable: MutableDecisionService,
+    {modelName}: BoxedEditorServiceOptions = {},
+): BoxedEditorService {
     const listeners = new Set<() => void>();
-    const cache = createRowCache((path) => loadRows(mutable, path));
+    const cache = createRowCache((path) => loadRows(mutable, path, modelName?.()));
 
     const commit = (
         path: string,
@@ -592,12 +624,12 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                     return referencedParameterError(path, parameterChange.name);
                 }
                 if (parameterChange && containsInvocation(root as unknown as PortableNode, path)) {
-                    const withFunction = replacePortablePath(root, path, denormalize(row));
+                    const withFunction = withPortableAt(root, path, denormalize(row));
                     const migrated = rewriteInvocationArguments(
                         withFunction as unknown as PortableNode,
                         path,
                         parameterChange,
-                    ) as PortableRootContext;
+                    ) as unknown as PortableContext;
                     return setChangedTopLevelWithLinkCheck(mutable, root, migrated);
                 }
                 const owner = optimisationOwner(root, path);
@@ -609,19 +641,21 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                         return setWithLinkCheck(
                             mutable,
                             owner.path,
-                            setOptimisationChild(
-                                {...owner, node: updated},
-                                `${owner.path}.${row.name}`,
-                                denormalize(row),
+                            asSetValue(
+                                setOptimisationChild(
+                                    {...owner, node: updated},
+                                    `${owner.path}.${row.name}`,
+                                    denormalize(row) as unknown as PortableNode,
+                                ),
                             ),
-                            owner.node,
+                            asSetValue(owner.node),
                         );
                     }
                     return setWithLinkCheck(
                         mutable,
                         owner.path,
-                        setOptimisationChild(owner, path, denormalize(row)),
-                        owner.node,
+                        asSetValue(setOptimisationChild(owner, path, denormalize(row) as unknown as PortableNode)),
+                        asSetValue(owner.node),
                     );
                 }
 
@@ -630,11 +664,17 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                     return setWithLinkCheck(
                         mutable,
                         typeOwner.path,
-                        setComplexTypeChild(typeOwner, path, denormalizeTypeField(row)),
-                        typeOwner.node,
+                        asSetValue(setComplexTypeChild(typeOwner, path, denormalizeTypeField(row))),
+                        asSetValue(typeOwner.node),
                     );
                 }
-                return setWithLinkCheck(mutable, path, denormalize(row), portableAtPath(root, path));
+                const previousNode = portableAtPath(root, path);
+                return setWithLinkCheck(
+                    mutable,
+                    path,
+                    denormalize(row),
+                    previousNode === undefined ? undefined : asSetValue(previousNode),
+                );
             }) as PortableNode | PortableError;
         },
         remove(path) {
@@ -642,12 +682,12 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                 const root = mutable.toPortable();
                 const owner = optimisationOwner(root, path);
                 if (owner && owner.path !== path) {
-                    const result = mutable.set(owner.path, removeOptimisationChild(owner, path));
+                    const result = mutable.set(owner.path, asSetValue(removeOptimisationChild(owner, path)));
                     return isPortableError(result) ? result : undefined;
                 }
                 const typeOwner = complexTypeOwner(root, path);
                 if (typeOwner && typeOwner.path !== path) {
-                    const result = mutable.set(typeOwner.path, removeComplexTypeChild(typeOwner, path));
+                    const result = mutable.set(typeOwner.path, asSetValue(removeComplexTypeChild(typeOwner, path)));
                     return isPortableError(result) ? result : undefined;
                 }
                 return mutable.remove(path);
@@ -659,11 +699,7 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                 const currentName = lastPathName(path);
                 const ownerPath = parentPath(path);
                 const siblings = ownerPath === '*' ? root : ownerPath ? portableAtPath(root, ownerPath) : undefined;
-                if (
-                    newName !== currentName &&
-                    isRecord(siblings) &&
-                    Object.prototype.hasOwnProperty.call(siblings, newName)
-                ) {
+                if (newName !== currentName && childNames(siblings).includes(newName)) {
                     return duplicateNameError(path, newName);
                 }
 
@@ -672,7 +708,7 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                     const renamed = renameOptimisationChild(owner, path, newName);
                     const updated =
                         currentName === undefined ? renamed : rewriteIdentifier(renamed, currentName, newName);
-                    const result = setWithLinkCheck(mutable, owner.path, updated, owner.node);
+                    const result = setWithLinkCheck(mutable, owner.path, asSetValue(updated), asSetValue(owner.node));
                     return isPortableError(result) ? result : undefined;
                 }
                 const typeOwner = complexTypeOwner(root, path);
@@ -688,8 +724,8 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                     const result = setWithLinkCheck(
                         mutable,
                         typeOwner.path,
-                        renameComplexTypeChild(typeOwner, path, newName),
-                        typeOwner.node,
+                        asSetValue(renameComplexTypeChild(typeOwner, path, newName)),
+                        asSetValue(typeOwner.node),
                     );
                     return isPortableError(result) ? result : undefined;
                 }
@@ -705,7 +741,7 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                 (destinationOwner && destinationOwner.path !== toParentPath);
             if (movesOptimisationChild) {
                 if (!sourceOwner || !destinationOwner || sourceOwner.path !== destinationOwner.path) {
-                    const attempted = mutable.get(fromPath, 'ALL');
+                    const attempted = mutable.get(fromPath);
                     return isPortableError(attempted)
                         ? attempted
                         : {
@@ -737,7 +773,7 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                 if (!sameParent) {
                     updated = removeOptimisationChild({...sourceOwner, node: updated}, fromPath);
                 }
-                const result = mutable.set(sourceOwner.path, updated);
+                const result = mutable.set(sourceOwner.path, asSetValue(updated));
                 if (isPortableError(result)) return result;
                 cache.invalidate(fromPath);
                 cache.invalidate(toParentPath);
@@ -747,7 +783,7 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
             const source = portableAtPath(root, fromPath) ?? readAuthored(mutable, fromPath).node;
             const destination = readAuthored(mutable, toParentPath).node ?? portableAtPath(root, toParentPath);
             if (source === undefined || destination === undefined) {
-                const read = mutable.get(source === undefined ? fromPath : toParentPath, 'ALL');
+                const read = mutable.get(source === undefined ? fromPath : toParentPath);
                 return isPortableError(read)
                     ? read
                     : {
@@ -759,7 +795,7 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
             }
             if (!Array.isArray(destination) && !isRecord(destination)) {
                 const attemptedPath = childPath(toParentPath, lastPathName(fromPath) ?? `item${index + 1}`);
-                const attempted = mutable.set(attemptedPath, source);
+                const attempted = mutable.set(attemptedPath, asSetValue(source));
                 if (isPortableError(attempted)) return attempted;
                 const removed = mutable.remove(fromPath);
                 if (isPortableError(removed)) return removed;
@@ -790,10 +826,10 @@ export function createBoxedEditorService(mutable: MutableDecisionService): Boxed
                 rulesOwnerPath !== undefined && isRecord(rulesOwner)
                     ? ({
                           ...(rulesOwner as unknown as Record<string, unknown>),
-                          '@rules': destinationNode,
+                          rules: destinationNode,
                       } as unknown as PortableNode)
                     : destinationNode;
-            const inserted = mutable.set(writePath, writeNode);
+            const inserted = mutable.set(writePath, asSetValue(writeNode));
             if (isPortableError(inserted)) return inserted;
 
             if (!sameParent) {

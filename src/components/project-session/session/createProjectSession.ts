@@ -8,6 +8,7 @@ import type {ProjectRepository} from '../repository/types';
 import {createDocumentationStore} from '../stores/createDocumentationStore';
 import {createFlowMetadataStore} from '../stores/createFlowMetadataStore';
 import {createProjectTestsStore} from '../stores/createProjectTestsStore';
+import {createReadmeStore} from '../stores/createReadmeStore';
 import type {StoreContext} from '../stores/storeSupport';
 import type {
     CommandResult,
@@ -27,13 +28,13 @@ export interface ProjectSessionOptions {
     engine: ProjectEngineClass;
 }
 
-const SLICE_ORDER: readonly ProjectSlice[] = ['model', 'documentation', 'tests', 'flow'];
+const SLICE_ORDER: readonly ProjectSlice[] = ['model', 'documentation', 'tests', 'flow', 'readme'];
 
 // Everything a failed transaction restores.
 interface Checkpoint {
     dsl: string;
     metadata: ModelMetadata;
-    documents: Pick<ProjectBundle, 'documentation' | 'tests' | 'flow'>;
+    documents: Pick<ProjectBundle, 'documentation' | 'tests' | 'flow' | 'readme'>;
     dirty: Set<ProjectSlice>;
     localVersion: number;
     modelVersion: number;
@@ -116,15 +117,11 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
         return {listeners: createListenerSet, onChange: () => sliceChanged(slice)};
     }
 
-    const engineHandle = createProjectEngine(
-        engineClass,
-        bundle.model,
-        () => sliceChanged('model'),
-        () => metadata,
-    );
+    const engineHandle = createProjectEngine(engineClass, bundle.model, () => sliceChanged('model'));
     const documentation = createDocumentationStore(contextFor('documentation'));
     const tests = createProjectTestsStore(contextFor('tests'));
     const flow = createFlowMetadataStore(contextFor('flow'));
+    const readme = createReadmeStore(contextFor('readme'));
 
     function replaceSlices(documents: Checkpoint['documents']): void {
         restoring = true;
@@ -132,6 +129,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
             documentation.replaceDocument(documents.documentation);
             tests.replaceDocument(documents.tests);
             flow.replaceDocument(documents.flow);
+            readme.replaceDocument(documents.readme);
         } finally {
             restoring = false;
         }
@@ -155,6 +153,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
                 documentation: documentation.exportDocument(),
                 tests: tests.exportDocument(),
                 flow: flow.exportDocument(),
+                readme: readme.exportDocument(),
             },
             dirty: new Set(dirty),
             localVersion,
@@ -242,6 +241,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
         documentation: () => documentation.exportDocument(),
         tests: () => tests.exportDocument(),
         flow: () => flow.exportDocument(),
+        readme: () => readme.exportDocument(),
     };
 
     const session: ProjectSession = {
@@ -252,6 +252,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
         documentation,
         tests,
         flow,
+        readme,
 
         getSnapshot() {
             snapshot ??= Object.freeze({
@@ -306,6 +307,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
                 documentation: documentation.exportDocument(),
                 tests: tests.exportDocument(),
                 flow: flow.exportDocument(),
+                readme: readme.exportDocument(),
             });
         },
 

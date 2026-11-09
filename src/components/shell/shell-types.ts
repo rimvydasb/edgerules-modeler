@@ -3,12 +3,13 @@ import type {BoxedEditorOpenTarget} from '../boxed-editor';
 import type {CodeEditorService} from '../code-editor';
 import type {FlowEditorOpenTarget} from '../flow-editor';
 
-// 'tests' shows the tests of the root path in the Tests Manager; it is the only view of a test.
-export type ShellView = 'code' | 'boxed' | 'flow' | 'tests';
+// 'tests' shows the tests of the root path in the Tests Manager; it is the only view of a test. 'preview' shows the
+// rendered Markdown of a document root (`doc:README.md`); only a document root has it.
+export type ShellView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview';
 
 export interface ShellProps {
     languageService: CodeEditorService; // diagnostics and completions; the engine class statics fit
-    path?: string; // controlled root path: '*' or the path of an entity; the test subject in the 'tests' view
+    path?: string; // controlled root path: '*', the path of an entity, or a document path such as 'doc:README.md'
     defaultPath?: string; // uncontrolled initial root path; defaults to '*'
     onPathChange?: (path: string) => void; // breadcrumb click, drill-down, or fallback to an existing path
     view?: ShellView; // controlled active view

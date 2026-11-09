@@ -2,7 +2,7 @@
  * The EdgeRules DSL of the loan repayment model.
  *
  * - `pricingTier` is the decision table: the credit score and the term select the price tier and the rate premium.
- * - `loanRepayment` is the `@Service`: it prices a `LoanRequest` and returns its monthly repayment schedule. Its flow
+ * - `loanRepayment` is the `service`: it prices a `LoanRequest` and returns its monthly repayment schedule. Its flow
  *   shows the `request` parameter, the invocations of its body and the `@ReturnNode`: the values it returns. The
  *   intermediate `annuity` and `fullSchedule` stay out of the result.
  * - `mortgageBook` and `termComparisonBook` are the two workbooks that call the service and chart the repayment.
@@ -38,8 +38,7 @@ export const LOAN_REPAYMENT_DSL = `{
         shorterBalance: if n * 12 <= count(shorter) then shorter[period = n * 12][0].balance else 0
         longerBalance: longer[period = n * 12][0].balance
     }
-    @Service
-    func loanRepayment(request: LoanRequest): {
+    service loanRepayment(request: LoanRequest): {
         @FunctionNode(name: "Price tier")
         pricing: pricingTier(creditScore: request.creditScore, years: request.years)
         @FunctionNode(name: "Annual rate")
@@ -63,8 +62,8 @@ export const LOAN_REPAYMENT_DSL = `{
     }
     sampleRequest: { amount: 25000; years: 3; creditScore: 700 }
     samplePayment: loanRepayment(request: sampleRequest).payment
-    @Workbook(name: "Mortgage plan")
-    mortgageBook: {
+    @Name("Mortgage plan")
+    workbook mortgageBook: {
         @InputNode(name: "Mortgage request")
         mortgage: { amount: 250000; years: 25; creditScore: 780 }
         @FunctionNode(name: "Repayment plan")
@@ -72,8 +71,8 @@ export const LOAN_REPAYMENT_DSL = `{
         @FunctionNode(name: "Yearly summary")
         yearly: yearlySummary(schedule: repayment.schedule)
     }
-    @Workbook(name: "15 vs 30 years")
-    termComparisonBook: {
+    @Name("15 vs 30 years")
+    workbook termComparisonBook: {
         @InputNode(name: "15-year loan")
         shortTerm: { amount: 180000; years: 15; creditScore: 720 }
         @InputNode(name: "30-year loan")

@@ -11,14 +11,12 @@ function items() {
 }
 
 describe('paletteItems', () => {
-    it('offers a new input of each kind and the records of the model, then one Invocation, Expression, Output and Chart', () => {
+    it('offers a new input of each kind, then one Invocation, Expression, Output and Chart', () => {
         const ids = items().items.map((item) => item.id);
         expect(ids).toEqual([
             'new-input',
             'new-list-input',
             'new-value-input',
-            'input:applicant',
-            'input:application',
             'function',
             'expression',
             'output',
@@ -33,7 +31,7 @@ describe('paletteItems', () => {
                 item.group,
                 item.action,
             ]);
-        expect(ids('{ @Service func f(a: number): { b: a } }')).toEqual([
+        expect(ids('{ service f(a: number): { b: a } }')).toEqual([
             ['parameter', 'input', {kind: 'parameter'}],
             ['function', 'function', {kind: 'function'}],
             ['expression', 'expression', {kind: 'expression'}],
@@ -42,7 +40,7 @@ describe('paletteItems', () => {
         const service = createFlowEditorService(MutableDecisionService.fromCode(SERVICE_MODEL), {root: 'quote'});
         expect(paletteItems(service).map((item) => item.id)).toEqual(['parameter', 'function', 'expression']);
         // A `return` expression, annotated or not, is the return of the service.
-        expect(ids('{ @Service func f(a: number): { b: a; return: b } }').map(([id]) => id)).toEqual([
+        expect(ids('{ service f(a: number): { b: a; return: b } }').map(([id]) => id)).toEqual([
             'parameter',
             'function',
             'expression',
@@ -66,32 +64,12 @@ describe('paletteItems', () => {
             ['Value input', {kind: 'new-input', input: 'value-input'}],
         ]);
     });
-
-    it('offers a list literal as an existing list', () => {
-        const service = createFlowEditorService(
-            MutableDecisionService.fromCode('{ scores: [1, 2, 3]\n doubled: for s in scores return s * 2 }'),
-        );
-        const inputs = paletteItems(service).filter((item) => item.group === 'input');
-        expect(inputs.map((item) => [item.id, item.icon, item.detail])).toEqual([
-            ['new-input', 'input', 'Record with one field'],
-            ['new-list-input', 'list-input', 'List of numbers'],
-            ['new-value-input', 'value-input', 'One number'],
-            ['input:scores', 'list-input', 'Existing list'],
-        ]);
-        expect(inputs[3].action).toEqual({kind: 'input', field: 'scores'});
-    });
-
-    it('drops a record once it is an input node', () => {
-        const {service} = items();
-        service.addInputNode('applicant');
-        expect(paletteItems(service).map((item) => item.id)).not.toContain('input:applicant');
-    });
 });
 
 describe('filterItems', () => {
     it('matches every word against title, detail and group, ignoring case', () => {
         const all = items().items;
-        expect(filterItems(all, 'APPLICANT').map((item) => item.id)).toEqual(['input:applicant']);
+        expect(filterItems(all, 'RECORD').map((item) => item.id)).toEqual(['new-input']);
         expect(filterItems(all, 'outputs').map((item) => item.id)).toEqual(['output']);
         expect(filterItems(all, 'charts').map((item) => item.id)).toEqual(['chart']);
         expect(filterItems(all, 'invocation').map((item) => item.id)).toEqual(['function']);

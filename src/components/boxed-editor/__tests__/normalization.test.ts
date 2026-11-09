@@ -6,6 +6,7 @@ import {addArgument} from '../commands/rowFactories';
 import {createBoxedEditorService} from '../service/createBoxedEditorService';
 import {denormalize} from '../service/denormalize';
 import {normalizeNode} from '../service/normalize';
+import {compactModel} from '#lib/testing/compactPortable';
 
 const MODEL = `{
   application: { amount: <number, required: true>; fee: amount * 0.1 }
@@ -70,7 +71,7 @@ describe('BoxedEditorService normalization', () => {
         });
         expect(service.getBoxedRowsData('people')[0]).toMatchObject({
             kind: 'relation-item',
-            cells: ["'Ada'", '32'],
+            cells: ['"Ada"', '32'],
         });
         expect(service.getBoxedRowData('people[0]')).toMatchObject({
             kind: 'relation-item',
@@ -99,7 +100,7 @@ describe('BoxedEditorService normalization', () => {
             kind: 'rule',
             name: 'adult',
             conditions: ['>= 18'],
-            actions: ["'low'", '1000'],
+            actions: ['"low"', '1000'],
             priority: 1,
         });
         expect(children[2]).toMatchObject({
@@ -109,7 +110,7 @@ describe('BoxedEditorService normalization', () => {
         });
         expect(children[3]).toMatchObject({
             kind: 'ruleset-default',
-            actions: ["'none'", '0'],
+            actions: ['"none"', '0'],
         });
         expect(service.getBoxedRowData('risk.rules[0]')).toMatchObject({
             kind: 'rule',
@@ -120,12 +121,13 @@ describe('BoxedEditorService normalization', () => {
     it('never exposes Portable annotations as rows', () => {
         const mutable = MutableDecisionService.fromPortable({
             '@kind': 'context',
-            '@model-name': 'Annotated',
-            box: {
-                '@kind': 'context',
-                '@node': 'InputNode',
-                '@node-name': 'Input',
-                value: 1,
+            fields: {
+                box: {
+                    '@kind': 'context',
+                    '@node': 'InputNode',
+                    '@name': 'Input',
+                    fields: {value: 1},
+                },
             },
         });
         const service = createBoxedEditorService(mutable);
@@ -173,22 +175,22 @@ describe('BoxedEditorService normalization', () => {
         const portable = denormalize(row);
         expect(portable).toMatchObject({
             '@kind': 'optimise',
-            '@parameters': {workers: 'number'},
-            '@using': 'highs',
-            '@bottlenecks': true,
-            '@timeLimit': 1000,
-            '@variables': {
+            parameters: {workers: 'number'},
+            using: 'highs',
+            bottlenecks: true,
+            timeLimit: 1000,
+            variables: {
                 chairs: '<number, min: 0, integer: true>',
             },
-            '@maximise': '15 * chairs',
-            '@constraints': {capacity: 'chairs <= workers'},
+            maximise: '15 * chairs',
+            constraints: {capacity: 'chairs <= workers'},
         });
 
         expect(isPortableError(service.setBoxedRowData('factory', row))).toBe(false);
-        expect(mutable.get('factory', 'ALL')).toMatchObject({
+        expect(mutable.get('factory')).toMatchObject({
             '@kind': 'optimise',
-            '@maximise': '15 * chairs',
-            '@constraints': {capacity: 'chairs <= workers'},
+            maximise: '15 * chairs',
+            constraints: {capacity: 'chairs <= workers'},
         });
 
         mutable.registerSolver(() => ({
@@ -208,10 +210,12 @@ describe('BoxedEditorService normalization', () => {
         const relation = normalizeNode('records', 'records', [
             {
                 '@kind': 'context',
-                id: 1,
-                address: {'@kind': 'context', city: "'Vilnius'"},
+                fields: {
+                    id: 1,
+                    address: {'@kind': 'context', fields: {city: '\"Vilnius\"'}},
+                },
             },
-        ]);
+        ] as never);
         const item = relation.children?.[0];
 
         expect(item).toMatchObject({
@@ -226,10 +230,12 @@ describe('BoxedEditorService normalization', () => {
         expect(denormalize(relation)).toEqual([
             {
                 '@kind': 'context',
-                id: {'@kind': 'expression', expression: '1'},
-                address: {
-                    '@kind': 'context',
-                    city: {'@kind': 'expression', expression: "'Vilnius'"},
+                fields: {
+                    id: {'@kind': 'expression', expression: '1'},
+                    address: {
+                        '@kind': 'context',
+                        fields: {city: {'@kind': 'expression', expression: '\"Vilnius\"'}},
+                    },
                 },
             },
         ]);
@@ -252,31 +258,36 @@ describe('BoxedEditorService normalization', () => {
 
     it('uses the linked item schema to classify an empty relation', () => {
         expect(
-            normalizeNode('records', 'records', [], {
-                '@kind': 'type',
-                type: 'array',
-                items: {
-                    '@kind': 'type-definition',
-                    value: {'@kind': 'type', type: 'number'},
-                },
-            } as never).kind,
+            normalizeNode(
+                'records',
+                'records',
+                [] as never,
+                {
+                    '@kind': 'placeholder',
+                    type: 'array',
+                    items: {
+                        '@kind': 'type',
+                        fields: {value: {'@kind': 'placeholder', type: 'number'}},
+                    },
+                } as never,
+            ).kind,
         ).toBe('relation');
     });
 
     it('collapses a function whose only authored child is result', () => {
         const functionRow = normalizeNode('f', 'f', {
-            '@kind': 'function',
-            '@parameters': {},
-            '@body': {
+            '@kind': 'method',
+            parameters: {},
+            body: {
                 '@kind': 'context',
-                result: {'@kind': 'expression', expression: '42'},
+                fields: {result: {'@kind': 'expression', expression: '42'}},
             },
         } as never);
 
         expect(denormalize(functionRow)).toEqual({
-            '@kind': 'function',
-            '@parameters': {},
-            '@body': {'@kind': 'expression', expression: '42'},
+            '@kind': 'method',
+            parameters: {},
+            body: {'@kind': 'expression', expression: '42'},
         });
     });
 
@@ -307,8 +318,8 @@ describe('BoxedEditorService normalization', () => {
             {name: 'arg2'},
             {name: 'arg3'},
         ]);
-        expect(mutable.toPortable().f).toMatchObject({
-            '@parameters': {arg: null, arg2: null, arg3: null},
+        expect(compactModel(mutable).f).toMatchObject({
+            parameters: {arg: null, arg2: null, arg3: null},
         });
         expect(() => mutable.link()).not.toThrow();
     });
@@ -326,5 +337,55 @@ describe('BoxedEditorService normalization', () => {
 
         expect(service.getBoxedRowsData('collect').map((row) => row.kind)).toEqual(['list', 'relation', 'field']);
         expect(service.getBoxedRowsData('collect.values')).toHaveLength(2);
+    });
+});
+
+describe('BoxedEditorService decision declarations', () => {
+    it('normalizes a decision with its `context` as the argument and writes it back as `context`', () => {
+        const mutable = MutableDecisionService.fromCode(`{
+            type Applicant: { age: <number> }
+            decision Eligibility(applicant: Applicant): { adult: applicant.age >= 18 }
+        }`);
+        const authored = mutable.toPortable().fields.Eligibility;
+        const row = normalizeNode('Eligibility', 'Eligibility', authored as never) as BoxedTableRowData;
+        expect(row).toMatchObject({kind: 'function', keyword: 'decision'});
+        expect(row.parameters).toEqual([expect.objectContaining({name: 'applicant'})]);
+        const written = denormalize(row) as unknown as Record<string, unknown>;
+        expect(written['@kind']).toBe('decision');
+        expect(written.context).toEqual({applicant: 'Applicant'});
+        expect(written.parameters).toBeUndefined();
+        expect(written.body).toEqual({
+            '@kind': 'context',
+            fields: {adult: {'@kind': 'expression', expression: 'applicant.age >= 18'}},
+        });
+        expect(isPortableError(mutable.set('Eligibility', written as never))).toBe(false);
+    });
+});
+
+describe('BoxedEditorService facts declarations', () => {
+    const FACTS_MODEL = `{
+        type Applicant: { age: <number> }
+        facts ApplicantFacts(applicant: Applicant): { adult: applicant.age >= 18 }
+    }`;
+
+    it('shows a facts declaration by its own name, with its fields as the body', () => {
+        const service = createBoxedEditorService(MutableDecisionService.fromCode(FACTS_MODEL));
+        expect(service.getBoxedRowData('ApplicantFacts')).toMatchObject({
+            kind: 'function',
+            keyword: 'facts',
+            name: 'ApplicantFacts',
+            parameters: [expect.objectContaining({name: 'applicant'})],
+        });
+        expect(service.getBoxedRowsData('ApplicantFacts').map((row) => [row.path, row.value])).toEqual([
+            ['ApplicantFacts.adult', 'applicant.age >= 18'],
+        ]);
+    });
+
+    it('writes an edited field back to the facts declaration', () => {
+        const mutable = MutableDecisionService.fromCode(FACTS_MODEL);
+        const service = createBoxedEditorService(mutable);
+        const row = service.getBoxedRowsData('ApplicantFacts')[0]!;
+        expect(isPortableError(service.setBoxedRowData(row.path, {...row, value: 'applicant.age >= 21'}))).toBe(false);
+        expect(mutable.getCode('*')).toContain('adult: applicant.age >= 21');
     });
 });

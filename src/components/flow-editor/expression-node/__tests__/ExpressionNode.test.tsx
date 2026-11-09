@@ -2,6 +2,7 @@ import {fireEvent, screen, waitFor} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import type {FlowEditorOpenTarget} from '../../flow-editor-types';
 import {renderNode} from '../../testing/renderNode';
+import {compactModel} from '#lib/testing/compactPortable';
 
 // A literal and two expressions that read it, one through the other.
 const EXPRESSION_MODEL = `{
@@ -35,7 +36,7 @@ describe('ExpressionNode', () => {
         expect(document.querySelector('[data-handleid="in:*"]')).toHaveAttribute('title', 'tax reads rate');
     });
 
-    it('offers the node menu without Rename node and Remove from flow, and routes the host items', async () => {
+    it('offers the node menu without Rename node, and routes the host items', async () => {
         const onOpenNode = vi.fn<(target: FlowEditorOpenTarget) => void>();
         renderExpression('tax', {onOpenNode});
         fireEvent.click(screen.getByRole('button', {name: 'Node actions'}));
@@ -53,7 +54,7 @@ describe('ExpressionNode', () => {
         const {mutable, documentation} = renderExpression('rate');
         documentation.setDescription('rate', 'The tax rate');
         await renameTo('taxRate');
-        await waitFor(() => expect(mutable.toPortable()).toHaveProperty('taxRate'));
+        await waitFor(() => expect(compactModel(mutable)).toHaveProperty('taxRate'));
         expect(documentation.getDescription('taxRate')).toBe('The tax rate');
     });
 

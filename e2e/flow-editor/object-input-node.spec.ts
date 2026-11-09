@@ -49,7 +49,7 @@ test('shows the value of every field beside its name', async ({page}) => {
 
     await expect(page.getByRole('button', {name: 'Value of age'})).toHaveText('23');
     await expect(page.getByRole('button', {name: 'Value of income'})).toHaveText('25000');
-    await expect(page.getByRole('button', {name: 'Value of segment'})).toHaveText("'retail'");
+    await expect(page.getByRole('button', {name: 'Value of segment'})).toHaveText('"retail"');
 });
 
 test('edits a value in a code editor cell', async ({page}) => {

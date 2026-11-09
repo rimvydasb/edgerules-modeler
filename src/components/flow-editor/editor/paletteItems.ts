@@ -101,15 +101,6 @@ export function paletteItems(service: FlowEditorService): PaletteItem[] {
             label: 'Add value input',
             action: {kind: 'new-input', input: 'value-input'},
         },
-        ...service.listInputCandidates().map(({field, kind}): PaletteItem => ({
-            id: `input:${field}`,
-            group: 'input',
-            icon: kind === 'list-input' ? 'list-input' : 'input',
-            title: field,
-            detail: kind === 'list-input' ? 'Existing list' : 'Existing record',
-            label: `Add input ${field}`,
-            action: {kind: 'input', field},
-        })),
         INVOCATION,
         EXPRESSION,
         {

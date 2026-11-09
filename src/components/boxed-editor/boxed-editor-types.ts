@@ -1,4 +1,4 @@
-import type {PortableError, PortableNode, PortableRootContext} from '@edgerules/portable';
+import type {PortableError, PortableNode, PortableContext} from '@edgerules/portable';
 
 export type BoxedRowKind =
     | 'model'
@@ -33,9 +33,14 @@ export interface BoxedRowData {
     readOnly?: boolean;
     deletable?: boolean;
     children?: BoxedRowData[];
-    /** `model` kind only — the root context's `@model-version` metadata (edited in the Shell settings). */
-    modelVersion?: string;
+    /**
+     * The declaration keyword of a `function` row (`service`, `decision`, `facts`; a plain `func` has none) or of
+     * a `context` row (`workbook`). It keeps the `@kind` of the declaration when the row is written back.
+     */
+    keyword?: BoxedDeclarationKeyword;
 }
+
+export type BoxedDeclarationKeyword = 'service' | 'decision' | 'facts' | 'workbook';
 
 export interface BoxedTableRowData extends BoxedRowData {
     parameters?: SignatureParameter[];
@@ -66,7 +71,7 @@ export interface BoxedEditorService {
     move(fromPath: string, toParentPath: string, index: number): void | PortableError;
     subscribe(listener: () => void): Unsubscribe;
     invalidate(path?: string): void;
-    toPortable(): PortableRootContext;
+    toPortable(): PortableContext;
     /**
      * Explicit, on-demand relink check
      */

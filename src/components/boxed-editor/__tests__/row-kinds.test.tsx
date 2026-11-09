@@ -23,6 +23,7 @@ import {RulesetDefaultRow} from '../rows/RulesetDefaultRow';
 import {RulesetHitPolicyRow} from '../rows/RulesetHitPolicyRow';
 import {createBoxedEditorService} from '../service/createBoxedEditorService';
 import {byCode, notCode} from './queries';
+import {compactModel} from '#lib/testing/compactPortable';
 
 const languageService = MutableDecisionService;
 
@@ -85,11 +86,11 @@ describe('row kinds: list', () => {
 
         await user.click(screen.getByText(item0.value!));
         await user.click(queryEditable(container));
-        replaceDoc(container, "'submitted'");
+        replaceDoc(container, '\"submitted\"');
         await user.keyboard('{Enter}');
 
-        expect(mutable.toPortable().stages).toMatchObject({'@kind': 'expression'});
-        expect((mutable.toPortable().stages as {expression: string}).expression).toContain('submitted');
+        expect(mutable.toPortable().fields.stages).toMatchObject({'@kind': 'expression'});
+        expect(compactModel(mutable).stages).toContain('submitted');
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -108,7 +109,7 @@ describe('row kinds: list', () => {
         expect(service.getBoxedRowsData('stages')).toHaveLength(3);
         expect(service.getBoxedRowData('stages[2]')).toMatchObject({
             kind: 'list-item',
-            value: "''",
+            value: '""',
         });
         expect(onChange).toHaveBeenCalledTimes(1);
     });
@@ -187,15 +188,15 @@ describe('row kinds: relation', () => {
         expect(screen.getByText('people')).toBeInTheDocument();
         expect(screen.getByText('name')).toBeInTheDocument();
         expect(screen.getByText('age', notCode)).toBeInTheDocument();
-        expect(screen.getByText("'Ada'")).toBeInTheDocument();
+        expect(screen.getByText('"Ada"')).toBeInTheDocument();
         expect(screen.getByText('32')).toBeInTheDocument();
 
-        await user.click(screen.getByText("'Ada'"));
+        await user.click(screen.getByText('"Ada"'));
         await user.click(queryEditable(container));
-        replaceDoc(container, "'Grace'");
+        replaceDoc(container, '\"Grace\"');
         await user.keyboard('{Enter}');
 
-        expect(mutable.get('people[0].name', 'ALL')).toBe("'Grace'");
+        expect(mutable.get('people[0].name')).toMatchObject({'@kind': 'expression', expression: '"Grace"'});
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -207,7 +208,7 @@ describe('row kinds: relation', () => {
             path: 'people[1]',
             name: 'Item 2',
             columns: ['name', 'age'],
-            cells: ["'Lin'", ''],
+            cells: ['\"Lin\"', ''],
         };
         expect(secondRow.children ?? []).toHaveLength(0);
 
@@ -229,7 +230,7 @@ describe('row kinds: relation', () => {
             </BoxedEditorProvider>,
         );
 
-        expect(screen.getByText("'Lin'")).toBeInTheDocument();
+        expect(screen.getByText('\"Lin\"')).toBeInTheDocument();
         // The missing `age` column renders as an empty cell — never its own "age" field row.
         expect(screen.queryByText('age')).not.toBeInTheDocument();
     });
@@ -252,7 +253,7 @@ describe('row kinds: relation', () => {
         expect(rows[2]).toMatchObject({
             kind: 'relation-item',
             columns: ['name'],
-            cells: ["''"],
+            cells: ['""'],
         });
         expect(onChange).toHaveBeenCalledTimes(1);
     });
@@ -275,10 +276,10 @@ describe('row kinds: relation', () => {
             columns: ['name', 'age', 'status'],
         });
         expect(service.getBoxedRowsData('people')[0]).toMatchObject({
-            cells: ["'Ada'", '32', "'status0'"],
+            cells: ['"Ada"', '32', '"status0"'],
         });
         expect(service.getBoxedRowsData('people')[1]).toMatchObject({
-            cells: ["'Lin'", '28', "'status1'"],
+            cells: ['"Lin"', '28', '"status1"'],
         });
 
         const afterAdd = service.getBoxedRowData('people') as BoxedTableRowData;
@@ -289,7 +290,7 @@ describe('row kinds: relation', () => {
             columns: ['name', 'status'],
         });
         expect(service.getBoxedRowsData('people')[0]).toMatchObject({
-            cells: ["'Ada'", "'status0'"],
+            cells: ['"Ada"', '"status0"'],
         });
     });
 
@@ -312,7 +313,7 @@ describe('row kinds: relation', () => {
 
         // The column header of the opened relation and the drill-down row of the record.
         expect(screen.getAllByText('address')).toHaveLength(2);
-        expect(screen.getByText("'Vilnius'")).toBeInTheDocument();
+        expect(screen.getByText('"Vilnius"')).toBeInTheDocument();
         expect(screen.queryByText(/"city"/)).not.toBeInTheDocument();
     });
 });
@@ -388,9 +389,9 @@ describe('row kinds: function', () => {
         // An inline function's body is a bare expression in the AST — `monthly.result` names no real
         // field there (it's a UI-only synthesized path), so the edit commits by rewriting the whole
         // `monthly` function instead; it stays collapsed to an inline function afterward.
-        expect(mutable.toPortable().monthly).toMatchObject({
-            '@kind': 'function',
-            '@body': {'@kind': 'expression', expression: 'amount / 24'},
+        expect(compactModel(mutable).monthly).toMatchObject({
+            '@kind': 'method',
+            body: 'amount / 24',
         });
         expect(onChange).toHaveBeenCalledTimes(1);
     });
@@ -490,7 +491,7 @@ describe('row kinds: ruleset', () => {
         replaceDoc(container, '');
         await user.keyboard('{Enter}');
 
-        expect(mutable.get('risk.rules[0]', 'ALL')).toMatchObject({
+        expect(mutable.get('risk.rules[0]')).toMatchObject({
             when: {income: '< 30000'},
         });
         expect(onChange).toHaveBeenCalledTimes(1);
@@ -511,7 +512,7 @@ describe('row kinds: ruleset', () => {
         replaceDoc(container, 'age >= 30');
         await user.keyboard('{Enter}');
 
-        expect(mutable.get('risk.rules[1]', 'ALL')).toMatchObject({
+        expect(mutable.get('risk.rules[1]')).toMatchObject({
             when: {'@kind': 'expression', expression: 'age >= 30'},
         });
         expect(onChange).toHaveBeenCalledTimes(1);
@@ -543,7 +544,7 @@ describe('row kinds: ruleset', () => {
         replaceDoc(container, '2');
         await user.keyboard('{Enter}');
 
-        expect(mutable.get('risk.rules[0]', 'ALL')).toMatchObject({priority: 2});
+        expect(mutable.get('risk.rules[0]')).toMatchObject({priority: 2});
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -677,8 +678,8 @@ describe('row kinds: optimisation', () => {
 
         await user.click(screen.getByText('(new constraint)'));
 
-        expect(mutable.get('factory', 'ALL')).toMatchObject({
-            '@constraints': {capacity: 'chairs <= workers', constraint: '0 <= 0'},
+        expect(mutable.get('factory')).toMatchObject({
+            constraints: {capacity: 'chairs <= workers', constraint: '0 <= 0'},
         });
         expect(onChange).toHaveBeenCalledTimes(1);
     });
@@ -714,7 +715,7 @@ describe('row kinds: optimisation', () => {
         replaceDoc(container, '2000');
         await user.keyboard('{Enter}');
 
-        expect(mutable.get('factory', 'ALL')).toMatchObject({'@timeLimit': 2000});
+        expect(mutable.get('factory')).toMatchObject({timeLimit: 2000});
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -727,10 +728,10 @@ describe('row kinds: optimisation', () => {
             false,
         );
 
-        expect(mutable.get('factory', 'ALL')).toMatchObject({
-            '@minimise': '15 * chairs',
+        expect(mutable.get('factory')).toMatchObject({
+            minimise: '15 * chairs',
         });
-        expect(mutable.get('factory', 'ALL')).not.toHaveProperty('@maximise');
+        expect(mutable.get('factory')).not.toHaveProperty('maximise');
     });
 
     it('variable and constraint rows are draggable; groups, objective, and settings are not', () => {

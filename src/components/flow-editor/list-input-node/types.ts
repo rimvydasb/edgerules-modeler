@@ -14,7 +14,7 @@ export interface ListItemField {
 
 export interface ListInputNodeModel {
     field: string; // model field path
-    label?: string; // '@node-name'
+    label?: string; // '@name'
     type: string; // the list type, for example 'object[]' or 'number[]'
     itemFields: ListItemField[]; // the fields of a record item; empty for a list of plain values
 }

@@ -3,7 +3,10 @@ import {
     IconBook2,
     IconBraces,
     IconChevronRight,
+    IconDatabase,
+    IconFileText,
     IconFlask,
+    IconGavel,
     IconListCheck,
     IconMathFunction,
     IconSitemap,
@@ -20,13 +23,17 @@ export interface ShellBreadcrumbsProps {
     segments: ShellPathSegment[]; // the root path, one segment per field
     rootLabel?: string; // the model name; defaults to 'Model'
     origin?: {path: string; label: string}; // the Flow view that opened the root path: a crumb after the model name
+    document?: {path: string; label: string}; // a document root path: its file name is the last crumb
     onNavigate: (path: string) => void; // a crumb click; '*' is the model name
-    primaryView: 'flow' | 'boxed'; // the view the kind icon opens: Flow when the root path has it, otherwise Boxed
+    primaryView: PrimaryView; // the view the kind icon opens: Flow when the root path has it, otherwise Boxed
     onOpenPrimary: () => void;
     tests?: boolean; // the Tests view: the root path is a test subject
 }
 
-type GlyphKind = 'model' | 'tests' | ShellPathKind;
+/** The main view of a root path: Preview for a document, Flow when the root path has it, otherwise Boxed. */
+export type PrimaryView = 'flow' | 'boxed' | 'preview';
+
+type GlyphKind = 'model' | 'tests' | 'document' | ShellPathKind;
 
 // The icon square of the root path kind, in the shared kind colors of the Boxed Editor header rows. A context row of
 // the Boxed Editor has no colored icon, so a context and a plain field get a muted one.
@@ -36,11 +43,17 @@ function KindGlyph({kind}: {kind: GlyphKind}): ReactElement {
             return <IconSitemap size={20} color="#fff" />;
         case 'tests':
             return <IconFlask size={19} color="#fff" />;
+        case 'document':
+            return <IconFileText size={19} />;
         case 'workbook':
             return <IconBook2 size={19} color="#fff" />;
         case 'function':
         case 'service':
             return <IconMathFunction size={19} color="#fff" />;
+        case 'decision':
+            return <IconGavel size={19} color="#fff" />;
+        case 'facts':
+            return <IconDatabase size={19} color="#fff" />;
         case 'ruleset':
             return <IconListCheck size={19} color="#fff" />;
         case 'type':
@@ -59,20 +72,32 @@ const KIND_FILL: Partial<Record<GlyphKind, string>> = {
     function: KIND_COLORS.function,
     service: KIND_COLORS.service,
     ruleset: KIND_COLORS.ruleset,
+    decision: KIND_COLORS.decision,
+    facts: KIND_COLORS.facts,
     type: KIND_COLORS.complexType,
 };
 
 // A callable reads as a call: `name(...)`.
 function segmentLabel(segment: ShellPathSegment): string {
-    return segment.kind === 'function' || segment.kind === 'service' || segment.kind === 'ruleset'
+    if (segment.kind === 'facts') return 'facts';
+    return segment.kind === 'function' ||
+        segment.kind === 'decision' ||
+        segment.kind === 'service' ||
+        segment.kind === 'ruleset'
         ? `${segment.name}(...)`
         : segment.name;
 }
 
 // The kind icon square opens the root path in its main editor: the Flow Editor, or the Boxed Editor when the root
 // path has no Flow view.
-function KindButton({kind, view, onOpen}: {kind: GlyphKind; view: 'flow' | 'boxed'; onOpen: () => void}): ReactElement {
-    const label = view === 'flow' ? 'Open in the Flow view' : 'Open in the Boxed view';
+const PRIMARY_LABEL: Record<PrimaryView, string> = {
+    flow: 'Open in the Flow view',
+    boxed: 'Open in the Boxed view',
+    preview: 'Open in the Preview view',
+};
+
+function KindButton({kind, view, onOpen}: {kind: GlyphKind; view: PrimaryView; onOpen: () => void}): ReactElement {
+    const label = PRIMARY_LABEL[view];
     const fill = KIND_FILL[kind];
     return (
         <Tooltip label={label} position="bottom-start" withArrow>
@@ -94,12 +119,14 @@ function KindButton({kind, view, onOpen}: {kind: GlyphKind; view: 'flow' | 'boxe
  * `Loan repayment` › `applicant` › `calculateAge(...)`: the fully qualified root path, the last item as plain text. In the
  * Tests view, the path of the test subject. The model name is always a button: it opens the model root. A root path
  * opened from a Flow view outside it has the crumb of that Flow view after the model name:
- * `Loan Repayment Planner` › `Mortgage plan` › `yearlySummary(...)`.
+ * `Loan Repayment Planner` › `Mortgage plan` › `yearlySummary(...)`. A document root path is the model name and the
+ * file name: `Loan Repayment Planner` › `README.md`.
  */
 export function ShellBreadcrumbs({
     segments,
     rootLabel = 'Model',
     origin,
+    document,
     onNavigate,
     primaryView,
     onOpenPrimary,
@@ -109,11 +136,12 @@ export function ShellBreadcrumbs({
         {label: rootLabel, path: '*'},
         ...(origin ? [origin] : []),
         ...segments.map((segment) => ({label: segmentLabel(segment), path: segment.path})),
+        ...(document ? [document] : []),
     ];
     return (
         <>
             <KindButton
-                kind={tests ? 'tests' : (segments.at(-1)?.kind ?? 'model')}
+                kind={tests ? 'tests' : document ? 'document' : (segments.at(-1)?.kind ?? 'model')}
                 view={primaryView}
                 onOpen={onOpenPrimary}
             />

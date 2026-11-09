@@ -14,7 +14,7 @@ const CLIENT_LIST = CLIENTS.map((client) => `            ${clientDsl(client)}`).
  * - `contactMix` is the optimisation: one 0/1 decision variable per client and channel (`over: clients`), at most one
  *   action per client, no blocked channel, within the time of the team and the SMS limit.
  * - `clientAction` reads the decision of the solver for one client; `workSchedule` puts the actions on the workers.
- * - `contactPlan` is the `@Service`; `outreachBook` is the workbook.
+ * - `contactPlan` is the `service`; `outreachBook` is the workbook.
  */
 export const CLIENT_OUTREACH_DSL = `{
     type Client: { id: <string>; name: <string>; wealth: <number>; propensity: <number>; preferredChannel: <string>; hasEmail: <boolean>; phoneConsent: <boolean>; daysSinceContact: <number> }
@@ -140,8 +140,7 @@ export const CLIENT_OUTREACH_DSL = `{
         sms: count(plan[tier = tierName and action = "sms"])
         none: count(plan[tier = tierName and action = "none"])
     }
-    @Service
-    func contactPlan(clients: Client[], team: Team): {
+    service contactPlan(clients: Client[], team: Team): {
         records: for client in clients return clientRecord(client)
         capacityMinutes: team.workers * team.dayHours * 60
         mix: contactMix(clients: clients, callOk: for r in records return allowedFlag(r.call).result, emailOk: for r in records return allowedFlag(r.email).result, smsOk: for r in records return allowedFlag(r.sms).result, callValue: for r in records return r.call.value, emailValue: for r in records return r.email.value, smsValue: for r in records return r.sms.value, callMinutes: channelTerms("call").minutes, emailMinutes: channelTerms("email").minutes, smsMinutes: channelTerms("sms").minutes, capacityMinutes: capacityMinutes, smsCap: campaign().smsDailyCap)
@@ -171,8 +170,8 @@ export const CLIENT_OUTREACH_DSL = `{
             plannedRevenue: round(mix.objective, 2)
         }
     }
-    @Workbook(name: "Daily outreach plan")
-    outreachBook: {
+    @Name("Daily outreach plan")
+    workbook outreachBook: {
         @InputNode(name: "Team")
         team: { workers: 2; dayHours: 7 }
         @InputNode(name: "Clients")

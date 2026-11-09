@@ -16,7 +16,7 @@ describe('ProjectFactory.createBundle', () => {
         expect(bundle).toEqual({
             manifest: {
                 kind: 'EdgeRulesProject',
-                formatVersion: 2,
+                formatVersion: 3,
                 projectId: expect.stringMatching(/^[0-9a-f-]{36}$/),
                 name: 'Loans',
                 description: 'Credit',
@@ -27,7 +27,20 @@ describe('ProjectFactory.createBundle', () => {
             documentation: {schemaVersion: 1, byPath: {}},
             tests: {schemaVersion: 1, subjects: {}},
             flow: {schemaVersion: 2, layouts: {}},
+            readme: '# Loans\n\nCredit\n',
         });
+    });
+
+    it('generates the README from the name and description when the input has none', () => {
+        expect(factory.createBundle({name: 'Loans', model: {dsl: '{ a: 1 }'}}).readme).toBe('# Loans\n');
+        expect(
+            factory.createBundle({name: 'Loans', description: 'Credit decisions', model: {dsl: '{ a: 1 }'}}).readme,
+        ).toBe('# Loans\n\nCredit decisions\n');
+        const authored = '# Loans\n\nSee [decision](model:decision).\n';
+        expect(
+            factory.createBundle({name: 'Loans', description: 'Credit', model: {dsl: '{ a: 1 }'}, readme: authored})
+                .readme,
+        ).toBe(authored);
     });
 
     it('gives every bundle its own projectId', () => {
@@ -43,11 +56,14 @@ describe('ProjectFactory.createBundle', () => {
         expect(MutableDecisionService.fromCode(bundle.model).toPortable()).toEqual(portable);
     });
 
-    it('keeps the model name and version in the manifest, from the input or the Portable root metadata', () => {
+    it('keeps the model name and version of the input in the manifest', () => {
         const fromDsl = factory.createBundle({name: 'Loans', model: {dsl: '{ a: 1 }', name: 'Desk', version: '1.0'}});
         expect(fromDsl.manifest.model).toMatchObject({name: 'Desk', version: '1.0'});
-        const portable = {'@kind': 'context', '@model-name': 'Portable desk', '@model-version': '3', a: 1} as const;
-        const fromPortable = factory.createBundle({name: 'Loans', model: {portable}});
+        const portable = {'@kind': 'context', fields: {a: 1}} as const;
+        const fromPortable = factory.createBundle({
+            name: 'Loans',
+            model: {portable, name: 'Portable desk', version: '3'},
+        });
         expect(fromPortable.manifest.model).toMatchObject({name: 'Portable desk', version: '3'});
         expect(factory.createBundle({name: 'Loans', model: {dsl: '{ a: 1 }'}}).manifest.model).toEqual({
             format: 'dsl',

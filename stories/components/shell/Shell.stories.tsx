@@ -1,7 +1,7 @@
 import type {Meta, StoryObj} from '@storybook/react-vite';
 import {expect, userEvent, within} from 'storybook/test';
 import {renderShellHost, SHELL_HOST_ARG_TYPES, ShellHost} from '../../support/ShellHost';
-import {openStoryProject} from '../../support/storyProject';
+import {openStoredStoryProject, openStoryProject} from '../../support/storyProject';
 
 // The sample model of docs/model-decomposition.md. `risk` is an invocation, so the Flow view shows it as a
 // FunctionNode; `applicant.calculateAge` shows a function root path.
@@ -26,16 +26,14 @@ const SAMPLE_MODEL = `{
 const PROJECT_MODEL = `{
   type Customer: { name: <string>; income: <number, 0> }
   func riskScore(income: number): { score: income / 100 }
-  @Service
-  func processApplication(income: number): { result: riskScore(income).score }
+  service processApplication(income: number): { result: riskScore(income).score }
   ruleset band(age: number): {
     hitPolicy: "first-match"
     rules: [{ when: { age: < 30 }, then: { level: "young" } }]
     default: { level: "none" }
   }
   limit: 1000
-  @Workbook
-  loanBook: {
+  workbook loanBook: {
     @InputNode(name: "Applicant")
     applicant: { income: 5000 }
     @FunctionNode
@@ -132,4 +130,55 @@ export const SplitScreen: Story = {
         const panel = await canvas.findByTestId('shell-split-panel');
         await expect(within(panel).getByTestId('row-riskScore.score')).toBeInTheDocument();
     },
+};
+
+// The README of the sample project: a `model:` link opens that model path.
+const SAMPLE_README = `# Shell story
+
+The sample model of the Shell stories. [riskScore](model:riskScore) scores an income; the
+[applicant](model:applicant) is the input.
+
+| Field     | Meaning                 |
+| --------- | ----------------------- |
+| \`limit\` | The credit limit        |
+| \`risk\`  | The risk of the applicant |
+`;
+
+/**
+ * The `README.md` of the project: the Documents section of the Project Explorer opens it in the Preview view; the Code
+ * view edits its Markdown source. Only Preview and Code are in the view switch.
+ */
+export const ReadmeDocument: Story = {
+    args: {defaultPath: 'doc:README.md', defaultView: 'preview', defaultExplorerOpen: true},
+    loaders: [
+        async () => ({
+            session: await openStoryProject({
+                name: 'Shell README story',
+                model: {dsl: SAMPLE_MODEL},
+                readme: SAMPLE_README,
+            }),
+        }),
+    ],
+    play: async ({canvasElement}) => {
+        const canvas = within(canvasElement);
+        await expect(await canvas.findByRole('heading', {name: 'Shell story'})).toBeInTheDocument();
+        await expect(canvas.getAllByRole('radio').map((cell) => cell.textContent)).toEqual(['Preview', 'Code']);
+    },
+};
+
+/**
+ * A stored project with a Save button: a save writes the README with the other slices in one revision, and a reload of
+ * the story reopens what the last save stored. The `projectKey` arg picks the stored project.
+ */
+export const SavedProject: Story = {
+    args: {saveable: true, defaultExplorerOpen: true, defaultView: 'flow', projectKey: 'default'},
+    loaders: [
+        async ({args}) => ({
+            session: await openStoredStoryProject(String(args.projectKey ?? 'default'), {
+                name: 'Shell saved story',
+                model: {dsl: PROJECT_MODEL},
+                readme: SAMPLE_README,
+            }),
+        }),
+    ],
 };

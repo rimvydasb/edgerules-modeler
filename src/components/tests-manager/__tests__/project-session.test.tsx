@@ -48,9 +48,7 @@ describe('TestsManager — project session tests', () => {
                 },
             },
         });
-        render(
-            <TestsManager service={session.engine} testCases={session.tests} subjectId="risk" autoRun={false} />,
-        );
+        render(<TestsManager service={session.engine} testCases={session.tests} subjectId="risk" autoRun={false} />);
 
         const assertion = await screen.findByLabelText('assertion level');
         expect(assertion).toHaveAttribute('data-mismatch', 'false');

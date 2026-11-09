@@ -1,26 +1,30 @@
-import type {PortableNode} from '@edgerules/portable';
-import {SERVICE_ANNOTATION, WORKBOOK_ANNOTATION, type ExplorerEntryKind, type ExplorerSection} from './tree-model';
+import type {PortableSetValue} from '@edgerules/portable';
+import type {ExplorerEntryKind, ExplorerSection} from './tree-model';
 
 /** One "New …" item of a section menu. */
 export interface CreateOption {
     kind: ExplorerEntryKind;
     label: string;
     defaultName: string; // the start of the proposed name; a number makes it unique
-    template: () => PortableNode;
+    template: () => PortableSetValue;
 }
 
-const EMPTY_BODY = {'@kind': 'context', result: 0};
+const EMPTY_BODY = {'@kind': 'context', fields: {result: 0}} as const;
 
 // The smallest valid entity of each kind; the user completes it in the opened editor.
-// A method is a function or a ruleset; a service is a function with `@Service`. Input, output and chart nodes exist
-// only inside a workbook, so no section offers them: the Flow Editor of the workbook creates them.
-export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOption[]> = {
+// A method is a function or a ruleset; a service is a `service` declaration and a workbook a root `workbook`
+// declaration. Input, output and chart nodes exist only inside a workbook, so no section offers them: the Flow Editor of the workbook creates them.
+// A `decision` and a `facts` declaration need an existing context type, so their sections offer no "New …" item.
+export const CREATE_OPTIONS: Record<
+    Exclude<ExplorerSection, 'documents' | 'tests' | 'factsLibrary' | 'decisions'>,
+    CreateOption[]
+> = {
     types: [
         {
             kind: 'type',
             label: 'Type',
             defaultName: 'NewType',
-            template: () => ({'@kind': 'type-definition', value: {'@kind': 'type', type: 'string'}}) as PortableNode,
+            template: () => ({'@kind': 'type', fields: {value: {'@kind': 'placeholder', type: 'string'}}}),
         },
     ],
     methods: [
@@ -28,20 +32,19 @@ export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOpt
             kind: 'function',
             label: 'Function',
             defaultName: 'newFunction',
-            template: () => ({'@kind': 'function', '@parameters': {}, '@body': EMPTY_BODY}) as PortableNode,
+            template: () => ({'@kind': 'method', parameters: {}, body: EMPTY_BODY}),
         },
         {
             kind: 'ruleset',
             label: 'Ruleset',
             defaultName: 'newRuleset',
-            template: () =>
-                ({
-                    '@kind': 'ruleset',
-                    '@parameters': {value: 'number'},
-                    '@hitPolicy': 'first-match',
-                    '@rules': [],
-                    '@default': EMPTY_BODY,
-                }) as PortableNode,
+            template: () => ({
+                '@kind': 'ruleset',
+                parameters: {value: 'number'},
+                hitPolicy: 'first-match',
+                rules: [],
+                default: EMPTY_BODY,
+            }),
         },
     ],
     services: [
@@ -49,13 +52,7 @@ export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOpt
             kind: 'service',
             label: 'Service',
             defaultName: 'newService',
-            template: () =>
-                ({
-                    '@kind': 'function',
-                    '@node': SERVICE_ANNOTATION,
-                    '@parameters': {},
-                    '@body': EMPTY_BODY,
-                }) as PortableNode,
+            template: () => ({'@kind': 'service', parameters: {}, body: EMPTY_BODY}),
         },
     ],
     variables: [
@@ -64,7 +61,7 @@ export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOpt
             kind: 'context',
             label: 'Context',
             defaultName: 'newContext',
-            template: () => ({'@kind': 'context'}) as PortableNode,
+            template: () => ({'@kind': 'context', fields: {}}),
         },
     ],
     workbooks: [
@@ -72,7 +69,7 @@ export const CREATE_OPTIONS: Record<Exclude<ExplorerSection, 'tests'>, CreateOpt
             kind: 'workbook',
             label: 'Workbook',
             defaultName: 'newWorkbook',
-            template: () => ({'@kind': 'context', '@node': WORKBOOK_ANNOTATION}) as PortableNode,
+            template: () => ({'@kind': 'workbook', fields: {}}),
         },
     ],
 };

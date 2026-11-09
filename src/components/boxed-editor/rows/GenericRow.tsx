@@ -177,7 +177,11 @@ export function GenericRow({
                 <div aria-hidden="true" className={classes.actionsFiller} />
             )}
             {showDescription && <Cell column="description">{row && <DescriptionCell path={row.path} />}</Cell>}
-            {showTestResultsColumn && <Cell column="test-results">{row && <TestResultCell path={row.path} showSubjectResult={row.kind === 'ruleset'} />}</Cell>}
+            {showTestResultsColumn && (
+                <Cell column="test-results">
+                    {row && <TestResultCell path={row.path} showSubjectResult={row.kind === 'ruleset'} />}
+                </Cell>
+            )}
             {rowError && (
                 <div className={classes.rowError}>
                     <Alert

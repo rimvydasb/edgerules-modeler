@@ -79,7 +79,7 @@ describe('ReturnNode', () => {
 
     it('shows a returned expression as one row with its text, one input pin and its type', async () => {
         const {service} = renderNode('f.return', {
-            model: '{ @Service func f(a: number): { b: a * 2; return: b + 1 } }',
+            model: '{ service f(a: number): { b: a * 2; return: b + 1 } }',
             root: 'f',
             service: 'return',
         });

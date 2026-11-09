@@ -4,6 +4,7 @@ import {isPortableError} from '#lib/portable';
 import type {BoxedTableRowData} from '../boxed-editor-types';
 import {addRelationColumn, appendRelationItem, nextComplexTypeRow, nextRelationRow} from '../commands/rowFactories';
 import {createBoxedEditorService} from '../service/createBoxedEditorService';
+import {compactModel} from '#lib/testing/compactPortable';
 
 describe('row factories', () => {
     it('creates an empty complex type that commits and links through the real engine', () => {
@@ -13,8 +14,8 @@ describe('row factories', () => {
 
         expect(isPortableError(service.setBoxedRowData(row.path, row))).toBe(false);
         expect(service.link()).toBeUndefined();
-        expect(mutable.toPortable()).toMatchObject({
-            Type: {'@kind': 'type-definition'},
+        expect(compactModel(mutable)).toMatchObject({
+            Type: {'@kind': 'type'},
         });
     });
 

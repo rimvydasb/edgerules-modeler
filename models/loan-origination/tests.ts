@@ -72,7 +72,7 @@ export const LOAN_ORIGINATION_TESTS: TestSuitesDocument = {
                 ...applicantRows('application.applicants[1]'),
             ],
             [
-                ['record.ltv', 'number'],
+                ['ltv', 'number'],
                 ['householdScore', 'number'],
                 ['grade.grade', 'string'],
                 ['rate', 'number'],
@@ -189,33 +189,42 @@ export const LOAN_ORIGINATION_TESTS: TestSuitesDocument = {
                 ],
             ],
         ),
-        applicantRecord: suite(
-            'applicantRecord',
-            [['applicationDate', 'date'], ...applicantRows('applicant')],
+        HouseholdRisk: suite(
+            'HouseholdRisk',
             [
-                ['age', 'number'],
-                ['disposableIncome', 'number'],
+                ['application.applicationDate', 'date'],
+                ['application.loanAmount', 'number'],
+                ['application.propertyValue', 'number'],
+                ['application.termYears', 'number'],
+                ...applicantRows('application.applicants[0]'),
+                ...applicantRows('application.applicants[1]'),
             ],
-            [
-                ['Permanent employee', ['2026-10-01', ...JONAS], ['38', '2650']],
-                ['Contractor', ['2026-10-01', ...IEVA], ['36', '1700']],
-                ['Young self-employed', ['2026-10-01', ...TOMAS], ['23', '3700']],
-                ['Pensioner', ['2026-10-01', ...ONA], ['64', '1100']],
-            ],
-        ),
-        scoreApplicant: suite(
-            'scoreApplicant',
-            [...applicantRows('record.data'), ['record.age', 'number'], ['record.disposableIncome', 'number']],
             [
                 ['score', 'number'],
                 ['grade.grade', 'string'],
                 ['grade.probabilityOfDefault', 'number'],
             ],
             [
-                ['Permanent employee, good bureau score', [...JONAS, '38', '2650'], ['175', 'A', '0.005']],
-                ['Contractor with one delinquency', [...IEVA, '36', '1700'], ['115', 'C', '0.03']],
-                ['Young self-employed', [...TOMAS, '23', '3700'], ['85', 'D', '0.07']],
-                ['Pensioner, excellent bureau score', [...ONA, '64', '1100'], ['125', 'C', '0.03']],
+                [
+                    'Graded by the weaker applicant',
+                    ['2026-10-01', '240000', '320000', '25', ...JONAS, ...IEVA],
+                    ['115', 'C', '0.03'],
+                ],
+                [
+                    'Permanent employee, good bureau score',
+                    ['2026-10-01', '240000', '320000', '25', ...JONAS, ...NONE],
+                    ['175', 'A', '0.005'],
+                ],
+                [
+                    'Young self-employed',
+                    ['2026-10-01', '150000', '320000', '25', ...TOMAS, ...NONE],
+                    ['85', 'D', '0.07'],
+                ],
+                [
+                    'Pensioner, excellent bureau score',
+                    ['2026-10-01', '100000', '320000', '10', ...ONA, ...NONE],
+                    ['125', 'C', '0.03'],
+                ],
             ],
         ),
         policyRules: suite(

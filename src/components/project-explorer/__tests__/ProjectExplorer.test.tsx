@@ -17,7 +17,7 @@ function sectionCount(label: string): string | null | undefined {
 }
 
 describe('ProjectExplorer sections', () => {
-    it('renders the six sections in order, expanded, with their member counts', () => {
+    it('renders the eight sections in order, expanded, with their member counts', () => {
         render(<ProjectExplorer service={buildService()} testSubjects={['*']} />);
 
         const tree = screen.getByRole('tree');
@@ -25,14 +25,29 @@ describe('ProjectExplorer sections', () => {
             .getAllByRole('treeitem')
             .filter((item) => item.dataset.level === '1')
             .map((item) => item.querySelector('span span')?.textContent);
-        expect(headers).toEqual(['Types', 'Methods', 'Service Methods', 'Variables', 'Workbooks', 'Tests']);
+        expect(headers).toEqual([
+            'Types',
+            'Facts Library',
+            'Methods',
+            'Decisions',
+            'Service Methods',
+            'Variables',
+            'Workbooks',
+            'Tests',
+        ]);
         expect(sectionCount('Types')).toBe('2');
+        expect(sectionCount('Facts Library')).toBe('1');
         expect(sectionCount('Methods')).toBe('3');
+        expect(sectionCount('Decisions')).toBe('1');
         expect(sectionCount('Service Methods')).toBe('1');
         expect(sectionCount('Variables')).toBe('3');
         expect(sectionCount('Workbooks')).toBe('1');
         expect(sectionCount('Tests')).toBe('1');
         expect(screen.getAllByText('riskScore(...)')).toHaveLength(1);
+        // A decision is listed apart from the methods; a facts declaration by its own name.
+        expect(screen.getAllByText('Eligibility(...)')).toHaveLength(1);
+        expect(screen.getAllByText('Person')).toHaveLength(1);
+        expect(screen.getAllByText('PersonFacts')).toHaveLength(1);
     });
 
     it('filters the entries by the search, and hides the sections without matches', async () => {
@@ -71,20 +86,22 @@ describe('ProjectExplorer sections', () => {
         expect(screen.getByText('applicant')).toBeInTheDocument();
         expect(screen.getByText('decision')).toBeInTheDocument();
         expect(screen.getByText('result')).toBeInTheDocument();
-        expect(screen.queryByText('helper')).toBeNull();
+        // A field without a node annotation is listed too.
+        expect(screen.getByText('helper')).toBeInTheDocument();
         expect(screen.getByTestId('icon-input-node')).toBeInTheDocument();
         expect(screen.getByTestId('icon-output-node')).toBeInTheDocument();
     });
 
-    it('reads the model with two get() calls only, whatever is expanded', async () => {
+    it('reads the model once, whatever is expanded', async () => {
         const service = buildService();
         const getSpy = vi.spyOn(service, 'get');
         const user = userEvent.setup();
         render(<ProjectExplorer service={service} />);
-        expect(getSpy).toHaveBeenCalledTimes(2);
+        // The model, with its types.
+        expect(getSpy).toHaveBeenCalledTimes(1);
 
         await user.click(screen.getByText('loanBook'));
-        expect(getSpy).toHaveBeenCalledTimes(2);
+        expect(getSpy).toHaveBeenCalledTimes(1);
     });
 
     it('re-reads the model when the revision changes, keeping the sections expanded', () => {
@@ -123,7 +140,9 @@ describe('ProjectExplorer sections', () => {
 describe('ProjectExplorer open', () => {
     it.each([
         ['Types', 'Person', {kind: 'type', path: 'Person'}],
+        ['Facts Library', 'PersonFacts', {kind: 'facts', path: 'PersonFacts'}],
         ['Methods', 'nested.deep()', {kind: 'function', path: 'nested.deep'}],
+        ['Decisions', 'Eligibility(...)', {kind: 'decision', path: 'Eligibility'}],
         ['Methods', 'risk(...)', {kind: 'ruleset', path: 'risk'}],
         ['Service Methods', 'processApplication(...)', {kind: 'service', path: 'processApplication'}],
         ['Variables', 'nested', {kind: 'context', path: 'nested'}],
@@ -139,7 +158,9 @@ describe('ProjectExplorer open', () => {
         await user.click(screen.getByText(section));
         await user.click(screen.getByText(section));
         expect(onOpen).not.toHaveBeenCalled();
-        await user.click(screen.getByText(label));
+        // Within its section: the facts of a type have the name of the type.
+        const sectionItem = screen.getByText(section).closest<HTMLElement>('[role="treeitem"]')!;
+        await user.click(within(sectionItem).getByText(label));
         expect(onOpen).toHaveBeenCalledWith(target);
     });
 
@@ -151,6 +172,49 @@ describe('ProjectExplorer open', () => {
         await user.click(screen.getByText('loanBook'));
         await user.click(screen.getByText('decision'));
         expect(onOpen).toHaveBeenLastCalledWith({kind: 'function-node', path: 'loanBook.decision'});
+    });
+});
+
+describe('ProjectExplorer documents', () => {
+    it('lists the documents first, as doc: entries, and opens a clicked one', async () => {
+        const onOpen = vi.fn();
+        const user = userEvent.setup();
+        render(<ProjectExplorer service={buildService()} documents={['README.md']} onOpen={onOpen} />);
+
+        const headers = within(screen.getByRole('tree'))
+            .getAllByRole('treeitem')
+            .filter((item) => item.dataset.level === '1')
+            .map((item) => item.querySelector('span span')?.textContent);
+        expect(headers[0]).toBe('Documents');
+        expect(sectionCount('Documents')).toBe('1');
+        const readme = screen.getByText('README.md').closest('[role="treeitem"]');
+        expect(readme).toHaveAttribute('data-value', 'document:doc:README.md');
+        expect(screen.getByTestId('icon-document')).toBeInTheDocument();
+
+        await user.click(screen.getByText('README.md'));
+        expect(onOpen).toHaveBeenCalledWith({kind: 'document', path: 'doc:README.md'});
+    });
+
+    it('has no add button in Documents, and no Documents section without the prop', () => {
+        const {unmount} = render(<ProjectExplorer service={buildService()} documents={['README.md']} />);
+        expect(screen.queryByRole('button', {name: 'Add to Documents'})).toBeNull();
+        expect(screen.getByRole('button', {name: 'Add to Types'})).toBeInTheDocument();
+        unmount();
+
+        render(<ProjectExplorer service={buildService()} />);
+        expect(screen.queryByText('Documents')).toBeNull();
+        expect(screen.queryByText('README.md')).toBeNull();
+    });
+
+    it('finds a document by the search, and shows Documents in the rail', async () => {
+        const user = userEvent.setup();
+        const {rerender} = render(<ProjectExplorer service={buildService()} documents={['README.md']} />);
+        await user.type(screen.getByRole('textbox', {name: 'Search project'}), 'readme');
+        expect(screen.getByText('README.md')).toBeInTheDocument();
+        expect(screen.queryByText('Types')).toBeNull();
+
+        rerender(<ProjectExplorer service={buildService()} documents={['README.md']} collapsed />);
+        expect(screen.getByRole('button', {name: 'Show Documents'})).toBeInTheDocument();
     });
 });
 
@@ -167,13 +231,13 @@ describe('ProjectExplorer create', () => {
     }
 
     it.each([
-        ['Types', undefined, 'NewType', {'@kind': 'type-definition'}, 'type'],
-        ['Methods', 'Function', 'newFunction', {'@kind': 'function-schema'}, 'function'],
-        ['Service Methods', undefined, 'newService', {'@kind': 'function-schema', '@node': 'Service'}, 'service'],
-        ['Methods', 'Ruleset', 'newRuleset', {'@kind': 'ruleset-schema'}, 'ruleset'],
+        ['Types', undefined, 'NewType', {'@kind': 'type'}, 'type'],
+        ['Methods', 'Function', 'newFunction', {'@kind': 'method'}, 'function'],
+        ['Service Methods', undefined, 'newService', {'@kind': 'service'}, 'service'],
+        ['Methods', 'Ruleset', 'newRuleset', {'@kind': 'ruleset'}, 'ruleset'],
         ['Variables', 'Value', 'newValue', {'@kind': 'expression', type: 'number'}, 'variable'],
         ['Variables', 'Context', 'newContext', {'@kind': 'context'}, 'context'],
-        ['Workbooks', undefined, 'newWorkbook', {'@kind': 'context', '@node': 'Workbook'}, 'workbook'],
+        ['Workbooks', undefined, 'newWorkbook', {'@kind': 'workbook'}, 'workbook'],
     ])('creates a new entity of %s %s and opens it', async (section, item, name, node, kind) => {
         const service = buildService('{ a: 1 }');
         const onOpen = vi.fn();
@@ -182,8 +246,8 @@ describe('ProjectExplorer create', () => {
 
         await create(user, section, item);
 
-        const filter = kind === 'type' ? 'TYPE_DEFINITIONS' : undefined;
-        expect(service.get(name, filter)).toMatchObject(node);
+        expect(service.get(name)).toMatchObject(node);
+        if (kind === 'service') expect(service.toPortable().fields[name]).toMatchObject({'@kind': 'service'});
         expect(() => service.link()).not.toThrow();
         expect(onOpen).toHaveBeenCalledWith({kind, path: name});
         // The section expands and shows the new entry; a new ruleset has a `value` argument.
@@ -237,7 +301,14 @@ describe('ProjectExplorer create', () => {
 
         await user.click(screen.getByRole('button', {name: 'Add to Tests'}));
         const subjects = (await screen.findAllByRole('menuitem')).map((item) => item.textContent);
-        expect(subjects).toEqual(['Model', 'nested.deep()', 'processApplication(...)', 'risk(...)', 'riskScore(...)']);
+        expect(subjects).toEqual([
+            'Model',
+            'Eligibility(...)',
+            'nested.deep()',
+            'processApplication(...)',
+            'risk(...)',
+            'riskScore(...)',
+        ]);
 
         await user.click(screen.getByRole('menuitem', {name: 'risk(...)'}));
         expect(onCreateTest).toHaveBeenCalledWith('risk');

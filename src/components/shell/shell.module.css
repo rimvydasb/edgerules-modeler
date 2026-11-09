@@ -512,11 +512,77 @@
   text-transform: uppercase;
 }
 
+/* A grid of at most 3 panels per row; a narrow body shows fewer columns. The add panels are grid items too. */
 .workbookPanels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+  --wb-panel: 340px;
+  --wb-gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, var(--wb-panel));
+  gap: var(--wb-gap);
   justify-content: center;
+  width: 100%;
+  max-width: calc(3 * var(--wb-panel) + 2 * var(--wb-gap));
+}
+
+/*
+ * The README panel above the workbooks: the width of 3 panels and 2 gaps, the height of its content, at most 2 panel
+ * heights and 1 gap. Content above the maximum height is cut off with a fade.
+ */
+.readmePanel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: calc(3 * 340px + 2 * 24px);
+  max-height: calc(2 * 196px + 24px);
+  padding: 20px;
+  border: 1px solid var(--sh-border);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-xs);
+  color: var(--mantine-color-text);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.readmePanel:hover {
+  border-color: var(--mantine-primary-color-filled);
+  box-shadow: var(--mantine-shadow-md);
+}
+
+.readmeContent {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.readmeContent > :first-child > :first-child {
+  margin-top: 0;
+}
+
+.readmeContentCut {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent);
+}
+
+.readmeOpen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mantine-primary-color-filled);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.readmeOpen:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
 }
 
 .workbookPanel {
@@ -674,4 +740,23 @@
   height: 44px;
   border: 1px dashed currentColor;
   border-radius: 50%;
+}
+
+/* ---------------------------------------------------------------- document */
+/* The Preview view of a document: the rendered Markdown on a page, in a frame like the other views. */
+.document {
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--sh-border);
+}
+
+.documentPage {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 32px 48px;
+}
+
+.documentEmpty {
+  color: var(--mantine-color-dimmed);
+  font-style: italic;
 }

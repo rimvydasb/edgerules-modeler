@@ -3,8 +3,15 @@ import {LOAN_REPAYMENT_DOCUMENTATION} from './documentation';
 import {LOAN_REPAYMENT_FLOW} from './flow';
 import {LOAN_REPAYMENT_DSL} from './model';
 import {LOAN_REPAYMENT_TESTS} from './tests';
+import LOAN_REPAYMENT_README from './README.md?raw';
 
-export {LOAN_REPAYMENT_DOCUMENTATION, LOAN_REPAYMENT_DSL, LOAN_REPAYMENT_FLOW, LOAN_REPAYMENT_TESTS};
+export {
+    LOAN_REPAYMENT_DOCUMENTATION,
+    LOAN_REPAYMENT_DSL,
+    LOAN_REPAYMENT_FLOW,
+    LOAN_REPAYMENT_README,
+    LOAN_REPAYMENT_TESTS,
+};
 
 /** The loan repayment project: pass it to `ProjectFactory.createBundle`. */
 export const LOAN_REPAYMENT_PROJECT: ProjectBundleInput = {
@@ -15,4 +22,5 @@ export const LOAN_REPAYMENT_PROJECT: ProjectBundleInput = {
     documentation: LOAN_REPAYMENT_DOCUMENTATION,
     tests: LOAN_REPAYMENT_TESTS,
     flow: LOAN_REPAYMENT_FLOW,
+    readme: LOAN_REPAYMENT_README,
 };

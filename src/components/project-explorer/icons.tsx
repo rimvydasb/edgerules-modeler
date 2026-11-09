@@ -5,7 +5,11 @@ import {
     IconBraces,
     IconCategory,
     IconChartLine,
+    IconFileText,
+    IconFiles,
+    IconDatabase,
     IconFlask,
+    IconGavel,
     IconListCheck,
     IconLogin2,
     IconLogout2,
@@ -23,14 +27,20 @@ import * as classes from './projectExplorer.module.css';
 export type IconKind = ExplorerEntryKind | ExplorerSection;
 
 const ICON_BY_KIND: Record<IconKind, Icon> = {
+    documents: IconFiles,
+    document: IconFileText,
     types: IconCategory,
+    factsLibrary: IconDatabase,
     methods: IconMathFunction,
+    decisions: IconGavel,
     services: IconServer,
     variables: IconVariable,
     workbooks: IconBook2,
     tests: IconFlask,
     type: IconTag,
+    facts: IconDatabase,
     function: IconMathFunction,
+    decision: IconGavel,
     service: IconMathFunction,
     ruleset: IconListCheck,
     context: IconBraces,
@@ -48,7 +58,9 @@ const ICON_BY_KIND: Record<IconKind, Icon> = {
 // contexts and variables have no kind color: a muted tile.
 const TILE_COLOR: Partial<Record<IconKind, string>> = {
     type: KIND_COLORS.complexType,
+    facts: KIND_COLORS.facts,
     function: KIND_COLORS.function,
+    decision: KIND_COLORS.decision,
     service: KIND_COLORS.service,
     ruleset: KIND_COLORS.ruleset,
     workbook: KIND_COLORS.model,

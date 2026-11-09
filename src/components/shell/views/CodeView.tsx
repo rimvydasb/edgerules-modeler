@@ -1,7 +1,8 @@
-import {useEffect, useRef, useState, type MutableRefObject, type ReactElement} from 'react';
+import {useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactElement} from 'react';
 import {isPortableError} from '#lib/portable';
 import {CodeEditor, type CodeEditorService} from '../../code-editor';
-import {useProjectSession, type ProjectSession} from '../../project-session';
+import {useProjectSession, useProjectSlice, type ProjectSession} from '../../project-session';
+import {codeEmbedContext, modelScopedService} from './codeViewLanguage';
 
 // The Code view commits after this much time without an edit.
 export const COMMIT_DELAY_MS = 500;
@@ -42,6 +43,12 @@ export function CodeView({
     flushRef,
 }: CodeViewProps): ReactElement {
     const session = useProjectSession();
+    const {dsl} = useProjectSlice('model');
+    // The code of an entity is analyzed inside the committed model, so references to the rest of the model resolve.
+    const service = useMemo(() => {
+        const context = codeEmbedContext(dsl, root, committedCode(session, root));
+        return context ? modelScopedService(languageService, context) : languageService;
+    }, [dsl, root, session, languageService]);
     const [text, setText] = useState(() => drafts.get(root) ?? committedCode(session, root));
     const pending = useRef<string | undefined>(undefined);
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -87,7 +94,7 @@ export function CodeView({
         <CodeEditor
             value={text}
             onChange={onChange}
-            service={languageService}
+            service={service}
             readOnly={readOnly}
             style={{height: '100%'}} // fills the Shell body
         />

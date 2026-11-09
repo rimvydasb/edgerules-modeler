@@ -60,3 +60,10 @@ export const CreateEntity: Story = {
         await userEvent.click(await canvas.findByRole('button', {name: 'Add to Methods'}));
     },
 };
+
+/** The host lists the documents of the project: the Documents section comes first. A click opens `doc:README.md`. */
+export const Documents: Story = {
+    args: {documents: ['README.md'], onOpen: fn()},
+    loaders: [async () => ({service: await buildService(MODEL_DSL)})],
+    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} style={{flex: 1}} />,
+};

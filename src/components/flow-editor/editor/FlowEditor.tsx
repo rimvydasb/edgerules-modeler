@@ -120,7 +120,7 @@ const WIRE_CLASS: Record<Wire['kind'], string> = {
 
 /**
  * The EdgeRules Flow Editor: a canvas of Input, Function, Output and Chart nodes with a node palette on the left; the
- * flow of a `@Service` has Parameter, Function and Return nodes. Nodes and wires come from the model; positions,
+ * flow of a `service` has Parameter, Function and Return nodes. Nodes and wires come from the model; positions,
  * output nodes and chart nodes are presentation data reported through `onLayoutChange`.
  */
 export function FlowEditor({
@@ -309,6 +309,7 @@ function FlowCanvas({
                 (field) => service.getFunctionNode(field),
                 (field) => service.getReturnNode(field),
                 (field) => service.getExpressionNode(field),
+                (field) => service.getParameterNode(field),
             ),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [service, refs, version],
@@ -502,11 +503,6 @@ function FlowCanvas({
             setCharts([...charts, {id}]);
             return;
         }
-        if (action.kind === 'input') {
-            place(action.field);
-            if (isPortableError(service.addInputNode(action.field))) pending.current.delete(action.field);
-            return;
-        }
         if (action.kind === 'new-input') {
             const created = service.createInputNode(action.input);
             if (!isPortableError(created)) place(created);
@@ -595,10 +591,8 @@ function FlowCanvas({
     // The editor applies deletions to the model itself; xyflow only reports them.
     const onBeforeDelete: OnBeforeDelete = useCallback(
         async ({nodes: doomedNodes, edges: doomedEdges}) => {
+            // A model node is always on the flow: only the menu Delete removes its field.
             const doomed = new Set(doomedNodes.map((node) => node.id));
-            for (const node of doomedNodes) {
-                if (!CANVAS_TYPES.has(node.type ?? '')) service.removeFromFlow(node.id);
-            }
             const removedOf = (type: string) =>
                 new Set(doomedNodes.filter((node) => node.type === type).map((node) => node.id));
             const removedOutputs = removedOf('outputNode');
@@ -779,7 +773,7 @@ function FlowCanvas({
                                     <strong>This flow has no nodes yet</strong>
                                     <span>
                                         {readOnly
-                                            ? 'Nodes appear here when the model has fields annotated for the flow.'
+                                            ? 'Nodes appear here when the workbook or the service has fields.'
                                             : 'Drag a node from the palette onto the canvas, or click it to add it here.'}
                                     </span>
                                 </div>

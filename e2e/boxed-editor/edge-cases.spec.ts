@@ -230,7 +230,6 @@ test.describe('Boxed Editor / modes', () => {
         await expect(page.getByRole('tooltip').first()).toBeVisible();
         await page.keyboard.up('Alt');
     });
-    test.fixme('CANNOT COMPLETE: engine drops @model-version metadata on root set', async () => {});
 });
 
 test.describe('Boxed Editor / side columns', () => {

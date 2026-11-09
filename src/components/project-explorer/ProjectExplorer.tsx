@@ -23,7 +23,7 @@ import {
     type TreeNodeData,
 } from '@mantine/core';
 import {IconChevronRight, IconLayoutSidebarLeftCollapse, IconPlus, IconSearch} from '@tabler/icons-react';
-import type {PortableContext, PortableError, PortableNode} from '@edgerules/portable';
+import type {PortableContext, PortableError, PortableNode, PortableSetValue} from '@edgerules/portable';
 import {cx} from '#ui/cx';
 import {isPortableError} from '#lib/portable';
 import {CREATE_OPTIONS, type CreateOption} from './create-templates';
@@ -39,12 +39,10 @@ import {
 } from './tree-model';
 import * as classes from './projectExplorer.module.css';
 
-type GetFilter = 'FIELDS' | 'TYPE_DEFINITIONS' | 'FUNCTION_DEFINITIONS' | 'EXTERNAL_DEFINITIONS' | 'ALL';
-
 interface ProjectExplorerService {
-    get(path: string, filter?: GetFilter): PortableNode | PortableError;
+    get(path: string): PortableNode | PortableError;
     // Creates the new types, methods, variables and workbooks; without it the explorer only reads.
-    set?(path: string, node: PortableNode): PortableNode | PortableError;
+    set?(path: string, node: PortableSetValue): PortableNode | PortableError;
 }
 
 /** The entry the user opened: its kind and its fully qualified model path (the subject ID of a test). */
@@ -64,6 +62,11 @@ export interface ProjectExplorerProps {
     onCollapsedChange?: (collapsed: boolean) => void;
     /** Any value that changes with the model, e.g. the model version; a change re-reads the model. */
     revision?: unknown;
+    /**
+     * The document files of the project, such as `README.md`; the explorer does not read them from the engine. An
+     * entry opens as `{kind: 'document', path: 'doc:README.md'}`. Without it there is no Documents section.
+     */
+    documents?: readonly string[];
     /** The test subjects that have tests: '*' for the model, or a method path. */
     testSubjects?: readonly string[];
     /** Hides the add buttons of the sections. */
@@ -85,8 +88,11 @@ export interface ProjectExplorerProps {
 const NO_SUBJECTS: readonly string[] = [];
 
 const SECTIONS: {section: ExplorerSection; label: string}[] = [
+    {section: 'documents', label: 'Documents'},
     {section: 'types', label: 'Types'},
+    {section: 'factsLibrary', label: 'Facts Library'},
     {section: 'methods', label: 'Methods'},
+    {section: 'decisions', label: 'Decisions'},
     {section: 'services', label: 'Service Methods'},
     {section: 'variables', label: 'Variables'},
     {section: 'workbooks', label: 'Workbooks'},
@@ -192,8 +198,8 @@ interface PendingCreate {
 }
 
 /**
- * The project tree: Types, Methods, Service Methods, Variables, Workbooks and Tests (docs/stories/project-explorer-redesign.md). It
- * reads the model with two `service.get` calls and reports the opened entry through `onOpen`; the host picks the
+ * The project tree: Documents, Types, Methods, Service Methods, Variables, Workbooks and Tests (docs/stories/project-explorer-redesign.md). It
+ * reads the model with `service.get` calls and reports the opened entry through `onOpen`; the host picks the
  * editor. Each section header has an add button that creates a new entity with `service.set` and opens it.
  */
 export function ProjectExplorer({
@@ -202,6 +208,7 @@ export function ProjectExplorer({
     collapsed = false,
     onCollapsedChange,
     revision,
+    documents,
     testSubjects = NO_SUBJECTS,
     readOnly = false,
     onOpen,
@@ -212,25 +219,20 @@ export function ProjectExplorer({
 }: ProjectExplorerProps): ReactElement {
     // A create bumps it, so a host without a `revision` sees the new entity too.
     const [created, setCreated] = useState(0);
-    const {model, types} = useMemo(
-        () => ({
-            model: service.get(ROOT_FETCH_PATH),
-            types: service.get(ROOT_FETCH_PATH, 'TYPE_DEFINITIONS'),
-        }),
+    const model = useMemo(
+        () => service.get(ROOT_FETCH_PATH),
         // `revision` and `created` stand for model changes the service does not report.
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [service, revision, created],
     );
     const sections = useMemo(
-        () =>
-            isPortableError(model)
-                ? undefined
-                : buildSections(
-                      model as PortableContext,
-                      isPortableError(types) ? undefined : (types as PortableContext),
-                      testSubjects,
-                  ),
-        [model, types, testSubjects],
+        () => (isPortableError(model) ? undefined : buildSections(model as PortableContext, testSubjects, documents)),
+        [model, testSubjects, documents],
+    );
+    // The sections the explorer shows: Documents only for a host that lists documents.
+    const shown = useMemo(
+        () => SECTIONS.filter(({section}) => section !== 'documents' || documents !== undefined),
+        [documents],
     );
 
     const [query, setQuery] = useState('');
@@ -244,14 +246,14 @@ export function ProjectExplorer({
     // A search hides the sections without matches.
     const data = useMemo(
         () =>
-            SECTIONS.flatMap(({section, label}) => {
+            shown.flatMap(({section, label}) => {
                 const all = sections?.[section] ?? [];
                 const entries = search ? filterEntries(all, search) : all;
                 if (search && entries.length === 0) return [];
                 const meta: NodeMeta = {kind: section, text: label, section, count: entries.length};
                 return [{value: sectionItemId(section), label, nodeProps: {meta}, children: entries.map(entryNode)}];
             }),
-        [sections, search],
+        [shown, sections, search],
     );
 
     // A search shows every match: the tree is expanded while it lasts, and the user's expansion comes back after it.
@@ -309,10 +311,11 @@ export function ProjectExplorer({
             ...(sections?.workbooks ?? []),
         ])
             names.add(entry.path);
-        // The nodes of the root workbook are root fields too.
-        for (const entry of sections?.workbooks.find((workbook) => workbook.path === ROOT_FETCH_PATH)?.children ?? [])
-            names.add(entry.path);
-        for (const entry of [...(sections?.methods ?? []), ...(sections?.services ?? [])])
+        for (const entry of [
+            ...(sections?.methods ?? []),
+            ...(sections?.decisions ?? []),
+            ...(sections?.services ?? []),
+        ])
             if (!entry.path.includes('.')) names.add(entry.path);
         return names;
     }, [sections]);
@@ -320,8 +323,8 @@ export function ProjectExplorer({
     const canCreate = !readOnly && service.set !== undefined;
     const testSubjectOptions: {path: string; label: string; untypedArguments?: string[]}[] = [
         {path: '*', label: 'Model'},
-        // The methods and the services, by name.
-        ...[...(sections?.methods ?? []), ...(sections?.services ?? [])]
+        // The methods, the decisions and the services, by name.
+        ...[...(sections?.methods ?? []), ...(sections?.decisions ?? []), ...(sections?.services ?? [])]
             .sort((a, b) => a.label.localeCompare(b.label))
             .map((entry) => ({
                 path: entry.path,
@@ -397,7 +400,8 @@ export function ProjectExplorer({
             );
         }
 
-        if (!canCreate) return null;
+        // A document is a project file: the explorer does not create one.
+        if (section === 'documents' || section === 'factsLibrary' || section === 'decisions' || !canCreate) return null;
         const options = CREATE_OPTIONS[section];
         if (options.length === 1) {
             return <span {...stop}>{trigger(() => setPending({section, option: options[0]!}))}</span>;
@@ -468,7 +472,7 @@ export function ProjectExplorer({
     if (collapsed) {
         return (
             <nav className={cx(classes.root, classes.rail, className)} style={style} aria-label="Project explorer">
-                {SECTIONS.map(({section, label}) => (
+                {shown.map(({section, label}) => (
                     <Tooltip key={section} label={label} position="right" withArrow>
                         <button
                             type="button"

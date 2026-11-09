@@ -7,54 +7,11 @@ Each entry has a label:
 
 Delete a [VALID] entry when the engine fixes it.
 
-All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.1.2-alpha.202610300921`** on
-**2026-10-30** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
+All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.7-alpha.202611081915`** on
+**2026-11-08** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
 
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
 [VALID]) or **Why it is not a bug** (for [NOT A BUG]).
-
-## [VALID] Empty zero-column relations round-trip as lists
-
-**What is wrong:** an empty relation has no record keys from which the engine can infer relation columns. After a
-mutable write, `[]` normalizes as a scalar list, not as a relation. A UI can keep a relation with zero records when it
-knows at least one column, but it cannot carry the "zero columns, zero records" state across the portable engine
-boundary.
-
-```ts
-const s = MutableDecisionService.fromCode('{ r: [{a: 1}] }');
-s.set('r', []);
-s.toPortable();
-// { '@kind': 'context', r: { '@kind': 'expression', expression: '[]' } }  — no relation kind
-```
-
-Phase 10's exact empty-relation browser case is marked **CANNOT COMPLETE**. Workaround: the editor seeds one empty
-record when it creates a zero-column relation.
-
-**Expected behaviour:** portable data has an unambiguous empty-relation representation, or engine metadata keeps the
-intended collection kind when no values exist.
-
-## [VALID] Root `set('*', …)` drops root metadata (`@model-name`, `@model-version`)
-
-> KNOWN ISSUE. IGNORE IT. This issue is well known and will be revisited in future stories.
-
-**What is wrong:** `MutableDecisionService.fromPortable({'@model-version': '1.4.0', ...})` keeps `@model-version`
-(`API_SPEC.md` "Limitations" #3: only `@model-version` round-trips; `@model-name` is accepted on parse but not
-persisted). A root `set('*', …)` on a service that already exists drops **both** keys. The rest of the write commits. So
-a mutable service can set `@model-version` at construction, but it can never change it or set it later.
-
-```ts
-const service = MutableDecisionService.fromCode('{ amount: 10 }');
-service.set('*', {...service.toPortable(), '@model-version': '2.0'});
-service.toPortable();
-// { '@kind': 'context', amount: 10 }  — '@model-version' is missing; 'amount' did commit
-```
-
-The DSL has no syntax for either key, so `getCode('*')` drops both as well. The `Shell` settings dialog
-(`docs/specs/shell-spec.md`) works around it: the project manifest keeps `model.name` and `model.version`, and the
-session engine adds them to the model root as `@model-name` and `@model-version`.
-
-**Expected behaviour:** a root `set('*', …)` persists `@model-version` exactly as `fromPortable` does. For
-`@model-name`, it persists the key or rejects the write (the sibling gap in `API_SPEC.md`).
 
 ## [VALID] Built-in function signatures are only available as lossy completion `detail` strings
 
@@ -79,54 +36,12 @@ MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
 //  'coalesce | (any) -> any', ...]
 ```
 
-**Expected behaviour:** a structured built-in catalog, for example `get('*', 'BUILTIN_DEFINITIONS')` or a static
-`builtins()`. It returns `PortableFunctionSchema`-shaped entries with named `@parameters`, optional/variadic markers per
-parameter (or one entry per overload), and `@return`. `get('*', 'ALL')` + `get('*', 'EXTERNAL_DEFINITIONS')` already
-cover user callables.
+Still reproduces on `0.2.7-alpha.202611081915`: the statics are still only `fromCode`, `fromPortable`, `diagnostics` and
+`completions`, with the same `detail` strings.
 
-## [VALID] Argument type-mismatch link error names an internal node id, not the argument
-
-**What is wrong:** a named argument of the wrong type fails linking with a message that names an internal node id. The
-message does not say which call or which argument is wrong. A missing argument, by contrast, gets a clear message
-(`E113: function 'risk' call is missing required argument 'segment'`).
-
-```ts
-// ruleset risk(age: number, income: number, segment: string)
-// d: risk(age: applicant.age, income: applicant.income, segment: applicant.income)
-await service.execute('*');
-// execution error: linker error: type mismatch in node NodeId(7): expected string, found number
-```
-
-The Flow Editor `FunctionNode` and the Boxed Editor must attach the error to one argument row. Today they can only
-assume that the row the user edited last caused it.
-
-**Expected behaviour:** an error code and a message in the E113 style, for example
-`function 'risk' argument 'segment' expects string, found number`, ideally with the field path (`d`).
-
-## [VALID] `get` returns the inferred item type of a list literal with its fields in name order
-
-**What is wrong:** for a list literal, `get(path)` infers the item type (`items` is a `type-definition`), but it lists
-the item fields sorted by name, not in the authored order. A record field, a declared `type` and the executed value keep
-the authored order, so the same shape reads differently depending on where it is written. Verified on `@edgerules/node`
-`0.1.2-alpha.202610300921`.
-
-```edgerules
-{
-    type P: { zeta: <string>; alpha: <number> }
-    rec: { zeta: "a"; alpha: 1 }
-    list: [{ zeta: "a"; alpha: 1 }]
-}
-// get('rec', 'FIELDS')  → zeta, alpha
-// get('P', 'ALL')       → zeta, alpha
-// execute('list')       → [{ zeta: "a", alpha: 1 }]
-// get('list').items     → alpha, zeta
-```
-
-The Flow Editor `ListInputNode` shows one row per item field from `get(path).items`. For `models/client-outreach` the
-`Clients` node lists `daysSinceContact, hasEmail, id, name, …` instead of `id, name, wealth, …`.
-
-**Expected behaviour:** the inferred item type keeps the field order of the first list element, as a record and a
-declared type do (`API_SPEC.md`: the key order is the stored entity order).
+**Expected behaviour:** a structured built-in catalog, for example a static `builtins()`. It returns
+`PortableMethodInterface`-shaped entries with named `parameters`, optional/variadic markers per parameter (or one entry
+per overload), and `return`. `get('*', Kinds.INVOCABLE_INTERFACES)` already covers user callables.
 
 ## [NOT A BUG] `getCode('*')` drops source comments
 

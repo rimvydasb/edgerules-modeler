@@ -91,7 +91,7 @@ test.describe('Boxed Editor / decision tables', () => {
     test('adds a rule with action cells seeded from existing output', async ({page}) => {
         await openBoxedEditorStory(page, 'decision-table-crud-playground');
         await page.getByTestId('append-risk').click();
-        await expect(valueCell(page, 'risk.rules[2]')).toContainText("'high'");
+        await expect(valueCell(page, 'risk.rules[2]')).toContainText('"high"');
         await expectLiveResult(page, /"riskResult"/);
     });
 

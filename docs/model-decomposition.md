@@ -13,7 +13,7 @@ model, so the user switches between views without conversion or data loss.
 
 - **Flow Component annotation:** a field annotation with a value that ends with `Node`. In Portable, it is
   `@node: '<Name>Node'`, for example `@node: 'InputNode'`. The annotation name in a DSL path is `@<Name>Node`.
-- **Optional `@node-name`:** the node title in the Flow Editor. The title falls back to the field name.
+- **Optional `@name`:** the node title in the Flow Editor. The title falls back to the field name.
 - **Flow node discovery:** the Flow Editor reads the direct fields of the opened context in field order. Each direct
   field with a Flow Component annotation is one node. The Flow Editor does not descend into a child context.
 
@@ -22,8 +22,8 @@ model, so the user switches between views without conversion or data loss.
 - A Flow Component annotation is presentation metadata. It does not change the computed value of a field.
 - An edit in the Code view or in the Boxed Editor MUST keep the annotations of the field. The engine `set` keeps
   annotations when the new node has none.
-- The Flow Editor adds a field to the flow with an annotation write. "Remove from flow" removes `@node` and `@node-name`
-  only, and the field stays in the model.
+- The flow of a `workbook` or a `service` shows every field of it, annotated or not. An annotation picks how a node
+  looks and labels it; it never decides whether the field is on the flow.
 - React Flow positions and viewport are not model data. The `FlowMetadataStore` keeps them in `flow.json`.
 
 ## Sample Model
