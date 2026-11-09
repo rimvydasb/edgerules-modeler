@@ -11,6 +11,7 @@ import {
     type FlowMetadataDocument,
     type ModelMetadata,
     type ProjectBundle,
+    type ProjectOrigin,
     type TestSuitesDocument,
 } from '../bundle/types';
 import type {EngineService, ProjectEngineClass} from '../engine/types';
@@ -28,6 +29,7 @@ export interface ProjectBundleInput {
     tests?: TestSuitesDocument;
     flow?: FlowMetadataDocument;
     readme?: string; // Markdown of `README.md`; defaults to a README generated from `name` and `description`
+    origin?: ProjectOrigin; // copied into the manifest
 }
 
 // Turns a model and optional slices into a new `ProjectBundle` with a fresh `projectId`. Persisting it is the
@@ -79,6 +81,7 @@ export function createProjectFactory({engine}: ProjectFactoryOptions): ProjectFa
                     name: input.name,
                     ...(input.description !== undefined && {description: input.description}),
                     ...(input.tags !== undefined && {tags: input.tags}),
+                    ...(input.origin !== undefined && {origin: input.origin}),
                     model: {format: 'dsl', source: DEFAULT_MODEL_SOURCE, ...metadataOf(input.model)},
                 },
                 model: toDsl(input.model),

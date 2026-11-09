@@ -18,7 +18,7 @@ interface ProjectRecord {
     projectPath: string;
     projectId: string; // unique index: two local projects never share a session key
     revision: number; // incremented by every save
-    updatedAt: string;
+    savedAt: string; // time of the last save
     bundle: ProjectBundle;
 }
 
@@ -135,7 +135,7 @@ export function createLocalProjectRepository(options: LocalProjectRepositoryOpti
                 projectPath,
                 projectId: valid.manifest.projectId,
                 revision: 1,
-                updatedAt: new Date().toISOString(),
+                savedAt: new Date().toISOString(),
                 bundle: valid,
             };
             await inTransaction<void>(dbName, 'readwrite', (store, done, fail) => {
@@ -178,7 +178,7 @@ export function createLocalProjectRepository(options: LocalProjectRepositoryOpti
                     const next: ProjectRecord = {
                         ...current,
                         revision: current.revision + 1,
-                        updatedAt: new Date().toISOString(),
+                        savedAt: new Date().toISOString(),
                         bundle: valid,
                     };
                     store.put(next).onsuccess = () => done(next);
@@ -187,15 +187,31 @@ export function createLocalProjectRepository(options: LocalProjectRepositoryOpti
             const revision = revisionOf(saved);
             return {
                 revision,
-                descriptor: describeProject(valid, repository.locatorFor(projectPath), revision),
+                descriptor: describeProject(valid, repository.locatorFor(projectPath), revision, saved.savedAt),
             } satisfies SaveResult;
+        },
+
+        async remove(locator) {
+            const projectPath = pathOf(locator);
+            await inTransaction<void>(dbName, 'readwrite', (store, done, fail) => {
+                const read = store.getKey(projectPath);
+                read.onsuccess = () => {
+                    if (read.result === undefined) return fail(notFound(projectPath));
+                    store.delete(projectPath).onsuccess = () => done();
+                };
+            });
         },
 
         async list(): Promise<ProjectDescriptor[]> {
             const records = await readAll();
             return records
                 .map((record) =>
-                    describeProject(record.bundle, repository.locatorFor(record.projectPath), revisionOf(record)),
+                    describeProject(
+                        record.bundle,
+                        repository.locatorFor(record.projectPath),
+                        revisionOf(record),
+                        record.savedAt,
+                    ),
                 )
                 .sort(
                     (a, b) =>

@@ -80,6 +80,11 @@ function checkManifest(c: Checker, manifest: unknown): void {
     if (manifest.tags !== undefined && c.array(manifest.tags, 'manifest.tags')) {
         manifest.tags.forEach((tag, i) => c.string(tag, `manifest.tags[${i}]`));
     }
+    if (manifest.origin !== undefined && c.record(manifest.origin, 'manifest.origin')) {
+        c.string(manifest.origin.library, 'manifest.origin.library', {nonEmpty: true});
+        c.string(manifest.origin.id, 'manifest.origin.id', {nonEmpty: true});
+        c.string(manifest.origin.version, 'manifest.origin.version', {nonEmpty: true});
+    }
     if (c.record(manifest.model, 'manifest.model')) {
         c.equals(manifest.model.format, 'dsl', 'manifest.model.format');
         c.string(manifest.model.source, 'manifest.model.source', {nonEmpty: true});

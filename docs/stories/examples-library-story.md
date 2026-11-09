@@ -640,17 +640,17 @@ interface ShellProps {
 
 **Phase 1: origin and repository changes in `project-session`**
 
-- [ ] Ensure project compiles and existing tests are passing
-- [ ] Add `ProjectManifest.origin`, `ProjectBundleInput.origin` and `ProjectOrigin`
-- [ ] Add `LocalProjectRepository.remove`, and `origin` and `savedAt` to `ProjectDescriptor`
-- [ ] Store `savedAt` in the IndexedDB record on each save
-- [ ] Add tests for the code of this phase
+- [x] Ensure project compiles and existing tests are passing
+- [x] Add `ProjectManifest.origin`, `ProjectBundleInput.origin` and `ProjectOrigin`
+- [x] Add `LocalProjectRepository.remove`, and `origin` and `savedAt` to `ProjectDescriptor`
+- [x] Store `savedAt` in the IndexedDB record on each save
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including a repository test: `remove` deletes a project, and `list` omits it
-- [ ] `npm test` passes, including a factory test: `origin` of the input is in the manifest of the new bundle
-- [ ] `npm test` passes, including a repository test: `savedAt` changes on each save
+- [x] `npm test` passes, including a repository test: `remove` deletes a project, and `list` omits it
+- [x] `npm test` passes, including a factory test: `origin` of the input is in the manifest of the new bundle
+- [x] `npm test` passes, including a repository test: `savedAt` changes on each save
 
 **Phase 2: Local Workspace**
 

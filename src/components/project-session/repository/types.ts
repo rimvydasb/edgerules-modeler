@@ -20,4 +20,6 @@ export interface LocalProjectRepository extends ProjectRepository {
     list(): Promise<ProjectDescriptor[]>; // ordered by name, then path
     // The first project, by path, whose manifest `name` is `name`. Names are not unique; locators are.
     findByName(name: string): Promise<ProjectLocator | undefined>;
+    // Deletes the project and its history; `not-found` when absent.
+    remove(locator: ProjectLocator): Promise<void>;
 }

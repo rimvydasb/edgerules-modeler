@@ -105,4 +105,10 @@ describe('ProjectFactory.createBundle', () => {
             expect.objectContaining({code: 'invalid-bundle'}),
         );
     });
+
+    it('copies the origin of the input into the manifest', () => {
+        const origin = {library: 'https://x/library.json', id: 'loans', version: '1.0.0'};
+        expect(factory.createBundle({name: 'Loans', model: {dsl: '{ a: 1 }'}, origin}).manifest.origin).toEqual(origin);
+        expect(factory.createBundle({name: 'Loans', model: {dsl: '{ a: 1 }'}}).manifest).not.toHaveProperty('origin');
+    });
 });

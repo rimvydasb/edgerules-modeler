@@ -9,6 +9,7 @@ export type {
     ProjectDescriptor,
     ProjectLocator,
     ProjectManifest,
+    ProjectOrigin,
     ProjectProviderKind,
     SaveResult,
     TestSuitesDocument,

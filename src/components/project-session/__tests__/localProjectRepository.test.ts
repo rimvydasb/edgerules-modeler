@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import {describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {createLocalProjectRepository} from '../repository/createLocalProjectRepository';
 import {contractBundle, describeProjectRepositoryContract} from '../testing/repositoryContract';
 
@@ -65,6 +65,7 @@ describe('LocalProjectRepository', () => {
             tags: ['contract'],
             locator: repository.locatorFor('b-pricing'),
             headRevision: '1',
+            savedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
         });
 
         // Names are display text and may repeat: the first project by path wins.
@@ -87,5 +88,50 @@ describe('LocalProjectRepository', () => {
         await first.create(first.locatorFor('p'), contractBundle('Only in first'));
         expect(await second.list()).toEqual([]);
         await expect(second.load(second.locatorFor('p'))).rejects.toMatchObject({code: 'not-found'});
+    });
+
+    it('removes a project and omits it from list', async () => {
+        const repository = createLocalProjectRepository({dbName: uniqueDbName()});
+        const keep = repository.locatorFor('keep');
+        const drop = repository.locatorFor('drop');
+        await repository.create(keep, contractBundle('Keep'));
+        await repository.create(drop, contractBundle('Drop'));
+
+        await repository.remove(drop);
+
+        expect((await repository.list()).map((d) => d.name)).toEqual(['Keep']);
+        await expect(repository.load(drop)).rejects.toMatchObject({code: 'not-found'});
+        await expect(repository.remove(drop)).rejects.toMatchObject({code: 'not-found'});
+    });
+
+    describe('savedAt', () => {
+        afterEach(() => vi.useRealTimers());
+
+        it('changes on each save', async () => {
+            vi.useFakeTimers({toFake: ['Date']});
+            vi.setSystemTime(new Date('2026-11-09T10:00:00.000Z'));
+            const repository = createLocalProjectRepository({dbName: uniqueDbName()});
+            const locator = repository.locatorFor('p');
+            const bundle = contractBundle();
+            const created = await repository.create(locator, bundle);
+            const [first] = await repository.list();
+            expect(first.savedAt).toBe('2026-11-09T10:00:00.000Z');
+
+            vi.setSystemTime(new Date('2026-11-09T11:00:00.000Z'));
+            const saved = await repository.save(locator, bundle, created.revision);
+            expect(saved.descriptor.savedAt).toBe('2026-11-09T11:00:00.000Z');
+            expect((await repository.list())[0].savedAt).toBe('2026-11-09T11:00:00.000Z');
+        });
+    });
+
+    it('lists the origin of a copy', async () => {
+        const repository = createLocalProjectRepository({dbName: uniqueDbName()});
+        const origin = {library: 'https://x/library.json', id: 'loan-repayment', version: '1.2.0'};
+        const bundle = contractBundle('Copy');
+        await repository.create(repository.locatorFor('c'), {
+            ...bundle,
+            manifest: {...bundle.manifest, origin},
+        });
+        expect((await repository.list())[0].origin).toEqual(origin);
     });
 });
