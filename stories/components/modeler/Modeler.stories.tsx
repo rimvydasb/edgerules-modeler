@@ -35,10 +35,10 @@ export default meta;
 
 type Story = StoryObj<ModelerArgs>;
 
-/** Home page: hero search, Get started for an empty workspace, industries, featured and new examples. */
+/** Home page: the search box and the featured examples; the Workspace section appears once projects exist. */
 export const Home: Story = {args: {route: {page: 'home'}}};
 
-/** Home page with projects: "Continue" replaces "Get started". */
+/** Home page with projects: the Workspace section lists the 3 newest. */
 export const HomeWithProjects: Story = {args: {route: {page: 'home'}, seeded: true}};
 
 /** Examples page: industry tabs, search, facets and example panels. "Copy and open" shows the copy in the Shell. */
@@ -53,13 +53,24 @@ export const ExampleDetailsPage: Story = {
 /** Workspace page: the project grid with the origin and the last save time of each copy. */
 export const Workspace: Story = {args: {route: {page: 'workspace'}, seeded: true}};
 
-/** Project page: the Shell of a copy, with the project menu; the top bar, not the Shell, leads back to the Workspace. */
+/** Project page: the Shell of a copy, with the project menu; its tab in the top bar stays as a shortcut until closed. */
 export const Project: Story = {
     args: {route: {page: 'workspace'}, seeded: true},
     play: async ({canvasElement}) => {
         const canvas = within(canvasElement);
         await userEvent.click(await canvas.findByRole('link', {name: /Loan repayment/}));
         await expect(await canvas.findByRole('button', {name: 'Project menu: Loan repayment'})).toBeTruthy();
+
+        // The project tab sits right of Workspace, stays when the user leaves the project and closes back to Workspace.
+        const nav = canvas.getByRole('navigation', {name: 'Modeler'});
+        const tab = within(nav).getByRole('button', {name: 'Loan repayment'});
+        await expect(tab.getAttribute('aria-current')).toBe('page');
+        await userEvent.click(within(nav).getByRole('button', {name: 'Examples'}));
+        await expect(within(nav).getByRole('button', {name: 'Loan repayment'}).getAttribute('aria-current')).toBeNull();
+        await userEvent.click(within(nav).getByRole('button', {name: 'Loan repayment'}));
+        await userEvent.click(await within(nav).findByRole('button', {name: 'Close Loan repayment'}));
+        await expect(within(nav).queryByRole('button', {name: 'Loan repayment'})).toBeNull();
+        await expect(within(nav).getByRole('button', {name: 'Workspace'}).getAttribute('aria-current')).toBe('page');
     },
 };
 

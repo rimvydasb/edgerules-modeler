@@ -1,8 +1,8 @@
 import type {ReactElement} from 'react';
 import {Text} from '@mantine/core';
-import {IconSitemap} from '@tabler/icons-react';
+import {IconArrowRight, IconSitemap} from '@tabler/icons-react';
 import {KIND_COLORS} from '#ui/kindColors';
-import {SheetGrid, SheetLinkButton, SheetPanelButton, SheetPanelHeader, SheetSection} from '#ui/sheet';
+import {SheetGrid, SheetPanelButton, SheetPanelHeader, SheetSection} from '#ui/sheet';
 import type {LocalProjectRepository, ProjectLocator} from '../project-session';
 import {DEFAULT_PROJECTS_LIMIT, recentProjects, savedAgo} from './workspaceModel';
 import {useWorkspaceProjects} from './useWorkspaceProjects';
@@ -10,10 +10,9 @@ import * as classes from './localWorkspace.module.css';
 
 export interface RecentProjectsProps {
     repository: LocalProjectRepository; // the IndexedDB repository of the workspace
-    limit?: number; // number of panels, default 6
+    limit?: number; // number of project panels, default 3
     onOpen: (locator: ProjectLocator) => void; // the host opens the project in the Shell
-    onNewProject?: () => void; // shows the "New project" action
-    onShowAll?: () => void; // shows the "All" link to the Workspace page
+    onShowAll?: () => void; // the "Browse other projects" panel, shown only when more projects exist than `limit`
 }
 
 /** The newest saved projects as compact one-row panels, for the Home page. */
@@ -21,24 +20,13 @@ export function RecentProjects({
     repository,
     limit = DEFAULT_PROJECTS_LIMIT,
     onOpen,
-    onNewProject,
     onShowAll,
 }: RecentProjectsProps): ReactElement {
     const {projects, error} = useWorkspaceProjects(repository);
     const recent = projects ? recentProjects(projects, limit) : [];
 
     return (
-        <SheetSection
-            label="Continue"
-            aria-label="Recent projects"
-            count={projects?.length}
-            actions={
-                <>
-                    {onNewProject && <SheetLinkButton onClick={onNewProject}>+ New project</SheetLinkButton>}
-                    {onShowAll && <SheetLinkButton onClick={onShowAll}>All projects →</SheetLinkButton>}
-                </>
-            }
-        >
+        <SheetSection label="Workspace" aria-label="Recent projects">
             {error && (
                 <Text c="red" size="sm" role="alert">
                     {error}
@@ -65,6 +53,11 @@ export function RecentProjects({
                         />
                     </SheetPanelButton>
                 ))}
+                {onShowAll && projects && projects.length > limit && (
+                    <SheetPanelButton onClick={onShowAll}>
+                        <SheetPanelHeader only icon={<IconArrowRight size={18} />} title="Browse other projects" />
+                    </SheetPanelButton>
+                )}
             </SheetGrid>
         </SheetSection>
     );

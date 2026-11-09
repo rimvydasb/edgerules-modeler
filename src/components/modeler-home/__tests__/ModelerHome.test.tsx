@@ -21,11 +21,9 @@ async function setup(
         await addWorkspaceProject({repository, factory}, {...project, model: {dsl: '{ a: 1 }'}});
     const callbacks = {
         onSearch: vi.fn(),
-        onSelectIndustry: vi.fn(),
         onShowDetails: vi.fn(),
         onCopy: vi.fn(),
         onOpenProject: vi.fn(),
-        onNewProject: vi.fn(),
         onShowAllProjects: vi.fn(),
         onShowAllExamples: vi.fn(),
     } satisfies Partial<ModelerHomeProps>;
@@ -34,46 +32,48 @@ async function setup(
 }
 
 describe('ModelerHome', () => {
-    it('shows Continue, industries, featured and new examples for a non-empty workspace', async () => {
+    it('shows the search, the featured examples and the recent projects of the workspace', async () => {
         const callbacks = await setup([{name: 'My pricing'}]);
         expect(await screen.findByRole('button', {name: 'Open My pricing'})).toBeTruthy();
-        expect(screen.queryByTestId('home-get-started')).toBeNull();
-        expect(await screen.findByTestId('industry-grid')).toBeTruthy();
-        expect(screen.getByRole('region', {name: 'Featured examples'})).toBeTruthy();
-        const fresh = screen.getByRole('region', {name: 'New and updated'});
-        // newest release first: loan-repayment 1.3.0 (2026-11-10)
-        expect(within(fresh).getAllByTestId('example-panel')[0].getAttribute('aria-label')).toBe('Loan repayment');
+        const examples = screen.getByRole('region', {name: 'Examples'});
+        expect(within(examples).getAllByTestId('example-panel').length).toBeGreaterThan(0);
+        expect(screen.getByRole('region', {name: 'Recent projects'}).getAttribute('aria-label')).toBe(
+            'Recent projects',
+        );
+        expect(screen.getByRole('heading', {name: 'Workspace'})).toBeTruthy();
+        for (const removed of ['Continue', 'Industries', 'Featured examples', 'New and updated', 'EdgeRules Modeler'])
+            expect(screen.queryByText(removed)).toBeNull();
+        expect(screen.queryByText(/See all examples/)).toBeNull();
+        expect(screen.queryByTestId('industry-grid')).toBeNull();
 
         const user = userEvent.setup();
-        await user.click(screen.getByRole('button', {name: /See all examples/}));
-        await user.click(screen.getByRole('button', {name: '+ New project'}));
-        await user.click(screen.getByRole('button', {name: 'All projects →'}));
+        await user.click(within(examples).getByRole('button', {name: /Browse other examples/}));
         await user.click(screen.getByRole('button', {name: 'Open My pricing'}));
         expect(callbacks.onShowAllExamples).toHaveBeenCalled();
-        expect(callbacks.onNewProject).toHaveBeenCalled();
-        expect(callbacks.onShowAllProjects).toHaveBeenCalled();
         expect(callbacks.onOpenProject).toHaveBeenCalledWith(expect.objectContaining({projectPath: 'my-pricing'}));
+        // Three projects or fewer: nothing more to browse.
+        expect(screen.queryByRole('button', {name: /Browse other projects/})).toBeNull();
     });
 
-    it('selects an industry tile', async () => {
-        const callbacks = await setup([{name: 'A'}]);
-        await userEvent.setup().click(await screen.findByRole('button', {name: /^Financial, 3 examples/}));
-        expect(callbacks.onSelectIndustry).toHaveBeenCalledWith('financial');
+    it('lists the 3 newest projects and offers to browse the others only when they exist', async () => {
+        const callbacks = await setup([{name: 'One'}, {name: 'Two'}, {name: 'Three'}, {name: 'Four'}]);
+        const browse = await screen.findByRole('button', {name: /Browse other projects/});
+        expect(screen.getAllByRole('button', {name: /^Open /})).toHaveLength(3);
+        await userEvent.setup().click(browse);
+        expect(callbacks.onShowAllProjects).toHaveBeenCalled();
     });
 
-    it('replaces Continue with Get started for an empty workspace', async () => {
-        const callbacks = await setup();
-        const started = await screen.findByTestId('home-get-started');
-        await waitFor(() => expect(within(started).getAllByTestId('example-panel')).toHaveLength(1));
-        expect(within(started).getByTestId('example-panel').getAttribute('aria-label')).toBe('Loan repayment');
+    it('hides the Workspace section for an empty workspace', async () => {
+        await setup();
+        expect(await screen.findByRole('region', {name: 'Examples'})).toBeTruthy();
+        await waitFor(() => expect(screen.queryByTestId('home-skeleton')).toBeNull());
         expect(screen.queryByRole('region', {name: 'Recent projects'})).toBeNull();
-        await userEvent.setup().click(within(started).getByRole('button', {name: 'Blank project'}));
-        expect(callbacks.onNewProject).toHaveBeenCalled();
+        expect(screen.queryByText('Get started')).toBeNull();
     });
 
     it('suggests examples and projects in two groups and opens them', async () => {
         const callbacks = await setup([{name: 'Loan pricing'}]);
-        await screen.findByTestId('industry-grid');
+        await screen.findByRole('region', {name: 'Examples'});
         const user = userEvent.setup();
         await user.type(screen.getByRole('combobox'), 'loan');
         const examples = await screen.findByRole('group', {name: 'Examples'});
@@ -82,9 +82,7 @@ describe('ModelerHome', () => {
             within(examples)
                 .getAllByRole('option')
                 .map((o) => o.textContent),
-        ).toEqual(
-            [expect.stringContaining('Loan origination'), expect.stringContaining('Loan repayment')].map((m) => m),
-        );
+        ).toEqual([expect.stringContaining('Loan origination'), expect.stringContaining('Loan repayment')]);
         expect(within(projects).getAllByRole('option')).toHaveLength(1);
 
         await user.keyboard('{ArrowDown}{Enter}');
@@ -98,7 +96,7 @@ describe('ModelerHome', () => {
 
     it('calls onSearch with the query on Enter without a selection, and focuses the box on /', async () => {
         const callbacks = await setup([{name: 'A'}]);
-        await screen.findByTestId('industry-grid');
+        await screen.findByRole('region', {name: 'Examples'});
         const user = userEvent.setup();
         await user.keyboard('/');
         expect(document.activeElement).toBe(screen.getByRole('combobox'));
@@ -106,7 +104,7 @@ describe('ModelerHome', () => {
         expect(callbacks.onSearch).toHaveBeenCalledWith('scorecard');
     });
 
-    it('shows one retry panel on an index failure and keeps Continue usable', async () => {
+    it('shows one retry panel on an index failure and keeps the recent projects usable', async () => {
         const good = createFixtureClient();
         let failing = true;
         const client: LibraryClient = {
@@ -116,11 +114,11 @@ describe('ModelerHome', () => {
         await setup([{name: 'My pricing'}], client);
         expect(await screen.findByText('HTTP 503')).toBeTruthy();
         expect(screen.getAllByRole('alert')).toHaveLength(1);
-        expect(screen.queryByTestId('industry-grid')).toBeNull();
+        expect(screen.queryByRole('region', {name: 'Examples'})).toBeNull();
         expect(await screen.findByRole('button', {name: 'Open My pricing'})).toBeTruthy();
 
         failing = false;
         await userEvent.setup().click(screen.getByRole('button', {name: 'Retry'}));
-        expect(await screen.findByTestId('industry-grid')).toBeTruthy();
+        expect(await screen.findByRole('region', {name: 'Examples'})).toBeTruthy();
     });
 });

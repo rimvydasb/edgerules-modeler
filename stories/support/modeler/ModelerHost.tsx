@@ -12,7 +12,7 @@ import {
     type ReactNode,
 } from 'react';
 import {Alert, Button, Loader} from '@mantine/core';
-import {IconBooks, IconFolders, IconHome, IconSitemap} from '@tabler/icons-react';
+import {IconBooks, IconFolders, IconSitemap, IconX} from '@tabler/icons-react';
 import {MutableDecisionService} from '@edgerules/web/mutable';
 import {
     ExampleDetails,
@@ -35,7 +35,7 @@ import {
 } from '../../../src/components/project-session';
 import {Shell, type ShellView} from '../../../src/components/shell';
 import {createExamplesClient, EXAMPLES_REPOSITORY_URL} from '../examplesSource';
-import {routePath, sectionOf, type ModelerRoute} from './routes';
+import {defaultView, routePath, sectionOf, type ModelerRoute, type ProjectRoute} from './routes';
 import * as classes from './modelerHost.module.css';
 
 const client = createExamplesClient();
@@ -55,6 +55,12 @@ export interface ModelerNavigator {
 
 type SessionManager = ReturnType<typeof createProjectSessionManager>;
 
+/** A project tab of the top bar: the last route of the project, so the tab leads back to the same element. */
+interface ProjectTab {
+    route: ProjectRoute;
+    name: string;
+}
+
 interface ModelerContextValue extends ModelerWorkspace, ModelerNavigator {
     manager: SessionManager;
     projects: ProjectDescriptor[];
@@ -62,6 +68,8 @@ interface ModelerContextValue extends ModelerWorkspace, ModelerNavigator {
     index: LibraryIndex | undefined;
     copy: (example: LoadedExample, open: boolean) => Promise<void>;
     openCopy: (exampleId: string) => void;
+    tabs: ProjectTab[]; // the projects that were opened, as shortcuts in the top bar
+    closeTab: (projectPath: string) => void;
     showDetails: (example: ExampleCoordinates) => void;
 }
 
@@ -88,6 +96,7 @@ export function ModelerProvider({
 }: ModelerWorkspace & ModelerNavigator & {route: ModelerRoute; children: ReactNode}): ReactElement {
     const [projects, setProjects] = useState<ProjectDescriptor[]>([]);
     const [index, setIndex] = useState<LibraryIndex>();
+    const [opened, setOpened] = useState<ProjectRoute[]>([]);
     const manager = useMemo(
         () => createProjectSessionManager({engine: MutableDecisionService, repository}),
         [repository],
@@ -102,13 +111,28 @@ export function ModelerProvider({
     useEffect(() => {
         void refresh();
     }, [refresh, page]);
+    // A project that was opened keeps its tab, with the last route in it, until the user closes the tab.
+    useEffect(() => {
+        if (route.page !== 'project') return;
+        setOpened((tabs) => {
+            const known = tabs.find((tab) => tab.projectPath === route.projectPath);
+            if (!known) return [...tabs, route];
+            return routePath(known) === routePath(route) ? tabs : tabs.map((tab) => (tab === known ? route : tab));
+        });
+    }, [route]);
     useEffect(() => {
         client.loadIndex().then(setIndex, () => undefined); // the pages show the index failure themselves
     }, []);
 
     const value = useMemo<ModelerContextValue>(() => {
         const origins = projects.flatMap((project) => (project.origin ? [project.origin] : []));
+        const names = new Map(projects.map((project) => [project.locator.projectPath, project.name]));
         return {
+            tabs: opened.map((tab) => ({route: tab, name: names.get(tab.projectPath) ?? tab.projectPath})),
+            closeTab: (projectPath) => {
+                setOpened((tabs) => tabs.filter((tab) => tab.projectPath !== projectPath));
+                if (route.page === 'project' && route.projectPath === projectPath) navigate({page: 'workspace'});
+            },
             repository,
             factory,
             navigate,
@@ -134,13 +158,12 @@ export function ModelerProvider({
                     industry: index?.examples.find((entry) => entry.id === example.id)?.industry,
                 }),
         };
-    }, [repository, factory, navigate, href, shareUrl, manager, projects, index, refresh]);
+    }, [repository, factory, navigate, href, shareUrl, manager, projects, opened, route, index, refresh]);
 
     return <ModelerContext.Provider value={value}>{children}</ModelerContext.Provider>;
 }
 
 const SECTIONS = [
-    {section: 'home', label: 'Home', icon: IconHome, route: {page: 'home'}},
     {section: 'examples', label: 'Examples', icon: IconBooks, route: {page: 'examples'}},
     {section: 'workspace', label: 'Workspace', icon: IconFolders, route: {page: 'workspace'}},
 ] as const satisfies readonly {section: string; label: string; icon: unknown; route: ModelerRoute}[];
@@ -204,7 +227,7 @@ const TITLES: Record<ModelerRoute['page'], string> = {
  * pages sit in a centered column.
  */
 export function ModelerFrame({route, children}: {route: ModelerRoute; children: ReactNode}): ReactElement {
-    const {href} = useModeler();
+    const {href, tabs, closeTab} = useModeler();
     const active = sectionOf(route);
     useEffect(() => {
         if (route.page !== 'project') document.title = `${TITLES[route.page]} · EdgeRules Modeler`;
@@ -227,6 +250,26 @@ export function ModelerFrame({route, children}: {route: ModelerRoute; children: 
                             {label}
                         </NavItem>
                     ))}
+                    {tabs.map(({route: target, name}) => {
+                        const current = route.page === 'project' && route.projectPath === target.projectPath;
+                        return (
+                            <div key={target.projectPath} className={classes.tab} data-active={current || undefined}>
+                                <NavItem route={target} className={classes.tabLink} current={current}>
+                                    <IconSitemap size={16} aria-hidden="true" />
+                                    <span className={classes.tabName}>{name}</span>
+                                </NavItem>
+                                <button
+                                    type="button"
+                                    className={classes.tabClose}
+                                    aria-label={`Close ${name}`}
+                                    title={`Close ${name}`}
+                                    onClick={() => closeTab(target.projectPath)}
+                                >
+                                    <IconX size={14} aria-hidden="true" />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </nav>
                 {/* The route of the in-memory host; the app shows it in the address bar instead. */}
                 {!href && (
@@ -246,13 +289,10 @@ export function HomePage(): ReactElement {
         <ModelerHome
             client={client}
             repository={repository}
-            tagline="Decision models in the browser: start from an example, or from an empty model."
             onSearch={(query) => navigate({page: 'examples', query})}
-            onSelectIndustry={(industry) => navigate({page: 'examples', industry})}
             onShowDetails={showDetails}
             onCopy={(example, open) => void copy(example, open)}
             onOpenProject={(locator) => navigate({page: 'project', projectPath: locator.projectPath})}
-            onNewProject={() => navigate({page: 'workspace'})}
             onShowAllProjects={() => navigate({page: 'workspace'})}
             onShowAllExamples={() => navigate({page: 'examples'})}
         />
@@ -383,12 +423,17 @@ export function ProjectPage({
                     page: 'project',
                     projectPath,
                     path: merged.path === '*' ? undefined : merged.path,
-                    view: merged.view === 'boxed' ? undefined : merged.view,
+                    view: merged.view === defaultView(merged.path) ? undefined : merged.view,
                 },
                 {replace: performance.now() - lastInput.current > USER_INPUT_WINDOW_MS},
             );
         });
     };
+
+    // `/project/<path>` without a view is the project home: show it as `?view=flow`.
+    useEffect(() => {
+        if (!view && (!path || path === '*')) navigate({page: 'project', projectPath}, {replace: true});
+    }, [view, path, projectPath, navigate]);
 
     const name = opened.session?.getSnapshot().name;
     useEffect(() => {
@@ -428,7 +473,7 @@ export function ProjectPage({
                     languageService={MutableDecisionService}
                     path={path ?? '*'}
                     onPathChange={(next) => change({path: next})}
-                    view={view ?? 'boxed'}
+                    view={view ?? defaultView(path)}
                     onViewChange={(next) => change({view: next})}
                     navigation={{
                         onBrowseExamples: () => navigate({page: 'examples'}),

@@ -12,7 +12,7 @@ export interface WorkspaceView {
     source: WorkspaceSource;
 }
 
-export const DEFAULT_PROJECTS_LIMIT = 6;
+export const DEFAULT_PROJECTS_LIMIT = 3;
 
 /** Case-insensitive substring match on name, description and tags. */
 export function matchesQuery(project: ProjectDescriptor, query: string): boolean {

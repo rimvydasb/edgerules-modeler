@@ -1,12 +1,11 @@
-import type {ExampleCoordinates, LibraryEntry} from '../example-library';
+import type {ExampleCoordinates} from '../example-library';
 import {searchExamples, type SearchIndex} from '../example-library/internal';
 import type {ProjectDescriptor} from '../project-session';
 import {matchesQuery} from '../local-workspace/internal';
 
 export const MAX_EXAMPLE_SUGGESTIONS = 5;
 export const MAX_PROJECT_SUGGESTIONS = 3;
-export const GET_STARTED_EXAMPLES = 3;
-export const NEW_AND_UPDATED = 6;
+export const HOME_EXAMPLES = 3; // featured examples on the Home page, before the "Browse other examples" panel
 
 export type Suggestion =
     | {kind: 'example'; key: string; label: string; detail: string; coordinates: ExampleCoordinates}
@@ -37,9 +36,4 @@ export function suggestionsFor(
             project,
         })),
     ];
-}
-
-/** The beginner examples that replace "Continue" for an empty workspace. */
-export function beginnerExamples(search: SearchIndex, limit = GET_STARTED_EXAMPLES): LibraryEntry[] {
-    return searchExamples(search, {level: 'beginner'}).slice(0, limit);
 }

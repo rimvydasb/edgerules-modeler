@@ -29,7 +29,7 @@ describe('Modeler URLs', () => {
         ],
         ['/examples/all/loan-repayment@1.2.0', {page: 'details', example: {id: 'loan-repayment', version: '1.2.0'}}],
         ['/workspace', {page: 'workspace'}],
-        ['/project/loan-origination', {page: 'project', projectPath: 'loan-origination'}],
+        ['/project/loan-origination?view=boxed', {page: 'project', projectPath: 'loan-origination', view: 'boxed'}],
         ['/project/loan-origination?view=flow', {page: 'project', projectPath: 'loan-origination', view: 'flow'}],
         [
             '/project/loan-origination/applicant.calculateAge?view=code',
@@ -44,6 +44,13 @@ describe('Modeler URLs', () => {
     it.each(routes)('%s is a route, and the route builds the same URL', async (href, route) => {
         expect(await routeOf(href)).toEqual(route);
         expect(routePath(route)).toBe(href);
+    });
+
+    it('builds the project home as the Flow view', async () => {
+        const home: ModelerRoute = {page: 'project', projectPath: 'loan-origination'};
+        expect(await routeOf('/project/loan-origination')).toEqual(home);
+        expect(routePath(home)).toBe('/project/loan-origination?view=flow');
+        expect(routePath({...home, path: 'applicant'})).toBe('/project/loan-origination/applicant');
     });
 
     it('ignores an unknown view', async () => {

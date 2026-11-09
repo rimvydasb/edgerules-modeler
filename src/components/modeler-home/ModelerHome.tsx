@@ -1,58 +1,48 @@
-import {Alert, Button, Skeleton, Stack, Text, Title} from '@mantine/core';
-import {IconSitemap} from '@tabler/icons-react';
-import {SheetLinkButton, SheetSection} from '#ui/sheet';
+import {Alert, Button, Skeleton, Stack, Text} from '@mantine/core';
+import {IconArrowRight} from '@tabler/icons-react';
+import {SheetPanelButton, SheetSection} from '#ui/sheet';
 import {useCallback, type ReactElement} from 'react';
 import type {LocalProjectRepository, ProjectLocator} from '../project-session';
-import {ExampleGallery, IndustryGrid} from '../example-library';
 import type {ExampleCoordinates, LibraryClient, LoadedExample} from '../example-library';
-import {newestExamples, useLibraryIndex} from '../example-library/internal';
+import {featuredExamples, useLibraryIndex} from '../example-library/internal';
 import {RecentProjects} from '../local-workspace';
 import {useWorkspaceProjects} from '../local-workspace/internal';
 import {ExampleRow} from './ExampleRow';
 import {HeroSearch} from './HeroSearch';
 import * as classes from './modelerHome.module.css';
-import {beginnerExamples, NEW_AND_UPDATED, suggestionsFor, type Suggestion} from './homeModel';
+import {HOME_EXAMPLES, suggestionsFor, type Suggestion} from './homeModel';
 
 export interface ModelerHomeProps {
     client: LibraryClient; // the example library
-    repository: LocalProjectRepository; // the workspace, for "Continue" and project suggestions
-    title?: string; // hero title, default "EdgeRules Modeler"
-    tagline?: string; // hero tagline
+    repository: LocalProjectRepository; // the workspace, for the recent projects and project suggestions
     engineVersion?: string; // version of the loaded engine, for the compatibility warnings
     onSearch: (query: string) => void; // the host shows the Examples page with this query
-    onSelectIndustry: (industry: string) => void; // the host shows /examples/<industry>
     onShowDetails: (coordinates: ExampleCoordinates) => void; // the host shows the example details page
     onCopy: (example: LoadedExample, open: boolean) => void; // "Copy and open" on a panel
     onOpenProject: (locator: ProjectLocator) => void; // a recent project or a project suggestion
-    onNewProject: () => void; // "New project" and "Blank project"
-    onShowAllProjects: () => void; // the host shows the Workspace page
-    onShowAllExamples: () => void; // the host shows the Examples page
+    onShowAllProjects: () => void; // "Browse other projects": the host shows the Workspace page
+    onShowAllExamples: () => void; // "Browse other examples": the host shows the Examples page
 }
 
 function SectionSkeleton({label}: {label: string}): ReactElement {
     return <Skeleton height={96} radius="sm" aria-label={`Loading ${label}`} data-testid="home-skeleton" />;
 }
 
-/** The Home page: hero search, Continue or Get started, industries, featured and new examples. */
+/** The Home page: the search box, the featured examples and the recent projects of the workspace. */
 export function ModelerHome({
     client,
     repository,
-    title = 'EdgeRules Modeler',
-    tagline,
     engineVersion,
     onSearch,
-    onSelectIndustry,
     onShowDetails,
     onCopy,
     onOpenProject,
-    onNewProject,
     onShowAllProjects,
     onShowAllExamples,
 }: ModelerHomeProps): ReactElement {
     const {search, error, retry} = useLibraryIndex(client);
     const {projects} = useWorkspaceProjects(repository);
     const origins = projects?.flatMap((project) => (project.origin ? [project.origin] : []));
-    const emptyWorkspace = projects !== undefined && projects.length === 0;
     const total = search?.index.examples.length;
 
     const suggestions = useCallback((query: string) => suggestionsFor(search, projects, query), [search, projects]);
@@ -68,52 +58,18 @@ export function ModelerHome({
             .sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0];
         if (copy) onOpenProject(copy.locator);
     };
-    const rowProps = {client, engineVersion, workspaceOrigins: origins, onCopy, onOpenCopy: openCopy, onShowDetails};
 
     return (
         <Stack gap={32} data-testid="modeler-home">
-            <header className={classes.hero}>
-                <div className={classes.heroTitle}>
-                    <span className={classes.heroIcon} aria-hidden="true">
-                        <IconSitemap size={26} />
-                    </span>
-                    <div>
-                        <Title order={1} className={classes.heroHeading}>
-                            {title}
-                        </Title>
-                        {tagline && <Text c="dimmed">{tagline}</Text>}
-                    </div>
-                </div>
-                <HeroSearch
-                    suggestions={suggestions}
-                    placeholder={
-                        total === undefined ? 'Search examples' : `Search ${total} examples and your projects  ( / )`
-                    }
-                    loading={!search && !error}
-                    onSearch={onSearch}
-                    onPick={pick}
-                />
-            </header>
-
-            {emptyWorkspace ? (
-                <SheetSection
-                    label="Get started"
-                    data-testid="home-get-started"
-                    actions={<SheetLinkButton onClick={onNewProject}>Blank project</SheetLinkButton>}
-                >
-                    {search && <ExampleRow {...rowProps} search={search} entries={beginnerExamples(search)} />}
-                    {!search && !error && <SectionSkeleton label="examples" />}
-                </SheetSection>
-            ) : projects === undefined ? (
-                <SectionSkeleton label="projects" />
-            ) : (
-                <RecentProjects
-                    repository={repository}
-                    onOpen={onOpenProject}
-                    onNewProject={onNewProject}
-                    onShowAll={onShowAllProjects}
-                />
-            )}
+            <HeroSearch
+                suggestions={suggestions}
+                placeholder={
+                    total === undefined ? 'Search examples' : `Search ${total} examples and your projects  ( / )`
+                }
+                loading={!search && !error}
+                onSearch={onSearch}
+                onPick={pick}
+            />
 
             {error ? (
                 <Alert color="red" title="The example library did not load" role="alert">
@@ -123,37 +79,34 @@ export function ModelerHome({
                     </Button>
                 </Alert>
             ) : !search ? (
-                <>
-                    <SectionSkeleton label="industries" />
-                    <SectionSkeleton label="featured examples" />
-                </>
+                <SectionSkeleton label="examples" />
             ) : (
-                <>
-                    <SheetSection label="Industries" count={search.index.industries.length}>
-                        <IndustryGrid client={client} onSelectIndustry={onSelectIndustry} />
-                    </SheetSection>
-                    <SheetSection
-                        label="Featured examples"
-                        actions={<SheetLinkButton onClick={onShowAllExamples}>See all examples →</SheetLinkButton>}
-                    >
-                        <ExampleGallery
-                            client={client}
-                            featured
-                            engineVersion={engineVersion}
-                            workspaceOrigins={origins}
-                            onCopy={onCopy}
-                            onOpenCopy={openCopy}
-                            onShowDetails={onShowDetails}
-                        />
-                    </SheetSection>
-                    <SheetSection label="New and updated">
-                        <ExampleRow
-                            {...rowProps}
-                            search={search}
-                            entries={newestExamples(search.index, NEW_AND_UPDATED)}
-                        />
-                    </SheetSection>
-                </>
+                <SheetSection label="Examples">
+                    <ExampleRow
+                        client={client}
+                        engineVersion={engineVersion}
+                        workspaceOrigins={origins}
+                        onCopy={onCopy}
+                        onOpenCopy={openCopy}
+                        onShowDetails={onShowDetails}
+                        search={search}
+                        entries={featuredExamples(search.index).slice(0, HOME_EXAMPLES)}
+                        trailing={
+                            <SheetPanelButton className={classes.browse} onClick={onShowAllExamples}>
+                                <IconArrowRight size={24} aria-hidden="true" />
+                                Browse other examples
+                            </SheetPanelButton>
+                        }
+                    />
+                </SheetSection>
+            )}
+
+            {projects === undefined ? (
+                <SectionSkeleton label="projects" />
+            ) : (
+                projects.length > 0 && (
+                    <RecentProjects repository={repository} onOpen={onOpenProject} onShowAll={onShowAllProjects} />
+                )
             )}
         </Stack>
     );

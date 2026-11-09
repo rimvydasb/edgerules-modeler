@@ -12,6 +12,11 @@ export type ModelerRoute =
     | {page: 'workspace'}
     | {page: 'project'; projectPath: string; path?: string; view?: ShellView};
 
+/** The view of a project path without `?view=`: the Flow view at the project root, the Boxed view of an element. */
+export function defaultView(path: string | undefined): ShellView {
+    return !path || path === '*' ? 'flow' : 'boxed';
+}
+
 export const SHELL_VIEWS: readonly ShellView[] = ['flow', 'boxed', 'code', 'tests', 'preview'];
 
 /** The industry segment of a details URL when the industry is not known yet. */
@@ -30,7 +35,8 @@ export function parseCoordinates(segment: string): ExampleCoordinates | undefine
  * - `/`, `/workspace`
  * - `/examples`, `/examples/<industry>`, with `?q=<query>`
  * - `/examples/<industry>/<id>@<version>`
- * - `/project/<projectPath>`, `/project/<projectPath>/<root path>`, with `?view=<view>`
+ * - `/project/<projectPath>?view=flow` (the project home), `/project/<projectPath>/<root path>`, with `?view=<view>`
+ *   (the Boxed view of an element is the default and has none)
  */
 export function routePath(route: ModelerRoute): string {
     switch (route.page) {
@@ -46,15 +52,17 @@ export function routePath(route: ModelerRoute): string {
             return '/workspace';
         case 'project': {
             const path = route.path && route.path !== '*' ? `/${encodeURI(route.path)}` : '';
-            const view = route.view ? `?view=${route.view}` : '';
-            return `/project/${encodeURIComponent(route.projectPath)}${path}${view}`;
+            // The project home opens in the Flow view, where a workbook or a service is chosen.
+            const view = route.view ?? (path ? undefined : 'flow');
+            return `/project/${encodeURIComponent(route.projectPath)}${path}${view ? `?view=${view}` : ''}`;
         }
     }
 }
 
-/** The top navigation item that a route belongs to. */
-export function sectionOf(route: ModelerRoute): 'home' | 'examples' | 'workspace' | undefined {
-    if (route.page === 'details') return 'examples';
-    if (route.page === 'project') return undefined;
-    return route.page;
+/** The top navigation item that a route belongs to; Home and the projects have their own (the brand, a project tab). */
+export function sectionOf(route: ModelerRoute): 'examples' | 'workspace' | undefined {
+    if (route.page === 'details' || route.page === 'examples') return 'examples';
+    return route.page === 'workspace' ? 'workspace' : undefined;
 }
+
+export type ProjectRoute = Extract<ModelerRoute, {page: 'project'}>;
