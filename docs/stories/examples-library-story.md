@@ -654,17 +654,17 @@ Acceptance criteria:
 
 **Phase 2: Local Workspace**
 
-- [ ] Implement `LocalWorkspace`: list, search, sort, open, new, duplicate, rename, delete, storage, empty state
-- [ ] Implement `addProject` with unique names and paths
-- [ ] Implement `RecentProjects`
-- [ ] Request persistent storage on first use and show the eviction warning
-- [ ] Add Storybook stories: empty workspace, workspace with copies, delete confirm
-- [ ] Add tests for the code of this phase
+- [x] Implement `LocalWorkspace`: list, search, sort, open, new, duplicate, rename, delete, storage, empty state
+- [x] Implement `addProject` with unique names and paths
+- [x] Implement `RecentProjects`
+- [x] Request persistent storage on first use and show the eviction warning
+- [x] Add Storybook stories: empty workspace, workspace with copies, delete confirm
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `LocalWorkspace.test.tsx`: new, duplicate, rename and delete against IndexedDB
-- [ ] `npm test` passes, including a test: two copies of one example get the names `X` and `X (2)`
+- [x] `npm test` passes, including `LocalWorkspace.test.tsx`: new, duplicate, rename and delete against IndexedDB
+- [x] `npm test` passes, including a test: two copies of one example get the names `X` and `X (2)`
 
 **Phase 3: Shell navigation**
 

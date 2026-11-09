@@ -52,6 +52,16 @@
         "default": "./dist/components/code-editor-cell/index.cjs"
       }
     },
+    "./local-workspace": {
+      "import": {
+        "types": "./dist/components/local-workspace/index.d.ts",
+        "default": "./dist/components/local-workspace/index.js"
+      },
+      "require": {
+        "types": "./dist/components/local-workspace/index.d.cts",
+        "default": "./dist/components/local-workspace/index.cjs"
+      }
+    },
     "./markdown-view": {
       "import": {
         "types": "./dist/components/markdown-view/index.d.ts",
