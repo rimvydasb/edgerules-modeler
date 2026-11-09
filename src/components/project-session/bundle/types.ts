@@ -82,6 +82,7 @@ export interface LoadedProject {
     locator: ProjectLocator;
     revision: string; // opaque concurrency token; never part of the bundle
     bundle: ProjectBundle;
+    savedAt?: string; // ISO time of the last save, when the repository keeps it
 }
 
 export interface SaveResult {

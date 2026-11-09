@@ -760,3 +760,63 @@
   color: var(--mantine-color-dimmed);
   font-style: italic;
 }
+
+/* ---------------------------------------------------------------- project menu */
+.projectMenu {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  max-width: 240px;
+  padding: 2px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--mantine-color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.projectMenu:hover {
+  background-color: var(--sh-border);
+}
+
+.projectName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectMenuHeader {
+  padding: 6px 12px;
+}
+
+.projectMenuName {
+  font-weight: 600;
+}
+
+.projectMenuMeta {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.originChip {
+  margin-top: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--sh-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mantine-color-text);
+  font: inherit;
+  font-size: var(--mantine-font-size-xs);
+  cursor: pointer;
+}
+
+.originChip:disabled {
+  cursor: default;
+}
+
+.originStatus {
+  color: var(--mantine-color-yellow-7);
+  font-weight: 600;
+}

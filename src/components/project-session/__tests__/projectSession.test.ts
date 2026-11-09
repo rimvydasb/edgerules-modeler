@@ -35,6 +35,7 @@ describe('ProjectSession — open', () => {
             phase: 'ready',
             projectId: bundle.manifest.projectId,
             name: 'Loans',
+            savedAt: expect.any(String),
             locator,
             revision: '1',
             localVersion: 0,

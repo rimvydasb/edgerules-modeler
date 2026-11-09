@@ -9,7 +9,7 @@ import {
     useProjectSnapshot,
     type ProjectSession,
 } from '../../src/components/project-session';
-import {Shell, type ShellView} from '../../src/components/shell';
+import {Shell, type ShellNavigation, type ShellView} from '../../src/components/shell';
 
 export interface ShellHostArgs {
     defaultPath?: string;
@@ -18,6 +18,7 @@ export interface ShellHostArgs {
     defaultExplorerOpen?: boolean;
     controlled?: boolean; // the host holds the path and the view, and prints them
     saveable?: boolean; // the host has a Save button and prints the save state of the session
+    navigation?: 'copy' | 'own'; // the Workspace crumb and the project menu; a copy has an origin chip
     projectKey?: string; // with `openStoredStoryProject`: the stored project the story reopens after a reload
 }
 
@@ -45,10 +46,28 @@ export function ShellHost({
     defaultExplorerOpen,
     controlled,
     saveable,
+    navigation,
 }: ShellHostArgs): ReactElement {
     const [path, setPath] = useState(defaultPath ?? '*');
     const [view, setView] = useState<ShellView>(defaultView ?? 'boxed');
     const [forwarded, setForwarded] = useState<string>();
+    const [navigated, setNavigated] = useState<string>();
+    const shellNavigation: ShellNavigation | undefined = navigation && {
+        onShowWorkspace: () => setNavigated('workspace'),
+        onBrowseExamples: () => setNavigated('examples'),
+        onOpenProject: (locator) => setNavigated(`project ${locator.projectPath}`),
+        onShowOrigin: (origin) => setNavigated(`example ${origin.id}@${origin.version}`),
+        onDuplicate: () => setNavigated('duplicate'),
+        ...(navigation === 'copy' && {originStatus: 'update-available' as const}),
+        recentProjects: ['Claims triage', 'My pricing'].map((name, index) => ({
+            projectId: `recent-${index}`,
+            name,
+            tags: [],
+            locator: {provider: 'indexeddb', resource: 'story', projectPath: `recent-${index}`},
+            headRevision: '1',
+            savedAt: new Date(Date.now() - (index + 1) * 86_400_000).toISOString(),
+        })),
+    };
     return (
         <div style={{height: '100vh', display: 'flex', flexDirection: 'column', padding: 12, boxSizing: 'border-box'}}>
             {controlled && (
@@ -66,6 +85,11 @@ export function ShellHost({
                     )}
                 </Group>
             )}
+            {navigated && (
+                <Text size="xs" mb="xs" data-testid="host-navigated">
+                    host navigates to <Code>{navigated}</Code>
+                </Text>
+            )}
             {saveable && <SaveBar />}
             <div style={{flex: 1, minHeight: 0}}>
                 <Shell
@@ -75,6 +99,7 @@ export function ShellHost({
                     {...(controlled
                         ? {path, onPathChange: setPath, view, onViewChange: setView}
                         : {defaultPath, defaultView})}
+                    navigation={shellNavigation}
                     onOpenNode={(target) => setForwarded(`${target.kind} ${target.path}`)}
                 />
             </div>
@@ -84,6 +109,11 @@ export function ShellHost({
 
 /** Controls of the Shell's initial state: changing one remounts the Shell over the same project session. */
 export const SHELL_HOST_ARG_TYPES: Partial<ArgTypes<ShellHostArgs>> = {
+    navigation: {
+        control: 'inline-radio',
+        options: [undefined, 'copy', 'own'],
+        description: 'The Workspace crumb and the project menu; `copy` adds the origin chip',
+    },
     defaultPath: {
         control: 'text',
         description: 'The path the Shell opens: `*`, `applicant`, `riskScore`…, or the document `doc:README.md`',

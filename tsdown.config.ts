@@ -77,6 +77,7 @@ export default defineConfig({
         'components/flow-editor/index': 'src/components/flow-editor/index.ts',
         'components/project-session/index': 'src/components/project-session/index.ts',
         'components/shell/index': 'src/components/shell/index.ts',
+        'components/example-library/index': 'src/components/example-library/index.ts',
         'components/local-workspace/index': 'src/components/local-workspace/index.ts',
     },
     format: ['esm', 'cjs'],

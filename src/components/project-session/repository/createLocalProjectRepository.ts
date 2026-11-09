@@ -125,6 +125,7 @@ export function createLocalProjectRepository(options: LocalProjectRepositoryOpti
                 locator: repository.locatorFor(projectPath),
                 revision: revisionOf(record),
                 bundle: parseProjectBundle(record.bundle),
+                savedAt: record.savedAt,
             };
         },
 
@@ -153,7 +154,12 @@ export function createLocalProjectRepository(options: LocalProjectRepositoryOpti
                     );
                 };
             });
-            return {locator: repository.locatorFor(projectPath), revision: revisionOf(record), bundle: valid};
+            return {
+                locator: repository.locatorFor(projectPath),
+                revision: revisionOf(record),
+                bundle: valid,
+                savedAt: record.savedAt,
+            };
         },
 
         async save(locator, bundle, expectedRevision) {

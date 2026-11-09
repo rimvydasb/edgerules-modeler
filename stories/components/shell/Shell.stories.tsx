@@ -182,3 +182,33 @@ export const SavedProject: Story = {
         }),
     ],
 };
+
+const ORIGIN = {
+    library: 'https://cdn.jsdelivr.net/gh/rimvydasb/edgerules-examples/library.json',
+    id: 'loan-repayment',
+    version: '1.2.0',
+};
+
+/**
+ * With `navigation`, the breadcrumb starts with the Workspace crumb and the project name opens the project menu. This
+ * project is a copy of `loan-repayment@1.2.0` and the index has a newer version: the origin chip shows "Update
+ * available".
+ */
+export const NavigationOfACopy: Story = {
+    args: {navigation: 'copy'},
+    loaders: [
+        async () => ({
+            session: await openStoryProject({
+                name: 'Loan repayment',
+                model: {dsl: SAMPLE_MODEL},
+                origin: ORIGIN,
+            }),
+        }),
+    ],
+};
+
+/** An own project has the same menu without the origin chip and "View original example". */
+export const NavigationOfAnOwnProject: Story = {
+    args: {navigation: 'own'},
+    loaders: [async () => ({session: await openStoryProject({name: 'My pricing', model: {dsl: SAMPLE_MODEL}})})],
+};

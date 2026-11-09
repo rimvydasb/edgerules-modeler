@@ -22,15 +22,18 @@ import {
     type ProjectFactory,
     type ProjectLocator,
 } from '../project-session';
+import type {LibraryClient} from '../example-library';
 import {addWorkspaceProject} from './addWorkspaceProject';
 import {ProjectDialog} from './ProjectDialog';
 import {useWorkspaceProjects} from './useWorkspaceProjects';
+import {isOutdated, useNewestVersions} from './useNewestVersions';
 import {useWorkspaceStorage} from './useWorkspaceStorage';
 import {formatBytes, savedAgo, visibleProjects, type WorkspaceSort, type WorkspaceSource} from './workspaceModel';
 
 export interface LocalWorkspaceProps {
     repository: LocalProjectRepository; // the IndexedDB repository of the workspace
     factory: ProjectFactory; // creates the bundle of a new project or a copy
+    library?: LibraryClient; // resolves "Update available"; without it the badge is not shown
     onOpen: (locator: ProjectLocator) => void; // the host opens the project in the Shell
     onBrowseExamples?: () => void; // "Browse examples" and the "From example" action of the New project panel
 }
@@ -59,7 +62,7 @@ function describeError(error: unknown): string {
 
 /** The projects of the user in one local repository: list, search, open, create, duplicate, rename, delete. */
 export const LocalWorkspace = forwardRef<LocalWorkspaceHandle, LocalWorkspaceProps>(function LocalWorkspace(
-    {repository, factory, onOpen, onBrowseExamples},
+    {repository, factory, library, onOpen, onBrowseExamples},
     ref,
 ): ReactElement {
     const {projects, error: loadError, reload} = useWorkspaceProjects(repository);
@@ -69,6 +72,7 @@ export const LocalWorkspace = forwardRef<LocalWorkspaceHandle, LocalWorkspacePro
     const [dialog, setDialog] = useState<Dialog | undefined>();
     const [actionError, setActionError] = useState<string | undefined>();
     const storage = useWorkspaceStorage(projects);
+    const newest = useNewestVersions(library);
 
     const run = useCallback(
         async (work: () => Promise<unknown>) => {
@@ -223,6 +227,11 @@ export const LocalWorkspace = forwardRef<LocalWorkspaceHandle, LocalWorkspacePro
                         )}
                         <Text size="xs" c="dimmed" mt="xs">
                             {project.origin ? `from ${project.origin.id}@${project.origin.version}` : 'Own project'}
+                            {project.origin && isOutdated(project.origin, newest) && (
+                                <Badge ml="xs" size="xs" color="yellow" variant="light">
+                                    Update available
+                                </Badge>
+                            )}
                         </Text>
                         <Text size="xs" c="dimmed">
                             {savedAgo(project.savedAt)}

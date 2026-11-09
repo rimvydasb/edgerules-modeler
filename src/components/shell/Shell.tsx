@@ -31,6 +31,7 @@ import {
 import {explorerRoute} from './shell-routing';
 import type {ShellProps, ShellView} from './shell-types';
 import {ShellBreadcrumbs, type PrimaryView} from './ShellBreadcrumbs';
+import {ShellProjectMenu} from './ShellProjectMenu';
 import {ShellSettings} from './ShellSettings';
 import {ShellSplitToggle} from './ShellSplitToggle';
 import {ShellViewSwitch} from './ShellViewSwitch';
@@ -75,6 +76,7 @@ export function Shell({
     defaultExplorerOpen = true,
     onExplorerOpenChange,
     onOpenNode,
+    navigation,
     className,
     style,
 }: ShellProps): ReactElement {
@@ -82,7 +84,7 @@ export function Shell({
     const {version, metadata} = useProjectSlice('model');
     const {subjects} = useProjectSlice('tests');
     const testSubjects = useMemo(() => Object.keys(subjects), [subjects]);
-    const {dslValidity} = useProjectSnapshot();
+    const {dslValidity, name: projectName, origin: projectOrigin, savedAt, projectId} = useProjectSnapshot();
     const {byPath: descriptions} = useProjectSlice('documentation');
     const readme = useProjectSlice('readme');
     const readmeExists = hasReadme(readme);
@@ -338,7 +340,18 @@ export function Shell({
                     primaryView={primaryView}
                     onOpenPrimary={() => navigate({view: primaryView})}
                     tests={view === 'tests'}
+                    onShowWorkspace={navigation?.onShowWorkspace}
                 />
+                {navigation && (
+                    <ShellProjectMenu
+                        name={projectName}
+                        projectId={projectId}
+                        origin={projectOrigin}
+                        savedAt={savedAt}
+                        navigation={navigation}
+                        onOpenReadme={openReadme}
+                    />
+                )}
                 {hasSettings && !readOnly && <ShellSettings key={root} root={root} />}
                 <ShellViewSwitch
                     view={view}

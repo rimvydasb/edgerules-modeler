@@ -668,37 +668,37 @@ Acceptance criteria:
 
 **Phase 3: Shell navigation**
 
-- [ ] Add `ShellNavigation` and the `navigation` prop to the Shell
-- [ ] Add the Workspace crumb to `ShellBreadcrumbs`
-- [ ] Add the project menu in the middle of the Shell bar, with the origin chip in its header
-- [ ] Add a Storybook story of the Shell with navigation, for a copy with "Update available" and for an own project
-- [ ] Add tests for the code of this phase
+- [x] Add `ShellNavigation` and the `navigation` prop to the Shell
+- [x] Add the Workspace crumb to `ShellBreadcrumbs`
+- [x] Add the project menu in the middle of the Shell bar, with the origin chip in its header
+- [x] Add a Storybook story of the Shell with navigation, for a copy with "Update available" and for an own project
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including a Shell test: the Workspace crumb calls `onShowWorkspace`
-- [ ] `npm test` passes, including a Shell test: the menu of a copy shows the origin chip and "View original example"
-- [ ] `npm test` passes, including a Shell test: the menu of an own project has no origin chip
-- [ ] `npm test` passes, including a Shell test: without `navigation` the Shell bar is unchanged
+- [x] `npm test` passes, including a Shell test: the Workspace crumb calls `onShowWorkspace`
+- [x] `npm test` passes, including a Shell test: the menu of a copy shows the origin chip and "View original example"
+- [x] `npm test` passes, including a Shell test: the menu of an own project has no origin chip
+- [x] `npm test` passes, including a Shell test: without `navigation` the Shell bar is unchanged
 
 **Phase 4: Library client and components**
 
-- [ ] Implement `createLibraryClient` with index validation, `resolve` and parallel file reads
-- [ ] Implement `ExampleGallery`: industry tabs, search, facets, sort, example panels, featured mode, virtual grid
-- [ ] Implement `ExampleDetails`: actions, version selector, README, metadata panel, related examples
-- [ ] Implement `IndustryGrid`
-- [ ] Add `EXAMPLES_SOURCE` to `stories/support/`: the `LibrarySource` of `rimvydasb/edgerules-examples` on jsDelivr
-- [ ] Add Storybook stories against `EXAMPLES_SOURCE`, with a `LocalWorkspace` next to the gallery
-- [ ] Add a test fixture: a snapshot of the published `library.json` and its files. Unit tests read it offline
-- [ ] Add a second version of one example to the fixture, for the version and badge tests
-- [ ] Add tests for the code of this phase
+- [x] Implement `createLibraryClient` with index validation, `resolve` and parallel file reads
+- [x] Implement `ExampleGallery`: industry tabs, search, facets, sort, example panels, featured mode, virtual grid
+- [x] Implement `ExampleDetails`: actions, version selector, README, metadata panel, related examples
+- [x] Implement `IndustryGrid`
+- [x] Add `EXAMPLES_SOURCE` to `stories/support/`: the `LibrarySource` of `rimvydasb/edgerules-examples` on jsDelivr
+- [x] Add Storybook stories against `EXAMPLES_SOURCE`, with a `LocalWorkspace` next to the gallery
+- [x] Add a test fixture: a snapshot of the published `library.json` and its files. Unit tests read it offline
+- [x] Add a second version of one example to the fixture, for the version and badge tests
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `ExampleGallery.test.tsx` and `ExampleDetails.test.tsx`: search, facets, panels,
+- [x] `npm test` passes, including `ExampleGallery.test.tsx` and `ExampleDetails.test.tsx`: search, facets, panels,
       versions, copy
-- [ ] `npm test` passes, including a badge test: a workspace origin of an older version shows "Update available"
-- [ ] A test with 5 000 generated entries finds a match in less than 50 ms
+- [x] `npm test` passes, including a badge test: a workspace origin of an older version shows "Update available"
+- [x] A test with 5 000 generated entries finds a match in less than 50 ms
 
 **Phase 5: Modeler Home and page composition**
 

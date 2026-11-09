@@ -5,6 +5,7 @@ import {render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {createLocalProjectRepository, createProjectFactory} from '../../project-session';
 import {nodeEngine, uniqueDbName} from '../../project-session/testing/sessionFixture';
+import {createFixtureClient} from '../../example-library/testing/fixtureLibrary';
 import {LocalWorkspace, RecentProjects, addWorkspaceProject, type LocalWorkspaceHandle} from '..';
 
 const MODEL = '{ a: 1 }';
@@ -139,6 +140,42 @@ describe('LocalWorkspace', () => {
         } finally {
             vi.unstubAllGlobals();
         }
+    });
+});
+
+describe('LocalWorkspace update badge', () => {
+    it('shows "Update available" for a copy of an older version, and not for the newest', async () => {
+        const {repository, factory, store} = setup();
+        await addWorkspaceProject(store, {
+            name: 'Old copy',
+            model: {dsl: MODEL},
+            origin: {...ORIGIN, version: '1.2.0'},
+        });
+        await addWorkspaceProject(store, {
+            name: 'New copy',
+            model: {dsl: MODEL},
+            origin: {...ORIGIN, version: '1.3.0'},
+        });
+        render(
+            <LocalWorkspace
+                repository={repository}
+                factory={factory}
+                library={createFixtureClient()}
+                onOpen={vi.fn()}
+            />,
+        );
+        await waitFor(() => expect(panels()).toHaveLength(2));
+        await waitFor(() => expect(screen.getAllByText('Update available')).toHaveLength(1));
+        const old = screen.getAllByTestId('project-panel').find((panel) => within(panel).queryByText('Old copy'))!;
+        expect(within(old).getByText('Update available')).toBeTruthy();
+    });
+
+    it('shows no badge without a library', async () => {
+        const {repository, factory, store} = setup();
+        await addWorkspaceProject(store, {name: 'Old', model: {dsl: MODEL}, origin: {...ORIGIN, version: '1.2.0'}});
+        render(<LocalWorkspace repository={repository} factory={factory} onOpen={vi.fn()} />);
+        await waitFor(() => expect(panels()).toHaveLength(1));
+        expect(screen.queryByText('Update available')).toBeNull();
     });
 });
 

@@ -116,6 +116,11 @@ module.exports = {
       'Project state architecture',
     ),
     componentAllowlist(
+      'example-library',
+      ['project-session', 'markdown-view'],
+      'Package placement of the page components',
+    ),
+    componentAllowlist(
       'local-workspace',
       ['project-session', 'example-library'],
       'Package placement of the page components',

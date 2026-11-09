@@ -28,6 +28,7 @@ export interface ShellBreadcrumbsProps {
     primaryView: PrimaryView; // the view the kind icon opens: Flow when the root path has it, otherwise Boxed
     onOpenPrimary: () => void;
     tests?: boolean; // the Tests view: the root path is a test subject
+    onShowWorkspace?: () => void; // shows the "Workspace" crumb before the model name
 }
 
 /** The main view of a root path: Preview for a document, Flow when the root path has it, otherwise Boxed. */
@@ -131,6 +132,7 @@ export function ShellBreadcrumbs({
     primaryView,
     onOpenPrimary,
     tests,
+    onShowWorkspace,
 }: ShellBreadcrumbsProps): ReactElement {
     const items = [
         {label: rootLabel, path: '*'},
@@ -146,6 +148,14 @@ export function ShellBreadcrumbs({
                 onOpen={onOpenPrimary}
             />
             <nav aria-label="Model path" className={classes.breadcrumbs}>
+                {onShowWorkspace && (
+                    <>
+                        <button type="button" className={classes.crumb} onClick={onShowWorkspace}>
+                            Workspace
+                        </button>
+                        <IconChevronRight aria-hidden="true" size={14} className={classes.separator} />
+                    </>
+                )}
                 {items.map((item, index) => (
                     <Fragment key={item.path}>
                         {index > 0 && <IconChevronRight aria-hidden="true" size={14} className={classes.separator} />}

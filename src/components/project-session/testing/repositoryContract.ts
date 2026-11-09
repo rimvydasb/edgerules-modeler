@@ -61,7 +61,8 @@ export function describeProjectRepositoryContract(
             expect(created.locator).toEqual(locator);
 
             const loaded = await repository.load(locator);
-            expect(loaded).toEqual({locator, revision: created.revision, bundle});
+            // `savedAt` is optional: a repository that keeps the time of the last save reports it.
+            expect(loaded).toMatchObject({locator, revision: created.revision, bundle});
             expect(await repository.load(locator, created.revision)).toEqual(loaded);
         });
 
@@ -126,7 +127,7 @@ export function describeProjectRepositoryContract(
                 locator,
                 headRevision: saved.revision,
             });
-            expect(await repository.load(locator)).toEqual({locator, revision: saved.revision, bundle: edited});
+            expect(await repository.load(locator)).toMatchObject({locator, revision: saved.revision, bundle: edited});
         });
 
         it('rejects a save against a stale revision and keeps the stored head', async () => {

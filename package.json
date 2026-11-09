@@ -52,6 +52,16 @@
         "default": "./dist/components/code-editor-cell/index.cjs"
       }
     },
+    "./example-library": {
+      "import": {
+        "types": "./dist/components/example-library/index.d.ts",
+        "default": "./dist/components/example-library/index.js"
+      },
+      "require": {
+        "types": "./dist/components/example-library/index.d.cts",
+        "default": "./dist/components/example-library/index.cjs"
+      }
+    },
     "./local-workspace": {
       "import": {
         "types": "./dist/components/local-workspace/index.d.ts",
