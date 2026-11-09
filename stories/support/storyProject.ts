@@ -3,6 +3,7 @@ import {
     createLocalProjectRepository,
     createProjectFactory,
     createProjectSessionManager,
+    isProjectError,
     type ProjectBundleInput,
     type ProjectSession,
 } from '../../src/components/project-session';
@@ -25,4 +26,20 @@ export async function openStoryProject(input: ProjectBundleInput | string): Prom
     const bundle = factory.createBundle(bundleInput);
     const created = await repository.create(repository.locatorFor(`story-${bundle.manifest.projectId}`), bundle);
     return manager.open(created.locator);
+}
+
+/**
+ * Opens the stored story project of `key`, or creates it from `input` when there is none. Unlike `openStoryProject`, a
+ * reload of the story opens what the last save stored: a spec passes a fresh `key` per run through the story args.
+ */
+export async function openStoredStoryProject(key: string, input: ProjectBundleInput): Promise<ProjectSession> {
+    await init();
+    const locator = repository.locatorFor(`stored-${key}`);
+    try {
+        return await manager.open(locator);
+    } catch (error) {
+        if (!isProjectError(error) || error.code !== 'not-found') throw error;
+        const created = await repository.create(locator, factory.createBundle(input));
+        return manager.open(created.locator);
+    }
 }

@@ -2,7 +2,6 @@ import {
     IconArrowDown,
     IconArrowUp,
     IconCopy,
-    IconEyeOff,
     IconNote,
     IconNoteOff,
     IconPencil,
@@ -11,7 +10,7 @@ import {
     IconTrash,
 } from '@tabler/icons-react';
 import type {ReactNode} from 'react';
-import type {RowMenuItem} from '../../../ui/RowActionsMenu';
+import type {RowMenuItem} from '#ui/RowActionsMenu';
 import type {CoreNodeMenuContext, CoreNodeMenuSlots, RowMenuContext} from './types';
 
 /** Labels the first item with `group`; RowActionsMenu starts a group at every labelled item. */
@@ -31,7 +30,6 @@ export function coreNodeMenuItems(context: CoreNodeMenuContext, slots: CoreNodeM
         const thisNode: RowMenuItem[] = [
             {id: 'rename-node', label: 'Rename node', icon: IconTag, onSelect: context.onRenameNode},
             {id: 'rename-field', label: 'Rename field', icon: IconPencil, onSelect: context.onRenameField},
-            ...(slots.afterRename ?? []),
             {id: 'duplicate', label: 'Duplicate', icon: IconCopy, onSelect: context.onDuplicate},
         ];
         if (context.canDescribe) {
@@ -59,15 +57,7 @@ export function coreNodeMenuItems(context: CoreNodeMenuContext, slots: CoreNodeM
     if (!context.readOnly) {
         items.push(
             ...startGroup(
-                [
-                    {
-                        id: 'remove-from-flow',
-                        label: 'Remove from flow',
-                        icon: IconEyeOff,
-                        onSelect: context.onRemoveFromFlow,
-                    },
-                    {id: 'delete', label: 'Delete', icon: IconTrash, danger: true, onSelect: context.onDelete},
-                ],
+                [{id: 'delete', label: 'Delete', icon: IconTrash, danger: true, onSelect: context.onDelete}],
                 'Remove',
             ),
         );

@@ -1,7 +1,11 @@
 import type {XYPosition} from '@xyflow/react';
+import {parentPath} from '#lib/portableUtils';
 import {typeKind} from '../core-node';
+import type {ExpressionNodeModel} from '../expression-node/types';
 import type {FlowNodeRef} from '../flow-editor-types';
 import type {FunctionNodeModel} from '../function-node/types';
+import type {ParameterNodeModel} from '../parameter-node/types';
+import type {ReturnNodeModel} from '../return-node/types';
 import type {FlowOutput} from './types';
 
 /** A wire as the canvas draws it; the editor turns it into an xyflow edge. */
@@ -10,7 +14,7 @@ export interface Wire {
     source: string; // node id
     sourceHandle: string; // 'out:<result>', 'out:*'
     target: string; // node id
-    targetHandle: string; // 'in:<parameter>', 'in:value'
+    targetHandle: string; // 'in:<parameter>', 'in:value', 'in:*' of an expression
     kind: ReturnType<typeof typeKind>; // color family of the wire
 }
 
@@ -23,9 +27,14 @@ export interface Box {
 
 export type LayoutKind = FlowNodeRef['kind'] | 'output' | 'chart';
 
-/** Output and chart nodes only read: they sit one column after their source. */
+/** Input and parameter nodes only feed: they sit in the first column. */
+function isSource(kind: LayoutKind | undefined): boolean {
+    return kind === 'object-input' || kind === 'list-input' || kind === 'value-input' || kind === 'parameter';
+}
+
+/** Output, chart and return nodes only read: they sit one column after their source. */
 function isSink(kind: LayoutKind | undefined): boolean {
-    return kind === 'output' || kind === 'chart';
+    return kind === 'output' || kind === 'chart' || kind === 'return';
 }
 
 export interface LayoutNode {
@@ -42,7 +51,7 @@ const GRID = 20;
 /** The node and the output pin that a path binding reads, when that node is on the canvas. */
 export function resolveSource(
     text: string,
-    nodes: ReadonlyMap<string, {results?: string[]}>,
+    nodes: ReadonlyMap<string, {whole?: boolean}>,
 ): {node: string; handle: string} | undefined {
     let best: string | undefined;
     for (const id of nodes.keys()) {
@@ -52,36 +61,124 @@ export function resolveSource(
     const rest = text.slice(best.length + 1);
     if (rest === '') {
         // An unnamed return has its own pin; a record result or an input record uses the whole-value pin.
-        const results = nodes.get(best)?.results;
-        return {node: best, handle: results?.length === 1 && results[0] === 'result' ? 'out:result' : 'out:*'};
+        return {node: best, handle: nodes.get(best)?.whole ? 'out:result' : 'out:*'};
     }
     // A deeper path such as `applicant.address.city` has no pin of its own.
     return rest.includes('.') || rest.includes('[') ? undefined : {node: best, handle: `out:${rest}`};
 }
 
-/** The wires of every path-bound argument whose source is a node on the canvas. */
-export function modelWires(refs: FlowNodeRef[], functionModel: (field: string) => FunctionNodeModel): Wire[] {
+/**
+ * The binding `text` of an argument of `field` as a node path. Inside a nested context or a function body a short name
+ * reads the field of that scope, and it shadows an outer field of the same name: `income` in `applicant.score` reads
+ * `applicant.income` when that is a node. Any other text is a path from the model root.
+ */
+export function qualifyBinding(text: string, field: string, nodes: ReadonlyMap<string, unknown>): string {
+    const scope = parentPath(field);
+    if (!scope || scope === '*') return text;
+    const first = text.split(/[.[]/, 1)[0];
+    return nodes.has(`${scope}.${first}`) ? `${scope}.${text}` : text;
+}
+
+/**
+ * The wires of every path-bound argument, of every field of a return context and of every field an expression node or
+ * a returned expression reads, whose source is a node on the canvas. All the wires of an expression go into its one
+ * input pin.
+ */
+export function modelWires(
+    refs: FlowNodeRef[],
+    functionModel: (field: string) => FunctionNodeModel,
+    returnModel?: (field: string) => ReturnNodeModel,
+    expressionModel?: (field: string) => ExpressionNodeModel,
+    parameterModel?: (field: string) => ParameterNodeModel,
+): Wire[] {
     const models = new Map(
         refs.filter((ref) => ref.kind === 'function').map((ref) => [ref.field, functionModel(ref.field)]),
     );
-    const sources = new Map<string, {results?: string[]}>(
-        refs.map((ref) => [ref.field, {results: models.get(ref.field)?.results.map((result) => result.name)}]),
+    const sources = new Map<string, {whole?: boolean}>(
+        refs
+            .filter((ref) => ref.kind !== 'return')
+            .map((ref) => [ref.field, {whole: models.get(ref.field)?.results.some((result) => result.whole)}]),
     );
+    // The pins of a parameter node are the fields of its record type. A read of a derived member (a fact or a decision
+    // of the type) or a deeper path comes from the nearest pin on its path, or else from the whole-value pin.
+    const pinsOf = new Map<string, Set<string>>();
+    if (parameterModel) {
+        for (const ref of refs) {
+            if (ref.kind === 'parameter')
+                pinsOf.set(ref.field, new Set(parameterModel(ref.field).fields.map((f) => f.name)));
+        }
+    }
+    const resolve = (text: string) => {
+        const direct = resolveSource(text, sources);
+        let best: string | undefined;
+        for (const id of pinsOf.keys()) {
+            if ((text === id || text.startsWith(`${id}.`)) && (!best || id.length > best.length)) best = id;
+        }
+        if (!best || text === best) return direct;
+        const member = text.slice(best.length + 1).split(/[.[]/, 1)[0];
+        return {node: best, handle: pinsOf.get(best)!.has(member) ? `out:${member}` : 'out:*'};
+    };
     const wires: Wire[] = [];
+    const wire = (field: string, pin: string, text: string, type: string, id = `${field}:${pin}`) => {
+        const source = resolve(qualifyBinding(text.trim(), field, sources));
+        if (!source || source.node === field) return;
+        // Two variables of one source pin, `a.x` and `a.x.y`, are one wire.
+        if (
+            wires.some(
+                (existing) =>
+                    existing.target === field &&
+                    existing.targetHandle === `in:${pin}` &&
+                    existing.source === source.node &&
+                    existing.sourceHandle === source.handle,
+            )
+        )
+            return;
+        wires.push({
+            id,
+            source: source.node,
+            sourceHandle: source.handle,
+            target: field,
+            targetHandle: `in:${pin}`,
+            kind: typeKind(type),
+        });
+    };
     for (const [field, model] of models) {
         for (const argument of model.arguments) {
-            if (argument.binding?.kind !== 'path') continue;
-            const source = resolveSource(argument.binding.text.trim(), sources);
-            if (!source || source.node === field) continue;
-            wires.push({
-                id: `${field}:${argument.name}`,
-                source: source.node,
-                sourceHandle: source.handle,
-                target: field,
-                targetHandle: `in:${argument.name}`,
-                kind: typeKind(argument.type),
-            });
+            if (argument.binding?.kind === 'path') wire(field, argument.name, argument.binding.text, argument.type);
         }
+    }
+    const wireVariables = (field: string, variables: string[]) => {
+        for (const variable of variables) {
+            // A read deeper than any pin, such as `applicant.address.city`, comes from the nearest pin on its path.
+            let path = variable.trim();
+            while (!resolve(qualifyBinding(path, field, sources))) {
+                const cut = Math.max(path.lastIndexOf('.'), path.lastIndexOf('['));
+                if (cut <= 0) break;
+                path = path.slice(0, cut);
+            }
+            wire(field, '*', path, 'any', `${field}:*:${path}`);
+        }
+    };
+    for (const ref of refs) {
+        if (ref.kind !== 'return' || !returnModel) continue;
+        const model = returnModel(ref.field);
+        // A returned expression wires like an expression node: one wire per field it reads into its one pin.
+        if (model.expression !== undefined) wireVariables(ref.field, model.variables);
+        for (const item of model.fields) {
+            if (item.value === undefined) continue;
+            if (resolve(qualifyBinding(item.value.trim(), ref.field, sources))) {
+                wire(ref.field, item.name, item.value, item.type);
+                continue;
+            }
+            // A computed value, such as `for x in a.items return x.b`: one wire per node path it reads.
+            for (const path of item.value.match(/[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*/g) ?? []) {
+                wire(ref.field, item.name, path, item.type, `${ref.field}:${item.name}:${path}`);
+            }
+        }
+    }
+    for (const ref of refs) {
+        if (ref.kind === 'expression' && expressionModel)
+            wireVariables(ref.field, expressionModel(ref.field).variables);
     }
     return wires;
 }
@@ -126,13 +223,13 @@ export function autoLayout(
         if (!kinds.has(link.source) || !kinds.has(link.target)) continue;
         sourcesOf.set(link.target, [...(sourcesOf.get(link.target) ?? []), link.source]);
     }
-    const firstFunctionColumn = nodes.some((node) => node.kind === 'input') ? 1 : 0;
+    const firstFunctionColumn = nodes.some((node) => isSource(node.kind)) ? 1 : 0;
     const columns = new Map<string, number>();
     const columnOf = (id: string, visiting: Set<string>): number => {
         const known = columns.get(id);
         if (known !== undefined) return known;
         const kind = kinds.get(id);
-        if (kind === 'input') return 0;
+        if (isSource(kind)) return 0;
         if (visiting.has(id)) return firstFunctionColumn; // a cycle cannot link; keep the walk finite
         visiting.add(id);
         const sources = sourcesOf.get(id) ?? [];

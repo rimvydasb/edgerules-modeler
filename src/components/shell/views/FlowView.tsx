@@ -1,0 +1,113 @@
+import {useCallback, useEffect, useMemo, useState, type ReactElement} from 'react';
+import {BoxedEditor, type BoxedEditorOpenTarget, type BoxedEditorService} from '../../boxed-editor';
+import type {CodeEditorService} from '../../code-editor';
+import {
+    FlowEditor,
+    type FlowEditorOpenTarget,
+    type FlowEditorService,
+    type FlowFocusRequest,
+    type FlowLayout,
+    type FlowSelection,
+} from '../../flow-editor';
+import {SinkSheet, useReducedSelection} from '../../flow-editor/internal';
+import {useProjectSession, useProjectSlice} from '../../project-session';
+import * as classes from '../shell.module.css';
+
+export interface FlowViewProps {
+    root: string;
+    service: FlowEditorService; // one per session and root path
+    boxedService: BoxedEditorService; // one per session; shows the selected model node in the split screen
+    languageService: CodeEditorService;
+    readOnly?: boolean;
+    onOpenNode: (target: FlowEditorOpenTarget | BoxedEditorOpenTarget) => void;
+    focusNode?: FlowFocusRequest; // the node a Project Explorer click centers
+    split?: boolean; // shows the selected node right of the canvas
+    onSplitOpen?: () => void; // a selected Output or Input node shows only a part of its data: open the split screen
+    onExpand?: (path: string) => void; // the `Expand` button of the split screen Boxed Editor: open it in the Boxed view
+}
+
+/**
+ * The Flow Component nodes that are direct fields of the root path context, on the canvas of that root; a service
+ * root adds its parameters and its result. With the split
+ * screen on, the selected node shows on the right in a Boxed Editor: a function node as the body of its callee, an
+ * input node at its field path. An Output or a Chart node shows the full data wired into it. Selecting an Output or
+ * an Input node that shows only a part of its data opens the split screen. A click on the empty canvas clears the
+ * selection and closes the panel.
+ */
+export function FlowView({
+    root,
+    service,
+    boxedService,
+    languageService,
+    readOnly,
+    onOpenNode,
+    focusNode,
+    split,
+    onSplitOpen,
+    onExpand,
+}: FlowViewProps): ReactElement {
+    const session = useProjectSession();
+    const {version} = useProjectSlice('model');
+    // `FlowEditor` reads its layout on mount only; the Shell mounts a new view for another root.
+    const [defaultLayout] = useState(() => session.flow.getLayout(root));
+    const onLayoutChange = useCallback((layout: FlowLayout) => session.flow.setLayout(root, layout), [session, root]);
+    const [selection, setSelection] = useState<FlowSelection | undefined>();
+    // A function node shows the body of the function or ruleset it calls; a draft without a callee, its own field. A
+    // parameter shows its record type; a parameter of another type has nothing to show.
+    const boxedPath = useMemo(() => {
+        if (!selection || !('field' in selection)) return undefined;
+        if (selection.kind === 'parameter') return service.getParameterNode(selection.field).typePath;
+        if (selection.kind !== 'function') return selection.field;
+        return service.getFunctionNode(selection.field).callee?.path ?? selection.field;
+        // `version` re-reads the callee after a model change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [service, selection, version]);
+    const reduced = useReducedSelection(service, selection);
+    const selected = selection && ('id' in selection ? selection.id : selection.field);
+    useEffect(() => {
+        if (selected !== undefined && reduced) onSplitOpen?.();
+        // Once per selected node: the user may close the split screen again while the node stays selected.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selected, reduced]);
+    // The canvas keeps its place in the tree when the split screen opens or closes, so it is never mounted again.
+    return (
+        <div className={classes.split}>
+            <div className={classes.splitCanvas}>
+                <FlowEditor
+                    service={service}
+                    revision={version}
+                    documentation={session.documentation}
+                    languageService={languageService}
+                    readOnly={readOnly}
+                    onOpenNode={onOpenNode}
+                    defaultLayout={defaultLayout}
+                    onLayoutChange={onLayoutChange}
+                    focusNode={focusNode}
+                    defaultPaletteCollapsed
+                    onSelectionChange={setSelection}
+                />
+            </div>
+            {split && selection && (
+                <div className={classes.splitPanel} data-testid="shell-split-panel">
+                    {boxedPath !== undefined ? (
+                        <BoxedEditor
+                            key={boxedPath}
+                            service={boxedService}
+                            path={boxedPath}
+                            revision={version}
+                            readOnly={readOnly}
+                            onOpenNode={onOpenNode}
+                            languageService={languageService}
+                            documentationService={session.documentation}
+                            // The split screen is narrow: the selected node shows without its description.
+                            showDescription={false}
+                            onExpand={onExpand && (() => onExpand(boxedPath))}
+                        />
+                    ) : (
+                        'id' in selection && <SinkSheet key={selection.id} service={service} sink={selection} />
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}

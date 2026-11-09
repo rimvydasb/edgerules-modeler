@@ -1,4 +1,4 @@
-import type {PortableRootContext} from '@edgerules/portable';
+import type {PortableContext} from '@edgerules/portable';
 import {parseProjectBundle} from '../bundle/parseProjectBundle';
 import {
     DEFAULT_MODEL_SOURCE,
@@ -6,8 +6,10 @@ import {
     emptyDocumentation,
     emptyFlow,
     emptyTests,
+    generateReadme,
     type DocumentationDocument,
     type FlowMetadataDocument,
+    type ModelMetadata,
     type ProjectBundle,
     type TestSuitesDocument,
 } from '../bundle/types';
@@ -18,12 +20,14 @@ export interface ProjectBundleInput {
     name: string;
     description?: string;
     tags?: string[];
-    // DSL is kept as written; Portable is converted to canonical DSL.
-    model: {dsl: string} | {portable: PortableRootContext};
+    // DSL is kept as written; Portable is converted to canonical DSL. The model has no name or version of its own:
+    // `name` and `version` are the only source.
+    model: ({dsl: string} | {portable: PortableContext}) & ModelMetadata;
     // Optional slices, in the form `exportBundle` produces them; each defaults to empty.
     documentation?: DocumentationDocument;
     tests?: TestSuitesDocument;
     flow?: FlowMetadataDocument;
+    readme?: string; // Markdown of `README.md`; defaults to a README generated from `name` and `description`
 }
 
 // Turns a model and optional slices into a new `ProjectBundle` with a fresh `projectId`. Persisting it is the
@@ -59,6 +63,12 @@ export function createProjectFactory({engine}: ProjectFactoryOptions): ProjectFa
         }
     }
 
+    // The model name and version of the input; blank values are left out.
+    function metadataOf(model: ProjectBundleInput['model']): ModelMetadata {
+        const {name, version} = model;
+        return {...(name?.trim() ? {name: name.trim()} : {}), ...(version?.trim() ? {version: version.trim()} : {})};
+    }
+
     return {
         createBundle(input) {
             return parseProjectBundle({
@@ -69,12 +79,13 @@ export function createProjectFactory({engine}: ProjectFactoryOptions): ProjectFa
                     name: input.name,
                     ...(input.description !== undefined && {description: input.description}),
                     ...(input.tags !== undefined && {tags: input.tags}),
-                    model: {format: 'dsl', source: DEFAULT_MODEL_SOURCE},
+                    model: {format: 'dsl', source: DEFAULT_MODEL_SOURCE, ...metadataOf(input.model)},
                 },
                 model: toDsl(input.model),
                 documentation: input.documentation ?? emptyDocumentation(),
                 tests: input.tests ?? emptyTests(),
                 flow: input.flow ?? emptyFlow(),
+                readme: input.readme ?? generateReadme(input.name, input.description),
             });
         },
     };

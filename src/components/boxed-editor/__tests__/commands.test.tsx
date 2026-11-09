@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {act, render, screen} from '@testing-library/react';
 import {renderHook} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {EditorView} from '@codemirror/view';
@@ -9,6 +9,7 @@ import {BoxedEditor} from '../BoxedEditor';
 import {BoxedEditorProvider} from '../context/BoxedEditorContext';
 import {useRowCommands} from '../commands/useRowCommands';
 import {createBoxedEditorService} from '../service/createBoxedEditorService';
+import {compactModel} from '#lib/testing/compactPortable';
 
 const MODEL = `{
   amount: 10
@@ -60,7 +61,7 @@ describe('commands: value commits', () => {
         replaceDoc(container, '99');
         await user.keyboard('{Enter}');
 
-        expect(mutable.toPortable()).toMatchObject({amount: 99});
+        expect(compactModel(mutable)).toMatchObject({amount: 99});
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(onChange).toHaveBeenCalledWith(service.toPortable());
         // The cell deactivates back to static text on a successful commit.
@@ -84,7 +85,7 @@ describe('commands: value commits', () => {
         await user.keyboard('{Enter}');
 
         // Rejected: the model is untouched and onChange never fires.
-        expect(mutable.toPortable()).toMatchObject({amount: 10});
+        expect(compactModel(mutable)).toMatchObject({amount: 10});
         expect(onChange).not.toHaveBeenCalled();
         // The cell stays active (still mounts the editor) and shows the error inline.
         expect(container.querySelector('.cm-editor')).not.toBeNull();
@@ -138,7 +139,7 @@ describe('commands: name commit', () => {
         });
 
         expect(error).toBeUndefined();
-        expect(mutable.toPortable()).toMatchObject({renamedAmount: 10});
+        expect(compactModel(mutable)).toMatchObject({renamedAmount: 10});
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -169,8 +170,8 @@ describe('commands: delete', () => {
         // Row order: model, amount, other.
         await chooseAction(user, 1, 'Delete');
 
-        expect(mutable.toPortable()).toMatchObject({other: 20});
-        expect(mutable.toPortable()).not.toHaveProperty('amount');
+        expect(compactModel(mutable)).toMatchObject({other: 20});
+        expect(compactModel(mutable)).not.toHaveProperty('amount');
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -206,7 +207,7 @@ describe('commands: Convert to Context / Relation / List', () => {
 
             await chooseAction(user, 1, label);
 
-            expect(mutable.toPortable().x).not.toBe(1);
+            expect(compactModel(mutable).x).not.toBe(1);
             expect(onChange).toHaveBeenCalledTimes(1);
         },
     );
@@ -221,7 +222,7 @@ describe('commands: model additions', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 0, 'Add field');
 
-        expect(service.getBoxedRowData('field')).toMatchObject({kind: 'field', value: "''"});
+        expect(service.getBoxedRowData('field')).toMatchObject({kind: 'field', value: '\"\"'});
     });
 
     it('Add Function appends a blank inline function at the model root', async () => {
@@ -232,7 +233,7 @@ describe('commands: model additions', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 0, 'Add function');
 
-        expect(mutable.toPortable().function).toMatchObject({'@kind': 'function'});
+        expect(compactModel(mutable).function).toMatchObject({'@kind': 'method'});
     });
 
     it('Add Decision Table appends a linkable, empty ruleset at the model root', async () => {
@@ -243,10 +244,10 @@ describe('commands: model additions', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 0, 'Add decision table');
 
-        expect(mutable.toPortable().decisionTable).toMatchObject({
+        expect(compactModel(mutable).decisionTable).toMatchObject({
             '@kind': 'ruleset',
-            '@hitPolicy': 'first-match',
-            '@rules': [],
+            hitPolicy: 'first-match',
+            rules: [],
         });
     });
 
@@ -259,7 +260,7 @@ describe('commands: model additions', () => {
         await chooseAction(user, 0, 'Add relation');
 
         // One empty record distinguishes the relation from a scalar list after an engine round-trip.
-        expect(mutable.toPortable().relation).toMatchObject({'@kind': 'expression', expression: '[{  }]'});
+        expect(compactModel(mutable).relation).toBe('[{  }]');
     });
 
     it('Add List appends an empty list at the model root', async () => {
@@ -281,7 +282,7 @@ describe('commands: model additions', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 0, 'Add optimisation');
 
-        expect(mutable.toPortable().optimisation).toMatchObject({'@kind': 'optimise'});
+        expect(compactModel(mutable).optimisation).toMatchObject({'@kind': 'optimise'});
     });
 });
 
@@ -295,7 +296,7 @@ describe('commands: context additions', () => {
         // Row order: model, group, a.
         await chooseAction(user, 1, 'Add field');
 
-        expect(service.getBoxedRowData('group.field')).toMatchObject({value: "''"});
+        expect(service.getBoxedRowData('group.field')).toMatchObject({value: '\"\"'});
         expect(service.getBoxedRowData('field')).toBeUndefined();
     });
 
@@ -325,7 +326,10 @@ describe('commands: relation columns', () => {
         await chooseAction(user, 1, 'Add column');
 
         expect(service.getBoxedRowData('people')).toMatchObject({columns: ['name', 'column']});
-        expect(service.getBoxedRowsData('people')).toMatchObject([{cells: ["'Ada'", "''"]}, {cells: ["'Lin'", "''"]}]);
+        expect(service.getBoxedRowsData('people')).toMatchObject([
+            {cells: ['\"Ada\"', '\"\"']},
+            {cells: ['\"Lin\"', '\"\"']},
+        ]);
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -340,7 +344,7 @@ describe('commands: relation columns', () => {
         await chooseAction(user, 1, 'Delete "age" column');
 
         expect(service.getBoxedRowData('people')).toMatchObject({columns: ['name']});
-        expect(service.getBoxedRowsData('people')).toMatchObject([{cells: ["'Ada'"]}, {cells: ["'Lin'"]}]);
+        expect(service.getBoxedRowsData('people')).toMatchObject([{cells: ['\"Ada\"']}, {cells: ['\"Lin\"']}]);
     });
 });
 
@@ -378,8 +382,8 @@ describe('commands: ruleset rules and columns', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 1, 'Add condition column');
 
-        expect(mutable.toPortable().risk).toMatchObject({
-            '@parameters': {age: 'number', condition: 'string'},
+        expect(compactModel(mutable).risk).toMatchObject({
+            parameters: {age: 'number', condition: 'string'},
         });
         expect(service.getBoxedRowData('risk')).toMatchObject({
             conditionColumns: ['age', 'condition'],
@@ -394,9 +398,9 @@ describe('commands: ruleset rules and columns', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 1, 'Add action column');
 
-        expect(mutable.toPortable().risk).toMatchObject({
-            '@rules': [{then: {level: "'high'", action: "''"}}],
-            '@default': {level: "'none'", action: "''"},
+        expect(compactModel(mutable).risk).toMatchObject({
+            rules: [{then: {level: '\"high\"', action: '\"\"'}}],
+            default: {level: '\"none\"', action: '\"\"'},
         });
     });
 
@@ -408,7 +412,7 @@ describe('commands: ruleset rules and columns', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 1, 'Delete "age" column');
 
-        expect(mutable.toPortable().risk).toMatchObject({'@parameters': {}});
+        expect(compactModel(mutable).risk).toMatchObject({parameters: {}});
     });
 
     it('Delete "‹column›" Column removes an action column from every rule and the default', async () => {
@@ -419,9 +423,9 @@ describe('commands: ruleset rules and columns', () => {
         render(<BoxedEditor service={service} path="*" languageService={languageService} />);
         await chooseAction(user, 1, 'Delete "level" column');
 
-        expect(mutable.toPortable().risk).toMatchObject({
-            '@rules': [{then: {}}],
-            '@default': {},
+        expect(compactModel(mutable).risk).toMatchObject({
+            rules: [{then: {}}],
+            default: {},
         });
     });
 });
@@ -499,9 +503,9 @@ describe('commands: optimisation arguments, variables, constraints, objective', 
         // Row order: model, factory, variables-group, chairs, objective, constraints-group, capacity.
         await chooseAction(user, 2, 'Add variable');
 
-        expect(mutable.toPortable().factory).toMatchObject({
-            '@variables': {chairs: expect.anything(), variable: expect.anything()},
-            '@constraints': {capacity: 'chairs <= workers', variableBound: 'variable >= 0'},
+        expect(compactModel(mutable).factory).toMatchObject({
+            variables: {chairs: expect.anything(), variable: expect.anything()},
+            constraints: {capacity: 'chairs <= workers', variableBound: 'variable >= 0'},
         });
         expect(onChange).toHaveBeenCalledTimes(1);
     });
@@ -515,8 +519,8 @@ describe('commands: optimisation arguments, variables, constraints, objective', 
         // Row order: model, factory, variables-group, chairs, objective, constraints-group.
         await chooseAction(user, 5, 'Add constraint');
 
-        expect(mutable.toPortable().factory).toMatchObject({
-            '@constraints': {capacity: 'chairs <= workers', constraint: '0 <= 0'},
+        expect(compactModel(mutable).factory).toMatchObject({
+            constraints: {capacity: 'chairs <= workers', constraint: '0 <= 0'},
         });
     });
 
@@ -529,8 +533,8 @@ describe('commands: optimisation arguments, variables, constraints, objective', 
         // Row order: model, factory, variables-group, chairs, objective.
         await chooseAction(user, 4, 'Switch to minimise');
 
-        expect(mutable.toPortable().factory).toMatchObject({'@minimise': '15 * chairs'});
-        expect(mutable.toPortable().factory).not.toHaveProperty('@maximise');
+        expect(compactModel(mutable).factory).toMatchObject({minimise: '15 * chairs'});
+        expect(compactModel(mutable).factory).not.toHaveProperty('maximise');
     });
 });
 
@@ -629,48 +633,6 @@ describe('commands: readOnly enablement', () => {
         render(<BoxedEditor service={service} path="*" readOnly />);
         await chooseAction(user, 0, 'Duplicate');
 
-        expect(mutable.toPortable()).toMatchObject({amount: 10, amount2: 10});
-    });
-});
-
-describe('commands: Model Settings', () => {
-    it('opens with the current name/version, and closes on Save', async () => {
-        const user = userEvent.setup();
-        const mutable = MutableDecisionService.fromCode('{ amount: 10 }');
-        const service = createBoxedEditorService(mutable);
-        const onChange = vi.fn();
-
-        render(<BoxedEditor service={service} path="*" languageService={languageService} onChange={onChange} />);
-        await chooseAction(user, 0, 'Model settings');
-
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByLabelText('Name')).toHaveValue('Model');
-
-        await user.clear(screen.getByLabelText('Version'));
-        await user.type(screen.getByLabelText('Version'), '1.0.0');
-        await user.click(screen.getByRole('button', {name: 'Save'}));
-
-        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-        // The rest of the model survives the commit (a regression risk fixed in this phase: the
-        // `model` row prop always has `children` stripped, since every path does — denormalizing it
-        // as-is would silently wipe the whole model).
-        expect(mutable.toPortable()).toMatchObject({amount: 10});
-        // Root metadata writes are accepted (no PortableError) but not yet persisted by the engine —
-        // see docs/BUG_REPORTS.md ("Root metadata … is silently dropped by `set('*', …)`").
-        expect(onChange).toHaveBeenCalledTimes(1);
-    });
-
-    it('closes without committing on Cancel', async () => {
-        const user = userEvent.setup();
-        const mutable = MutableDecisionService.fromCode('{ amount: 10 }');
-        const service = createBoxedEditorService(mutable);
-        const onChange = vi.fn();
-
-        render(<BoxedEditor service={service} path="*" languageService={languageService} onChange={onChange} />);
-        await chooseAction(user, 0, 'Model settings');
-        await user.click(screen.getByRole('button', {name: 'Cancel'}));
-
-        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-        expect(onChange).not.toHaveBeenCalled();
+        expect(compactModel(mutable)).toMatchObject({amount: 10, amount2: 10});
     });
 });

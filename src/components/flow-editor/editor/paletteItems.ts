@@ -5,52 +5,104 @@ export const DRAG_TYPE = 'application/x-edgerules-flow-node';
 
 export const GROUP_LABEL: Record<PaletteGroup, string> = {
     input: 'Inputs',
-    function: 'Functions & rulesets',
+    function: 'Invocations',
+    expression: 'Expressions',
     output: 'Outputs',
     chart: 'Charts',
 };
 
-export const GROUP_ORDER: PaletteGroup[] = ['input', 'function', 'output', 'chart'];
+export const GROUP_ORDER: PaletteGroup[] = ['input', 'function', 'expression', 'output', 'chart'];
 
-/** Every node the palette offers: one generic item per node type, then the model items of that type. */
+const INVOCATION: PaletteItem = {
+    id: 'function',
+    group: 'function',
+    icon: 'function',
+    title: 'Invocation',
+    detail: 'Pick a function or ruleset on the node',
+    label: 'Add invocation',
+    action: {kind: 'function'},
+};
+
+const EXPRESSION: PaletteItem = {
+    id: 'expression',
+    group: 'expression',
+    icon: 'expression',
+    title: 'Expression',
+    detail: 'A computed value; write it in the boxed or code editor',
+    label: 'Add expression',
+    action: {kind: 'expression'},
+};
+
+/**
+ * The nodes of a service flow: a new Parameter, one Invocation, an Expression, and the Return while the service has no
+ * `return` field. The values of a service come from its parameters and leave through its return, so it has no data
+ * inputs, outputs or charts.
+ */
+function serviceItems(service: FlowEditorService): PaletteItem[] {
+    const items: PaletteItem[] = [
+        {
+            id: 'parameter',
+            group: 'input',
+            icon: 'parameter',
+            title: 'Parameter',
+            detail: 'A number parameter of the service',
+            label: 'Add parameter',
+            action: {kind: 'parameter'},
+        },
+        INVOCATION,
+        EXPRESSION,
+    ];
+    if (!service.listNodes().some((node) => node.kind === 'return')) {
+        items.push({
+            id: 'return',
+            group: 'output',
+            icon: 'return',
+            title: 'Return',
+            detail: 'The value the service returns',
+            label: 'Add return',
+            action: {kind: 'return'},
+        });
+    }
+    return items;
+}
+
+/**
+ * Every node the palette offers: a new input of each kind and the records and lists of the model, one Invocation that
+ * picks what it invokes on the node, an Expression, an Output and a Chart. A service flow offers its own nodes
+ * (`serviceItems`).
+ */
 export function paletteItems(service: FlowEditorService): PaletteItem[] {
+    if (service.isService()) return serviceItems(service);
     const items: PaletteItem[] = [
         {
             id: 'new-input',
             group: 'input',
             icon: 'input',
-            title: 'New input',
-            detail: 'Empty record with one field',
-            label: 'Add new input',
-            action: {kind: 'new-input'},
+            title: 'Object input',
+            detail: 'Record with one field',
+            label: 'Add object input',
+            action: {kind: 'new-input', input: 'object-input'},
         },
-        ...service.listInputCandidates().map((record): PaletteItem => ({
-            id: `input:${record}`,
-            group: 'input',
-            icon: 'input',
-            title: record,
-            detail: 'Existing record',
-            label: `Add input ${record}`,
-            action: {kind: 'input', record},
-        })),
         {
-            id: 'function',
-            group: 'function',
-            icon: 'function',
-            title: 'Function call',
-            detail: 'Pick the callee on the node',
-            label: 'Add function call',
-            action: {kind: 'function'},
+            id: 'new-list-input',
+            group: 'input',
+            icon: 'list-input',
+            title: 'List input',
+            detail: 'List of numbers',
+            label: 'Add list input',
+            action: {kind: 'new-input', input: 'list-input'},
         },
-        ...service.listCallees().map((callee): PaletteItem => ({
-            id: `callee:${callee.path}`,
-            group: 'function',
-            icon: callee.kind,
-            title: callee.path,
-            detail: `(${callee.parameters.map((parameter) => parameter.name).join(', ')}) → ${callee.returnLabel}`,
-            label: `Add ${callee.kind} ${callee.path}`,
-            action: {kind: 'function', callee: callee.path},
-        })),
+        {
+            id: 'new-value-input',
+            group: 'input',
+            icon: 'value-input',
+            title: 'Value input',
+            detail: 'One number',
+            label: 'Add value input',
+            action: {kind: 'new-input', input: 'value-input'},
+        },
+        INVOCATION,
+        EXPRESSION,
         {
             id: 'output',
             group: 'output',

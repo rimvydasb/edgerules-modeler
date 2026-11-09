@@ -6,7 +6,7 @@
 // different rows can never be offset from each other.
 
 import type {BoxedRowData, BoxedRowKind, BoxedTableRowData} from '../boxed-editor-types';
-import {GRID_STEP} from '../../../ui/grid';
+import {GRID_STEP} from '#ui/grid';
 
 export const CELL = GRID_STEP;
 
@@ -14,7 +14,7 @@ export const NAME_COLUMN_UNITS = 8;
 /** Default value-column width; it widens (in whole steps) when a sub-grid needs more room. */
 export const VALUE_COLUMN_UNITS = 12;
 export const DESCRIPTION_COLUMN_UNITS = 6;
-export const TEST_RESULTS_COLUMN_UNITS = 6;
+export const TEST_RESULTS_COLUMN_UNITS = 8;
 /** Narrowest nested sub-column (rule condition/action, relation column, argument header). */
 export const MIN_SUB_COLUMN_UNITS = 3;
 /** Width of a ruleset's `priority` sub-column. */
@@ -24,7 +24,7 @@ export const NAME_COLUMN_WIDTH = CELL * NAME_COLUMN_UNITS; // 320
 export const VALUE_COLUMN_WIDTH = CELL * VALUE_COLUMN_UNITS; // 480
 export const ACTIONS_COLUMN_WIDTH = CELL; // 40
 export const DESCRIPTION_COLUMN_WIDTH = CELL * DESCRIPTION_COLUMN_UNITS; // 240
-export const TEST_RESULTS_COLUMN_WIDTH = CELL * TEST_RESULTS_COLUMN_UNITS; // 240
+export const TEST_RESULTS_COLUMN_WIDTH = CELL * TEST_RESULTS_COLUMN_UNITS; // 320
 
 export const ROW_HEIGHT = CELL; // 40
 export const TALL_ROW_HEIGHT = CELL * 2; // 80
@@ -48,6 +48,24 @@ export function gridTemplateColumns({
     if (showDescription) columns.push(`${DESCRIPTION_COLUMN_WIDTH}px`);
     if (showTestResults) columns.push(`${TEST_RESULTS_COLUMN_WIDTH}px`);
     return columns.join(' ');
+}
+
+/** Width of the grid frame's left and right edges (`.grid` border). */
+const GRID_FRAME_WIDTH = 2;
+
+/**
+ * Value-column width (in whole steps) that fills `availableWidth` next to the other visible columns, never narrower
+ * than `minUnits`.
+ */
+export function fittedValueUnits(
+    availableWidth: number,
+    {showDescription, showTestResults}: ColumnVisibility,
+    minUnits: number,
+): number {
+    let otherWidth = NAME_COLUMN_WIDTH + ACTIONS_COLUMN_WIDTH + GRID_FRAME_WIDTH;
+    if (showDescription) otherWidth += DESCRIPTION_COLUMN_WIDTH;
+    if (showTestResults) otherWidth += TEST_RESULTS_COLUMN_WIDTH;
+    return Math.max(minUnits, Math.floor((availableWidth - otherWidth) / CELL));
 }
 
 /** Splits `total` steps into `count` whole-step tracks; leftover steps go to the leftmost tracks. */

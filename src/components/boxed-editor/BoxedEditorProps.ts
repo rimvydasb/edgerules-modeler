@@ -1,5 +1,5 @@
 import type {CSSProperties} from 'react';
-import type {PortableRootContext} from '@edgerules/portable';
+import type {PortableContext} from '@edgerules/portable';
 import type {CodeEditorService} from '../code-editor';
 import type {DocumentationService} from '../documentation-service';
 import type {TestCasesService, TestSubjectId} from '../test-cases-service';
@@ -27,7 +27,7 @@ export interface BoxedEditorProps {
     // Disables name/value editing and ordering; navigation and visible handles remain.
     readOnly?: boolean;
     // Fired once per successful committed mutation.
-    onChange?: (snapshot: PortableRootContext) => void;
+    onChange?: (snapshot: PortableContext) => void;
     // Routes specialized nodes (types, rulesets, loops, nested boxed editors, code view) to another host editor.
     onOpenNode?: (target: BoxedEditorOpenTarget) => void;
 
@@ -48,14 +48,22 @@ export interface BoxedEditorProps {
     autoRunTests?: boolean;
 
     // --- chrome ---
-    // Model header row. Default true.
+    // Header row: the model name or the metaphor name, the column toggles, and the model's `plus` menu. Default true.
     showHeader?: boolean;
-    // TestResultsColumn. Default true.
+    // TestResultsColumn, the state of its header toggle; a changed value sets the toggle again. Default false.
+    // A shown column runs the selected test case.
     showTestResults?: boolean;
-    // DescriptionColumn. Default true.
+    // DescriptionColumn, the state of its header toggle; a changed value sets the toggle again. Default true.
     showDescription?: boolean;
+    // A click on the header toggle of the description column, with the new state.
+    onShowDescriptionChange?: (show: boolean) => void;
+    // A click on the header toggle of the test column, with the new state.
+    onShowTestResultsChange?: (show: boolean) => void;
     // Type tooltip (hover + Alt-reveal). Default true.
     showType?: boolean;
+    // A click on the `Expand` header button, left of the description toggle: the host opens `path` in a full view.
+    // Omit it to hide the button.
+    onExpand?: () => void;
     // Initial global expand state only — each row keeps its own state after first render. Default true.
     expanded?: boolean;
     className?: string;

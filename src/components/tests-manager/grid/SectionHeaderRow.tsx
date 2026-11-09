@@ -1,8 +1,9 @@
+import {IconCircleCheck, IconCircleX} from '@tabler/icons-react';
 import type {ReactElement} from 'react';
 import type {TestCase, TestCasesService, TestRow, TestSectionId} from '../../test-cases-service';
 import {useForceUpdateOn} from '../hooks/useForceUpdate';
-import {cx} from '../../../ui/cx';
-import {GridCell, GridRow} from '../../../ui/grid';
+import {cx} from '#ui/cx';
+import {GridCell, GridRow} from '#ui/grid';
 import * as classes from './testsGrid.module.css';
 import {matches} from '../model/values';
 
@@ -20,9 +21,9 @@ function assertionSummary(
 ): {label: string; allPass: boolean} | undefined {
     const resultSet = testCasesService.getResultSet(testCaseId);
     const currentRevision = revision === undefined ? undefined : String(revision);
-    // A stale column shows no counter — scoring an expectation against a value the current model
-    // would not produce is worse than no tick.
-    if (resultSet && resultSet.modelRevision !== currentRevision) return undefined;
+    // A column that has not run, or a stale one, shows no counter — scoring an expectation against
+    // a value the current model would not produce is worse than no tick.
+    if (!resultSet || resultSet.modelRevision !== currentRevision) return undefined;
 
     let total = 0;
     let passed = 0;
@@ -33,7 +34,7 @@ function assertionSummary(
         const expected = testCasesService.getCell(testCaseId, row.path, 'assertion');
         if (!expected) continue;
         total += 1;
-        if (matches(expected, resultSet?.results[row.path]?.value, row.type)) passed += 1;
+        if (matches(expected, resultSet.results[row.path]?.value, row.type)) passed += 1;
     }
     if (total === 0) return undefined;
     return {label: `${passed}/${total}`, allPass: passed === total};
@@ -59,7 +60,10 @@ export function SectionHeaderRow({
     return (
         <GridRow className={classes.section} data-testid={`section-${sectionId}`}>
             <GridCell colSpan={4} className={cx(classes.section, classes.sectionSticky)}>
-                {SECTION_LABELS[sectionId]}
+                <span className={classes.sectionLabel}>
+                    {SECTION_LABELS[sectionId]}
+                    <span className={classes.sectionCount}>{rows.length}</span>
+                </span>
             </GridCell>
             {visibleCases.map((testCase) => {
                 const summary =
@@ -75,7 +79,8 @@ export function SectionHeaderRow({
                     >
                         {summary ? (
                             <span className={summary.allPass ? classes.pass : classes.fail}>
-                                {summary.label} {summary.allPass ? '✓' : '✗'}
+                                {summary.allPass ? <IconCircleCheck size={16} /> : <IconCircleX size={16} />}
+                                {summary.label}
                             </span>
                         ) : null}
                     </GridCell>

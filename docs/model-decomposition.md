@@ -1,6 +1,35 @@
 # Model Decomposition
 
-EdgeRules Flow editor displays root invocations in the model, so:
+One EdgeRules model has three views: Code, Boxed Editor and Flow Editor. All views read and write the same Portable
+model, so the user switches between views without conversion or data loss.
+
+## Each View Renders a Different Part of the Model
+
+| View         | Renders                                                                                           | Annotations                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Code         | Every `PortableContext`, as EdgeRules DSL code                                                    | Shown and editable as DSL annotations                           |
+| Boxed Editor | Every `PortableContext`, as boxed expression rows, except `@ChartNode` and `@OutputNode` contexts | Read only to hide `@ChartNode` and `@OutputNode`; never written |
+| Flow Editor  | Only the fields that have a Flow Component annotation                                             | Read and written                                                |
+
+- **Flow Component annotation:** a field annotation with a value that ends with `Node`. In Portable, it is
+  `@node: '<Name>Node'`, for example `@node: 'InputNode'`. The annotation name in a DSL path is `@<Name>Node`.
+- **Optional `@name`:** the node title in the Flow Editor. The title falls back to the field name.
+- **Flow node discovery:** the Flow Editor reads the direct fields of the opened context in field order. Each direct
+  field with a Flow Component annotation is one node. The Flow Editor does not descend into a child context.
+
+## Views Share One Model Without Conflict
+
+- A Flow Component annotation is presentation metadata. It does not change the computed value of a field.
+- An edit in the Code view or in the Boxed Editor MUST keep the annotations of the field. The engine `set` keeps
+  annotations when the new node has none.
+- The flow of a `workbook` or a `service` shows every field of it, annotated or not. An annotation picks how a node
+  looks and labels it; it never decides whether the field is on the flow.
+- React Flow positions and viewport are not model data. The `FlowMetadataStore` keeps them in `flow.json`.
+
+## Sample Model
+
+The Code view and the Boxed Editor show all fields of the sample model. `limit` is an invocation: with
+`@node: 'FunctionNode'`, the Flow Editor shows it as a `FunctionNode`.
 
 ```edgerules
 {
@@ -48,4 +77,6 @@ EdgeRules Flow editor displays root invocations in the model, so:
 
 ### Clarifications
 
-1.
+- The Code view and the Boxed Editor need no annotation to render a field.
+- `ChartNode` and `OutputNode` contexts have no Boxed Expression Component, so the Boxed Editor hides them.
+- A plain value such as `amount: 5` takes no annotation. A Flow Component is a context or an invocation only.

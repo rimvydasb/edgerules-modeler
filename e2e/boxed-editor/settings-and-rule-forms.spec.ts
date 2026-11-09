@@ -23,7 +23,7 @@ test.describe('Boxed Editor / settings and rule forms', () => {
     test('switches hit policy from first-match to best-match through the chip', async ({page}) => {
         await openBoxedEditorStory(page, 'settings-rule-forms-playground');
         await pick(page, 'Change hit policy', 'best-match');
-        await expectLiveModel(page, /"@hitPolicy":"best-match"/);
+        await expectLiveModel(page, /"hitPolicy":"best-match"/);
         await expectLiveResult(page, /"value":2/);
     });
 
@@ -32,7 +32,7 @@ test.describe('Boxed Editor / settings and rule forms', () => {
         await pick(page, 'Change hit policy', 'best-match');
         await expect(valueCell(page, 'collectable.rules[0]')).toContainText('1');
         await pick(page, 'Change hit policy', 'first-match');
-        await expectLiveModel(page, /"@hitPolicy":"first-match"/);
+        await expectLiveModel(page, /"hitPolicy":"first-match"/);
         await expect(page.getByTestId('live-model')).not.toContainText('"priority"');
     });
 
@@ -60,7 +60,7 @@ test.describe('Boxed Editor / settings and rule forms', () => {
         await openBoxedEditorStory(page, 'settings-rule-forms-playground');
         await pick(page, 'Change hit policy', 'collect-matches');
         await expect(page.getByTestId('row-collectable.default')).toHaveCount(0);
-        await expectLiveModel(page, /"@hitPolicy":"collect-matches"/);
+        await expectLiveModel(page, /"hitPolicy":"collect-matches"/);
         await expectLiveResult(page, /"value":1.*"value":2/);
     });
 
@@ -78,7 +78,7 @@ test.describe('Boxed Editor / settings and rule forms', () => {
         await page.keyboard.press('ArrowDown');
         await page.getByRole('menuitem', {name: 'unique-match'}).focus();
         await page.keyboard.press('Enter');
-        await expectLiveModel(page, /"@hitPolicy":"unique-match"/);
+        await expectLiveModel(page, /"hitPolicy":"unique-match"/);
     });
 
     test('selects the supported solver backend through the using chip', async ({page}) => {
@@ -93,7 +93,7 @@ test.describe('Boxed Editor / settings and rule forms', () => {
         await valueCell(page, 'factory.timeLimit').locator('span[tabindex="0"]').click();
         await replaceActiveExpression(page, '2500');
         await page.keyboard.press('Enter');
-        await expectLiveModel(page, /"@timeLimit":2500/);
+        await expectLiveModel(page, /"timeLimit":2500/);
     });
 
     test('adds a bottlenecks setting and toggles it', async ({page}) => {
@@ -114,7 +114,7 @@ test.describe('Boxed Editor / settings and rule forms', () => {
     test('switches a rule from cell-map conditions to expression and back', async ({page}) => {
         await openBoxedEditorStory(page, 'settings-rule-forms-playground');
         await chooseRowAction(page, 'collectable.rules[0]', 'Switch to expression condition');
-        await expectLiveModel(page, /"when":true/);
+        await expectLiveModel(page, /"when":\{"@kind":"expression","expression":"true"\}/);
         await chooseRowAction(page, 'collectable.rules[0]', 'Switch to column conditions');
         await expect(page.getByTestId('live-model')).not.toContainText('"when":true');
     });
@@ -141,6 +141,6 @@ test.describe('Boxed Editor / settings and rule forms', () => {
         await chooseRowAction(page, '*', 'Add decision table');
         await page.getByTestId('append-decisionTable').click();
         await expect(valueCell(page, 'decisionTable.rules[0]')).toContainText('true');
-        await expectLiveModel(page, /"when":true/);
+        await expectLiveModel(page, /"when":\{"@kind":"expression","expression":"true"\}/);
     });
 });

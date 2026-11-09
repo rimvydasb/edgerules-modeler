@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {MutableDecisionService} from '@edgerules/node/mutable';
-import type {PortableNode, PortableRulesetDefinition, PortableRulesetSchema} from '@edgerules/portable';
+import type {PortableContext, PortableRuleset} from '@edgerules/portable';
 import {
     buildExpressionFromCells,
     buildTableModel,
@@ -27,15 +27,13 @@ import {RISK_MODEL_DSL, SCORECARD_MODEL_DSL} from '../testing/model.dsl';
 // The real dev-build engine service — never mocked (see project testing policy).
 function riskDefinition(): {
     service: MutableDecisionService;
-    definition: PortableRulesetDefinition;
-    schema: PortableRulesetSchema;
+    definition: PortableRuleset;
+    schema: PortableRuleset;
 } {
     const service = MutableDecisionService.fromCode(RISK_MODEL_DSL);
-    return {
-        service,
-        definition: service.get('risk.*') as PortableRulesetDefinition,
-        schema: service.get('risk') as unknown as PortableRulesetSchema,
-    };
+    // The linked view of the ruleset is its declaration with the inferred result type in `return`.
+    const definition = service.get('risk') as PortableRuleset;
+    return {service, definition, schema: definition};
 }
 
 describe('prettyUnaryTest', () => {
@@ -71,8 +69,7 @@ describe('formatCellValue', () => {
         expect(
             formatCellValue({
                 '@kind': 'context',
-                name: "'gold'",
-                apr: {'@kind': 'expression', expression: '12.5'},
+                fields: {name: "'gold'", apr: {'@kind': 'expression', expression: '12.5'}},
             }),
         ).toBe("{ name: 'gold', apr: 12.5 }");
     });
@@ -122,13 +119,13 @@ describe('buildTableModel (against the real engine echo)', () => {
     it('exposes the default row per output column', () => {
         const {definition, schema} = riskDefinition();
         const model = buildTableModel(definition, schema);
-        expect(model.defaultRow).toEqual({level: "'none'", limit: '0'});
+        expect(model.defaultRow).toEqual({level: '"none"', limit: '0'});
     });
 
     it('detects a scorecard and collapses outputs to one score column', () => {
         const service = MutableDecisionService.fromCode(SCORECARD_MODEL_DSL);
-        const definition = service.get('scoreFactors.*') as PortableRulesetDefinition;
-        const schema = service.get('scoreFactors') as unknown as PortableRulesetSchema;
+        const definition = service.get('scoreFactors') as PortableRuleset;
+        const schema = definition;
         const model = buildTableModel(definition, schema);
         expect(model.scorecard).toBe(true);
         expect(model.outputs).toHaveLength(1);
@@ -145,7 +142,7 @@ describe('rowToRule round-trips through the real engine', () => {
             row.when.cells.age = '21..30';
         }
         row.then.limit = '1500';
-        const result = service.set('risk.rules[0]', rowToRule(row, false) as unknown as PortableNode);
+        const result = service.set('risk.rules[0]', rowToRule(row, false));
         expect((result as {'@kind'?: string})['@kind']).toBe('rule');
         await expect(service.execute('decision')).resolves.toEqual({
             level: 'high',
@@ -157,18 +154,18 @@ describe('rowToRule round-trips through the real engine', () => {
         const {service, definition, schema} = riskDefinition();
         const model = buildTableModel(definition, schema);
         const rule = rowToRule(emptyRow(model), model.scorecard);
-        const result = service.set('risk.rules[3]', rule as unknown as PortableNode);
+        const result = service.set('risk.rules[3]', rule);
         expect((result as {'@kind'?: string})['@kind']).toBe('rule');
     });
 
     it('writes scorecard scores as numbers', async () => {
         const service = MutableDecisionService.fromCode(SCORECARD_MODEL_DSL);
-        const definition = service.get('scoreFactors.*') as PortableRulesetDefinition;
-        const model = buildTableModel(definition, service.get('scoreFactors') as unknown as PortableRulesetSchema);
+        const definition = service.get('scoreFactors') as PortableRuleset;
+        const model = buildTableModel(definition, service.get('scoreFactors') as unknown as PortableRuleset);
         const row = model.rows[1];
         row.then[''] = '12';
-        const result = service.set('scoreFactors.rules[1]', rowToRule(row, true) as unknown as PortableNode);
-        expect((result as {then?: unknown}).then).toBe(12);
+        const result = service.set('scoreFactors.rules[1]', rowToRule(row, true));
+        expect((result as {then?: unknown}).then).toMatchObject({'@kind': 'expression', expression: '12'});
         await expect(service.execute('total')).resolves.toBe(32);
     });
 });
@@ -177,25 +174,25 @@ describe('structural definition edits accepted by the real engine', () => {
     it('withHitPolicy(best-match) assigns priorities the engine accepts', () => {
         const {service, definition} = riskDefinition();
         const result = service.set('risk', withHitPolicy(definition, 'best-match'));
-        expect((result as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
-        const next = service.get('risk.*') as PortableRulesetDefinition;
-        expect(next['@hitPolicy']).toBe('best-match');
-        expect(next['@rules'].map((rule) => rule.priority)).toEqual([1, 2, 3]);
+        expect((result as {'@kind'?: string})['@kind']).toBe('ruleset');
+        const next = service.get('risk') as PortableRuleset;
+        expect(next.hitPolicy).toBe('best-match');
+        expect(next.rules.map((rule) => rule.priority)).toEqual([1, 2, 3]);
     });
 
     it('withHitPolicy(collect-matches) drops the default the engine would reject', () => {
         const {service, definition} = riskDefinition();
         const result = service.set('risk', withHitPolicy(definition, 'collect-matches'));
-        expect((result as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
-        expect((service.get('risk.*') as PortableRulesetDefinition)['@default']).toBeUndefined();
+        expect((result as {'@kind'?: string})['@kind']).toBe('ruleset');
+        expect((service.get('risk') as PortableRuleset)['default']).toBeUndefined();
     });
 
     it('withOutputColumnAdded/Renamed keep every row and the default in shape', async () => {
         const {service, definition} = riskDefinition();
         const added = withOutputColumnAdded(definition, 'reason', "'n/a'");
-        expect((service.set('risk', added) as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
-        const renamed = withOutputColumnRenamed(service.get('risk.*') as PortableRulesetDefinition, 'reason', 'note');
-        expect((service.set('risk', renamed) as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
+        expect((service.set('risk', added) as {'@kind'?: string})['@kind']).toBe('ruleset');
+        const renamed = withOutputColumnRenamed(service.get('risk') as PortableRuleset, 'reason', 'note');
+        expect((service.set('risk', renamed) as {'@kind'?: string})['@kind']).toBe('ruleset');
         await expect(service.execute('decision')).resolves.toEqual({
             level: 'high',
             limit: 1000,
@@ -207,15 +204,15 @@ describe('structural definition edits accepted by the real engine', () => {
         const {service, definition} = riskDefinition();
         const added = withInputColumnAdded(definition, 'channel', 'string');
         const result = service.set('risk', added);
-        expect((result as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
+        expect((result as {'@kind'?: string})['@kind']).toBe('ruleset');
         // The `decision` call site only ever passed age/income/segment; it must still link and run.
         await expect(service.execute('decision')).resolves.toEqual({
             level: 'high',
             limit: 1000,
         });
-        const next = service.get('risk.*') as PortableRulesetDefinition;
-        expect(next['@parameters'].channel).toEqual({
-            '@kind': 'type',
+        const next = service.get('risk') as PortableRuleset;
+        expect(next.parameters.channel).toEqual({
+            '@kind': 'placeholder',
             type: 'string',
             default: '',
         });
@@ -224,13 +221,13 @@ describe('structural definition edits accepted by the real engine', () => {
     it('withInputColumnRemoved drops the parameter and its cells', () => {
         const {service, definition} = riskDefinition();
         // `segment` is referenced by rule 3's boolean expression, so remove that rule first.
-        const rules = definition['@rules'].slice(0, 2);
-        const pruned = withInputColumnRemoved({...definition, '@rules': rules}, 'segment');
+        const rules = definition.rules.slice(0, 2);
+        const pruned = withInputColumnRemoved({...definition, rules: rules}, 'segment');
         const result = service.set('risk', pruned);
         // The call site still passes `segment:` — the engine reports it; what matters here is
         // that the definition itself no longer carries the column.
-        expect(Object.keys(pruned['@parameters'])).toEqual(['age', 'income']);
-        expect(pruned['@rules'][0].when).not.toHaveProperty('segment');
+        expect(Object.keys(pruned.parameters)).toEqual(['age', 'income']);
+        expect(pruned.rules[0].when).not.toHaveProperty('segment');
         expect(result).toBeDefined();
     });
 });
@@ -257,7 +254,7 @@ describe('cells <-> expression conversion (DT-001 / DT-002)', () => {
         const result = service.set('risk.rules[0]', {
             '@kind': 'rule',
             when: {'@kind': 'expression', expression} as unknown as Record<string, unknown>,
-            then: {level: "'high'", limit: 1000},
+            then: {'@kind': 'context', fields: {level: "'high'", limit: 1000}},
         } as unknown as Parameters<typeof service.set>[1]);
         expect((result as {'@kind'?: string})['@kind']).toBe('rule');
         await expect(service.execute('decision')).resolves.toEqual({level: 'high', limit: 1000});
@@ -318,11 +315,11 @@ describe('withInputColumnRenamed / withInputColumnTypeChanged / withOutputColumn
       }
       decision: risk(20, 25000)
     }`);
-        const definition = service.get('risk.*') as PortableRulesetDefinition;
+        const definition = service.get('risk') as PortableRuleset;
         const renamed = withInputColumnRenamed(definition, 'income', 'salary');
-        expect(Object.keys(renamed['@parameters'])).toEqual(['age', 'salary']);
-        expect(renamed['@rules'][0].when).toEqual({age: '18..25', salary: '< 30000'});
-        expect((service.set('risk', renamed) as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
+        expect(Object.keys(renamed.parameters)).toEqual(['age', 'salary']);
+        expect(renamed.rules[0].when).toEqual({age: '18..25', salary: '< 30000'});
+        expect((service.set('risk', renamed) as {'@kind'?: string})['@kind']).toBe('ruleset');
     });
 
     it('a renamed parameter still referenced by an unrewritten boolean-expression row surfaces as an engine error, not silent breakage', () => {
@@ -330,7 +327,7 @@ describe('withInputColumnRenamed / withInputColumnTypeChanged / withOutputColumn
         // Rule 3's `when` is the boolean expression `age >= 65 or segment = "premium"` — renaming
         // `age` doesn't rewrite that identifier (see the function's doc comment), so the model no
         // longer links. `set()` itself never rolls back or errors for a linking reason anymore (it
-        // applies the write and returns the type-free node — see `../../../edgerules-v2/doc/architecture/CRUD_SPEC.md`);
+        // applies the write and returns the type-free node — see `../../../edgerules/doc/architecture/CRUD_SPEC.md`);
         // `.link()` is the call that surfaces the precise diagnosis.
         const renamed = withInputColumnRenamed(definition, 'age', 'years');
         const result = service.set('risk', renamed) as {'@kind'?: string; message?: string};
@@ -341,14 +338,14 @@ describe('withInputColumnRenamed / withInputColumnTypeChanged / withOutputColumn
     it('changes a parameter type and is accepted by the real engine', () => {
         const {service, definition} = riskDefinition();
         const changed = withInputColumnTypeChanged(definition, 'income', 'number');
-        expect((service.set('risk', changed) as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
+        expect((service.set('risk', changed) as {'@kind'?: string})['@kind']).toBe('ruleset');
     });
 
     it('reorders then/default fields without changing their values', async () => {
         const {service, definition} = riskDefinition();
         const reordered = withOutputColumnsReordered(definition, ['limit', 'level']);
-        expect(Object.keys(reordered['@rules'][0].then).filter((key) => key !== '@kind')).toEqual(['limit', 'level']);
-        expect((service.set('risk', reordered) as {'@kind'?: string})['@kind']).toBe('ruleset-schema');
+        expect(Object.keys((reordered.rules[0].then as PortableContext).fields)).toEqual(['limit', 'level']);
+        expect((service.set('risk', reordered) as {'@kind'?: string})['@kind']).toBe('ruleset');
         await expect(service.execute('decision')).resolves.toEqual({level: 'high', limit: 1000});
     });
 });

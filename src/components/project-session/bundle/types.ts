@@ -1,7 +1,7 @@
-import type {TestSubjectId, TestSuite} from '../../test-cases-service/test-cases-service-types';
-import type {FlowLayout} from '../../flow-editor/editor/types';
+import type {TestSubjectId, TestSuite} from '../../test-cases-service';
+import type {FlowLayout} from '#lib/flowLayout';
 
-export const PROJECT_FORMAT_VERSION = 1;
+export const PROJECT_FORMAT_VERSION = 3;
 export const PROJECT_MANIFEST_FILE = 'edgerules.project.json';
 export const DEFAULT_MODEL_SOURCE = 'model/main.edge';
 
@@ -23,7 +23,14 @@ export interface ProjectManifest {
     name: string;
     description?: string;
     tags?: string[];
-    model: {format: 'dsl'; source: string}; // one model per project
+    model: {format: 'dsl'; source: string} & ModelMetadata; // one model per project
+}
+
+// The root metadata of the model. Neither the DSL nor the Portable format has a key for it, so the manifest keeps it;
+// read it from the `model` slice snapshot (`session.getSlice('model').metadata`).
+export interface ModelMetadata {
+    name?: string;
+    version?: string;
 }
 
 export interface DocumentationDocument {
@@ -36,9 +43,10 @@ export interface TestSuitesDocument {
     subjects: Record<TestSubjectId, TestSuite>; // authored tests only; results are never persisted
 }
 
+// One canvas per flow root: '*', a context path or a function path. Presentation only; the model holds the semantics.
 export interface FlowMetadataDocument {
-    schemaVersion: 1;
-    layout: FlowLayout; // presentation only; the model holds the semantics
+    schemaVersion: 2;
+    layouts: Record<string, FlowLayout>; // root path -> layout; a root without a layout has no entry
 }
 
 // One durable revision: everything authored for a project, saved and loaded together.
@@ -48,6 +56,7 @@ export interface ProjectBundle {
     documentation: DocumentationDocument;
     tests: TestSuitesDocument;
     flow: FlowMetadataDocument;
+    readme: string; // Markdown of `README.md`, the long description of the project
 }
 
 export interface ProjectDescriptor {
@@ -79,7 +88,13 @@ export function emptyTests(): TestSuitesDocument {
 }
 
 export function emptyFlow(): FlowMetadataDocument {
-    return {schemaVersion: 1, layout: {positions: {}, outputs: []}};
+    return {schemaVersion: 2, layouts: {}};
+}
+
+// The README of a project that has no authored one: its name as the title, then its description.
+export function generateReadme(name: string, description?: string): string {
+    const text = description?.trim();
+    return text ? `# ${name}\n\n${text}\n` : `# ${name}\n`;
 }
 
 export function describeProject(bundle: ProjectBundle, locator: ProjectLocator, revision: string): ProjectDescriptor {

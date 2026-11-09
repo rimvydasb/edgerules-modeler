@@ -14,20 +14,22 @@ import {IconDotsVertical, IconPlus} from '@tabler/icons-react';
 import type {
     PortableContext,
     PortableError,
+    PortableExpression,
     PortableNode,
+    PortableReturnType,
     PortableRule,
-    PortableRulesetDefinition,
-    PortableRulesetSchema,
+    PortableRuleset,
+    PortableSetValue,
     PortableTypeReference,
 } from '@edgerules/portable';
-import {isPortableError} from '../../lib/portable';
-import {cx} from '../../ui/cx';
-import {GridBody, GridCell, GridHead, GridRow, GridTable} from '../../ui/grid';
-import {Toast} from '../../ui/Toast';
+import {isPortableError} from '#lib/portable';
+import {cx} from '#ui/cx';
+import {GridBody, GridCell, GridHead, GridRow, GridTable} from '#ui/grid';
+import {Toast} from '#ui/Toast';
 import * as classes from './decisionTable.module.css';
-import {CodeEditorCell} from '../code-editor-cell/CodeEditorCell';
+import {CodeEditorCell} from '../code-editor-cell';
 import type {CodeEditorService} from '../code-editor/language/service';
-import {HighlightedCode} from '../code-editor-cell/HighlightedCode';
+import {HighlightedCode} from '../code-editor-cell/internal';
 import {
     HIT_POLICIES,
     SCALAR_OUTPUT,
@@ -66,20 +68,19 @@ import {
  */
 export interface DecisionTableService {
     get(path: string): PortableNode | PortableError;
-    /** `PortableRule` is accepted at `<ruleset>.rules[i]` paths although it is not a `PortableNode`. */
-    set(path: string, node: PortableNode | PortableRule): PortableNode | PortableError;
+    set(path: string, node: PortableSetValue): PortableNode | PortableError;
     /**
      * Optional: renames the ruleset itself and relinks its call sites. Also renames a ruleset's own
      * parameter one level deeper, as `"<path>.parameters.<name>"` — the engine relinks the cell-map
      * `when` column, boolean-expression bare-identifier references, and named-argument call sites
      * anywhere in the model. When absent, the "Rename table…" action is hidden and input-column
      * rename falls back to a client-side rewrite (see `withInputColumnRenamed`) that only covers the
-     * `@parameters` key and cell-map `when` rows.
+     * `parameters` key and cell-map `when` rows.
      */
     rename?(path: string, newName: string): void | PortableError;
     /**
      * Optional: explicit, throwing relink attempt (`MutableDecisionService.link()`). `set()` itself
-     * never rolls back or errors for a linking reason (see `../../../edgerules-v2/doc/architecture/CRUD_SPEC.md`),
+     * never rolls back or errors for a linking reason (see `../../../edgerules/doc/architecture/CRUD_SPEC.md`),
      * so a cell edit that breaks the ruleset's own linking (e.g. a `when`-cell value of the wrong
      * type) must be caught and undone here instead — see `setWithLinkCheck` below. When absent, a
      * link-breaking edit commits without detection, same as `rename`'s optionality above.
@@ -95,8 +96,8 @@ export interface DecisionTableService {
 function setWithLinkCheck(
     service: DecisionTableService,
     path: string,
-    node: PortableNode | PortableRule,
-    rollback?: {path: string; node: PortableNode | PortableRule},
+    node: PortableSetValue,
+    rollback?: {path: string; node: PortableSetValue},
 ): PortableNode | PortableError {
     const result = service.set(path, node);
     if (isPortableError(result)) return result;
@@ -123,7 +124,7 @@ export interface DecisionTableEditorProps {
     languageService?: CodeEditorService;
     readOnly?: boolean;
     /** Fired with the fresh definition after every successful edit. */
-    onChange?: (definition: PortableRulesetDefinition) => void;
+    onChange?: (definition: PortableRuleset) => void;
     /** Fired after a successful "Rename table…" — the host should update its `path` prop to match. */
     onRenamed?: (newPath: string) => void;
     className?: string;
@@ -438,8 +439,8 @@ function describeRow(row: DecisionTableRow): string {
 }
 
 /** A ruleset parameter's declared type, whether stored as a bare reference or a typed-value wrapper. */
-function currentParameterType(definition: PortableRulesetDefinition, name: string): PortableTypeReference {
-    const parameter = definition['@parameters'][name];
+function currentParameterType(definition: PortableRuleset, name: string): PortableTypeReference {
+    const parameter = definition.parameters[name];
     return typeof parameter === 'string' ? parameter : (parameter as {type: PortableTypeReference}).type;
 }
 
@@ -465,8 +466,8 @@ export function DecisionTableEditor({
     className,
     style,
 }: DecisionTableEditorProps): ReactElement {
-    const [definition, setDefinition] = useState<PortableRulesetDefinition | null>(null);
-    const [schema, setSchema] = useState<PortableRulesetSchema | undefined>(undefined);
+    const [definition, setDefinition] = useState<PortableRuleset | null>(null);
+    const [schema, setSchema] = useState<{return?: PortableReturnType} | undefined>(undefined);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [editError, setEditError] = useState<string | null>(null);
     const [editing, setEditing] = useState<CellId | null>(null);
@@ -476,9 +477,9 @@ export function DecisionTableEditor({
     const [pendingErrors, setPendingErrors] = useState<Record<string, {text: string; message: string}>>({});
     const [dialog, setDialog] = useState<ColumnDialogState | null>(null);
     const [confirm, setConfirm] = useState<ConfirmState | null>(null);
-    const [undo, setUndo] = useState<{label: string; definition: PortableRulesetDefinition} | null>(null);
+    const [undo, setUndo] = useState<{label: string; definition: PortableRuleset} | null>(null);
     const cellRefs = useRef(new Map<string, HTMLElement>());
-    const cachedDefaultRef = useRef<PortableContext | undefined>(undefined);
+    const cachedDefaultRef = useRef<PortableContext | PortableExpression | undefined>(undefined);
     const cachedPrioritiesRef = useRef<number[] | undefined>(undefined);
 
     // The ruleset path is normally just the `path` prop, but a successful "Rename table…" moves
@@ -489,25 +490,19 @@ export function DecisionTableEditor({
         setActivePath(path);
     }, [path]);
 
-    const refresh = useCallback((): PortableRulesetDefinition | null => {
-        const node = service.get(`${activePath}.*`);
+    const refresh = useCallback((): PortableRuleset | null => {
+        const node = service.get(activePath);
         if (isPortableError(node)) {
             setLoadError(node.message);
             setDefinition(null);
             return null;
         }
-        const schemaNode = service.get(activePath);
-        setSchema(
-            !isPortableError(schemaNode) &&
-                typeof schemaNode === 'object' &&
-                schemaNode !== null &&
-                (schemaNode as {'@kind'?: unknown})['@kind'] === 'ruleset-schema'
-                ? (schemaNode as unknown as PortableRulesetSchema)
-                : undefined,
-        );
+        // The linked view carries the inferred result type in `return`; `set` ignores it.
+        const {return: returnType, linked: _linked, ...definitionNode} = node as PortableRuleset;
+        setSchema(returnType === undefined ? undefined : {return: returnType});
         setLoadError(null);
-        setDefinition(node as PortableRulesetDefinition);
-        return node as PortableRulesetDefinition;
+        setDefinition(definitionNode as PortableRuleset);
+        return definitionNode as PortableRuleset;
     }, [service, activePath]);
 
     useEffect(() => {
@@ -535,7 +530,7 @@ export function DecisionTableEditor({
             const rulePath = `${activePath}.rules[${index}]`;
             const result = setWithLinkCheck(service, rulePath, rule, {
                 path: rulePath,
-                node: definition['@rules'][index],
+                node: definition.rules[index],
             });
             if (isPortableError(result)) {
                 setEditError(result.message);
@@ -550,7 +545,7 @@ export function DecisionTableEditor({
     /** Whole-ruleset write for structural edits (hit policy, rows added/removed, columns). Returns
      * the engine's error message on rejection, or `null` on success, so dialogs can stay open. */
     const applyDefinition = useCallback(
-        (next: PortableRulesetDefinition): string | null => {
+        (next: PortableRuleset): string | null => {
             if (!definition) {
                 return null;
             }
@@ -567,7 +562,7 @@ export function DecisionTableEditor({
 
     /** Like `applyDefinition`, but remembers the pre-change snapshot so `undo` can restore it. */
     const applyDestructive = useCallback(
-        (next: PortableRulesetDefinition, undoLabel: string): void => {
+        (next: PortableRuleset, undoLabel: string): void => {
             if (!definition) {
                 return;
             }
@@ -586,7 +581,7 @@ export function DecisionTableEditor({
                 return null;
             }
             const cellPath = name === SCALAR_OUTPUT ? `${activePath}.default` : `${activePath}.default.${name}`;
-            const previous = definition['@default'];
+            const previous = definition.default;
             const result = setWithLinkCheck(
                 service,
                 cellPath,
@@ -659,7 +654,7 @@ export function DecisionTableEditor({
             return;
         }
         const rule = rowToRule(emptyRow(model), model.scorecard);
-        const index = definition['@rules'].length;
+        const index = definition.rules.length;
         const result = setWithLinkCheck(service, `${activePath}.rules[${index}]`, rule, {
             path: activePath,
             node: definition,
@@ -678,27 +673,27 @@ export function DecisionTableEditor({
             if (!definition) {
                 return;
             }
-            if (nextPolicy === 'collect-matches' && definition['@default'] !== undefined) {
-                cachedDefaultRef.current = definition['@default'];
+            if (nextPolicy === 'collect-matches' && definition.default !== undefined) {
+                cachedDefaultRef.current = definition.default;
             }
-            if (definition['@hitPolicy'] === 'best-match' && nextPolicy !== 'best-match') {
-                cachedPrioritiesRef.current = definition['@rules'].map((rule) => rule.priority ?? 0);
+            if (definition.hitPolicy === 'best-match' && nextPolicy !== 'best-match') {
+                cachedPrioritiesRef.current = definition.rules.map((rule) => rule.priority ?? 0);
             }
             let next = withHitPolicy(definition, nextPolicy);
             if (
                 nextPolicy === 'best-match' &&
                 cachedPrioritiesRef.current &&
-                cachedPrioritiesRef.current.length === next['@rules'].length
+                cachedPrioritiesRef.current.length === next.rules.length
             ) {
                 const cached = cachedPrioritiesRef.current;
-                next = {...next, '@rules': next['@rules'].map((rule, index) => ({...rule, priority: cached[index]}))};
+                next = {...next, rules: next.rules.map((rule, index) => ({...rule, priority: cached[index]}))};
             }
             if (
                 nextPolicy !== 'collect-matches' &&
-                next['@default'] === undefined &&
+                next.default === undefined &&
                 cachedDefaultRef.current !== undefined
             ) {
-                next = {...next, '@default': cachedDefaultRef.current};
+                next = {...next, default: cachedDefaultRef.current};
             }
             applyDefinition(next);
         },
@@ -710,7 +705,7 @@ export function DecisionTableEditor({
             if (!definition || !model) {
                 return;
             }
-            const willDropDefault = nextPolicy === 'collect-matches' && definition['@default'] !== undefined;
+            const willDropDefault = nextPolicy === 'collect-matches' && definition.default !== undefined;
             const willDropPriorities =
                 model.hitPolicy === 'best-match' && nextPolicy !== 'best-match' && model.rows.length > 0;
             if (willDropDefault || willDropPriorities) {
@@ -1060,7 +1055,7 @@ export function DecisionTableEditor({
         if (!definition || !model) {
             return;
         }
-        const rules = [...definition['@rules']];
+        const rules = [...definition.rules];
         switch (action) {
             case 'delete': {
                 const label = describeRow(model.rows[index]);
@@ -1069,7 +1064,7 @@ export function DecisionTableEditor({
                     message: `This removes rule ${index + 1} (${label}). Use Undo right after if you didn't mean to.`,
                     confirmLabel: 'Delete rule',
                     onConfirm: () => {
-                        const nextRules = [...definition['@rules']];
+                        const nextRules = [...definition.rules];
                         nextRules.splice(index, 1);
                         applyDestructive(withRules(definition, nextRules), `Rule ${index + 1} deleted`);
                     },
@@ -1269,9 +1264,9 @@ export function DecisionTableEditor({
                         }
                         setActivePath(newPath);
                         onRenamed?.(newPath);
-                        const fresh = service.get(`${newPath}.*`);
+                        const fresh = service.get(newPath);
                         if (!isPortableError(fresh)) {
-                            onChange?.(fresh as PortableRulesetDefinition);
+                            onChange?.(fresh as PortableRuleset);
                         }
                         return null;
                     },
@@ -1311,10 +1306,13 @@ export function DecisionTableEditor({
                 break;
             case 'add-default': {
                 const defaultNode = model.scorecard
-                    ? (0 as unknown as PortableContext)
-                    : (Object.fromEntries(
-                          model.outputs.map((column) => [column.name, defaultTextForType(column.typeLabel)]),
-                      ) as PortableContext);
+                    ? ({'@kind': 'expression', expression: 0} as PortableExpression)
+                    : ({
+                          '@kind': 'context',
+                          fields: Object.fromEntries(
+                              model.outputs.map((column) => [column.name, defaultTextForType(column.typeLabel)]),
+                          ),
+                      } as PortableContext);
                 applyDefinition(withDefaultRow(definition, defaultNode));
                 break;
             }

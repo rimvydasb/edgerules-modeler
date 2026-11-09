@@ -152,3 +152,43 @@ describe('CodeEditor', () => {
         expect(onChange).not.toHaveBeenCalled();
     });
 });
+
+describe('CodeEditor — markdown', () => {
+    const README = '# Loans\n\nSome **bold** text and a [link](https://x.dev).\n\n```edgerules\n{ a: 1 }\n```\n';
+
+    it('highlights Markdown and edgerules fences without a service', async () => {
+        const {container} = render(<CodeEditor language="markdown" value={README} onChange={vi.fn()} />);
+
+        // Markers (`#`, `**`) carry the class of their construct too, plus `tok-meta`.
+        const textOf = (selector: string) =>
+            [...container.querySelectorAll(selector)].map((span) => span.textContent).join('');
+        await waitFor(() => {
+            expect(textOf('.tok-heading')).toBe('# Loans');
+            expect(textOf('.tok-strong')).toBe('**bold**');
+            expect(textOf('.tok-meta')).toContain('#');
+            expect(textOf('.tok-url')).toBe('https://x.dev');
+            expect(textOf('.tok-propertyName')).toBe('a'); // inside the edgerules fence
+        });
+        expect(container.querySelector('.cm-lintRange-error, .cm-lintPoint-error')).toBeNull();
+    });
+
+    it('edits Markdown source', async () => {
+        const user = userEvent.setup();
+        const onChange = vi.fn();
+        const {container} = render(<CodeEditor language="markdown" value="# Loans" onChange={onChange} />);
+
+        const view = getView(container);
+        view.dispatch({selection: {anchor: view.state.doc.length}});
+        queryEditable(container).focus();
+        await user.keyboard('!');
+
+        await waitFor(() => {
+            expect(onChange).toHaveBeenLastCalledWith('# Loans!');
+        });
+    });
+
+    it('does not allow edits when readOnly', () => {
+        const {container} = render(<CodeEditor language="markdown" value="# Loans" onChange={vi.fn()} readOnly />);
+        expect(container.querySelector('.cm-content[contenteditable="true"]')).toBeNull();
+    });
+});

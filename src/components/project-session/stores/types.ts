@@ -1,7 +1,7 @@
-import type {Unsubscribe} from '../../../lib/changeBatch';
-import type {DocumentationService} from '../../documentation-service/documentation-service-types';
-import type {FlowLayout} from '../../flow-editor/editor/types';
-import type {TestCasesService, TestSubjectId} from '../../test-cases-service/test-cases-service-types';
+import type {Unsubscribe} from '#lib/changeBatch';
+import type {DocumentationService} from '../../documentation-service';
+import type {FlowLayout} from '#lib/flowLayout';
+import type {TestCasesService, TestSubjectId} from '../../test-cases-service';
 import type {DocumentationDocument, FlowMetadataDocument, TestSuitesDocument} from '../bundle/types';
 
 /**
@@ -28,8 +28,14 @@ export interface ProjectTestsStore extends SliceStore<TestSuitesDocument> {
     forSubject(subjectId: TestSubjectId): TestCasesService;
 }
 
-// Flow canvas presentation data: positions, output nodes and chart nodes.
+// The Markdown of `README.md`. Not keyed by model path, so a rename does not change it.
+export interface ReadmeStore extends Omit<SliceStore<string>, 'renamePath'> {
+    setMarkdown(markdown: string): void; // equal text is no change
+}
+
+// Flow canvas presentation data: positions, output nodes and chart nodes, one layout per flow root ('*', a context
+// path or a function path). `renamePath` moves the root keys, the position keys and the output and chart sources.
 export interface FlowMetadataStore extends SliceStore<FlowMetadataDocument> {
-    getLayout(): FlowLayout; // same reference until the layout changes
-    setLayout(layout: FlowLayout): void; // fits `FlowEditor`'s `onLayoutChange`; an equal layout is no change
+    getLayout(root: string): FlowLayout; // same reference until that layout changes; empty for a root without one
+    setLayout(root: string, layout: FlowLayout): void; // an equal layout is no change
 }

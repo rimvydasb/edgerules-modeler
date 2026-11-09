@@ -29,7 +29,8 @@ export function contractBundle(name = 'Contract project'): ProjectBundle {
                 },
             },
         },
-        flow: {schemaVersion: 1, layout: {positions: {b: {x: 10, y: 20}}, outputs: []}},
+        flow: {schemaVersion: 2, layouts: {'*': {positions: {b: {x: 10, y: 20}}, outputs: []}}},
+        readme: `# ${name}\n\nA project of the repository contract.\n`,
     };
 }
 

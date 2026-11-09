@@ -17,6 +17,7 @@ export function NodeFrame({
     testId,
     selected,
     width,
+    fit = false,
     color,
     icon,
     badge,
@@ -25,14 +26,20 @@ export function NodeFrame({
     menuItems,
     editing,
     onEditingChange,
+    onRenameNode,
     children,
 }: NodeFrameProps): ReactElement {
     const {service, documentation, readOnly = false} = useFlowEditor();
+    const renameNode = onRenameNode ?? ((text: string) => runCommand(() => service.setNodeName(field, text)));
     const title = label ?? field;
     const stopEditing = () => onEditingChange(null);
 
     return (
-        <div className={`${styles.node} ${selected ? styles.selected : ''}`} style={{width}} data-testid={testId}>
+        <div
+            className={`${styles.node} ${fit ? styles.fit : ''} ${selected ? styles.selected : ''}`}
+            style={fit ? {minWidth: width} : {width}}
+            data-testid={testId}
+        >
             <div className={`${styles.row} ${styles.tall}`}>
                 <div className={styles.tile} style={{background: color}} aria-hidden>
                     {icon}
@@ -45,9 +52,7 @@ export function NodeFrame({
                                     value={label ?? ''}
                                     ariaLabel={`Name of node ${field}`}
                                     placeholder={field}
-                                    onCommit={(text) =>
-                                        runCommand(() => service.setNodeName(field, text)) ?? stopEditing()
-                                    }
+                                    onCommit={(text) => renameNode(text) ?? stopEditing()}
                                     onCancel={stopEditing}
                                 />
                             ) : (

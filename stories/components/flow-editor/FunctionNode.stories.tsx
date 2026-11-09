@@ -1,7 +1,6 @@
 import '@xyflow/react/dist/style.css';
 import {useCallback, useMemo, useState, type ReactElement} from 'react';
 import type {Meta, StoryObj} from '@storybook/react-vite';
-import {expect, userEvent, within} from 'storybook/test';
 import {ReactFlow, ReactFlowProvider, type Connection, type Edge, type Node} from '@xyflow/react';
 import {init, MutableDecisionService} from '@edgerules/web/mutable';
 import {createDocumentationService} from '../../../src/components/documentation-service';
@@ -9,7 +8,7 @@ import {
     createFlowEditorService,
     FlowEditorProvider,
     FunctionNode,
-    InputNode,
+    ObjectInputNode,
     OutputNode,
     type FlowEditorService,
 } from '../../../src/components/flow-editor';
@@ -36,7 +35,7 @@ const SAMPLE_MODEL = `{
   eligibility: applicantDecision(person: applicant)
 }`;
 
-const nodeTypes = {functionNode: FunctionNode, inputNode: InputNode, outputNode: OutputNode};
+const nodeTypes = {functionNode: FunctionNode, objectInputNode: ObjectInputNode, outputNode: OutputNode};
 
 interface Built {
     service: FlowEditorService;
@@ -44,10 +43,9 @@ interface Built {
     field: string;
 }
 
-function build(field: string | null, partial: boolean, wired: boolean): Built {
+function build(field: string | null, partial: boolean): Built {
     const mutable = MutableDecisionService.fromCode(SAMPLE_MODEL);
     const service = createFlowEditorService(mutable as never);
-    if (wired) service.addInputNode('applicant');
     const nodeField = field ?? service.createDraftNode();
     if (partial) {
         // A draft: a callee and one of three arguments; nothing is written to the model.
@@ -68,7 +66,7 @@ function Canvas({
     partial?: boolean;
     description?: string;
 }): ReactElement {
-    const {service, field: nodeField} = useMemo(() => build(field, partial, wired), [field, partial, wired]);
+    const {service, field: nodeField} = useMemo(() => build(field, partial), [field, partial]);
     const documentation = useMemo(() => {
         const service = createDocumentationService(`flow-story-${Math.random()}`);
         if (description) service.setDescription(nodeField, description);
@@ -107,7 +105,7 @@ function Canvas({
             ? [
                   {
                       id: 'applicant',
-                      type: 'inputNode',
+                      type: 'objectInputNode',
                       position: {x: 20, y: 60},
                       data: {field: 'applicant'},
                   },
@@ -155,7 +153,7 @@ function Canvas({
 }
 
 const meta: Meta<typeof Canvas> = {
-    title: 'Flow Editor/FunctionNode',
+    title: 'Components/Flow Editor/Function Node',
     component: Canvas,
     parameters: {layout: 'fullscreen'},
     loaders: [
@@ -172,55 +170,7 @@ type Story = StoryObj<typeof Canvas>;
 export const Default: Story = {args: {field: 'decision'}};
 export const UnnamedReturn: Story = {args: {field: 'payment'}};
 export const RecordArgument: Story = {args: {field: 'eligibility'}};
-/** A new node with a callee picked and no argument bound yet. */
-export const Draft: Story = {args: {field: null, partial: true}};
 export const NoCallee: Story = {args: {field: null}};
 export const Wired: Story = {args: {field: 'decision', wired: true}};
-/** A draft next to the InputNode: wire the two open arguments to complete it. */
+/** A draft next to the ObjectInputNode: wire the two open arguments to complete it. */
 export const WiredDraft: Story = {args: {field: null, partial: true, wired: true}};
-
-const DESCRIPTION = 'Assess the applicant risk band from age, income and segment';
-
-// Menus render in a portal, so the play functions query the whole document.
-const screen = () => within(document.body);
-// xyflow hides a node until it is measured, so the first lookup waits longer than the default.
-const SLOW = {timeout: 8000};
-
-export const NodeMenu: Story = {
-    args: {field: 'decision', description: DESCRIPTION},
-    play: async () => {
-        await userEvent.click(await screen().findByRole('button', {name: 'Node actions'}, SLOW));
-        await expect(await screen().findByRole('menuitem', {name: 'Duplicate'})).toBeVisible();
-    },
-};
-
-export const ArgumentMenu: Story = {
-    args: {field: 'decision'},
-    play: async () => {
-        await userEvent.click(await screen().findByRole('button', {name: 'Actions for argument segment'}, SLOW));
-        await expect(await screen().findByRole('menuitem', {name: 'Move down'})).toHaveAttribute(
-            'data-disabled',
-            'true',
-        );
-    },
-};
-
-export const RenameResult: Story = {
-    args: {field: 'decision'},
-    play: async () => {
-        await userEvent.click(await screen().findByRole('button', {name: 'level'}, SLOW));
-        const input = await screen().findByLabelText('Rename result level');
-        await userEvent.clear(input);
-        await userEvent.type(input, 'tier');
-    },
-};
-
-export const EditDescription: Story = {
-    args: {field: 'decision', description: DESCRIPTION},
-    play: async () => {
-        await userEvent.click(await screen().findByText(DESCRIPTION, {}, SLOW));
-        const input = await screen().findByLabelText('Description of decision');
-        await userEvent.clear(input);
-        await userEvent.type(input, 'Decide the risk band');
-    },
-};

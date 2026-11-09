@@ -1,5 +1,6 @@
-import type {PortableError, PortableNode} from '@edgerules/portable';
+import type {Kind, PortableError, PortableNode} from '@edgerules/portable';
 import {isPortableError} from './portable';
+import {authoredEntries, callableParameters, isRecord} from './portableUtils';
 
 export type CallableKind = 'function' | 'ruleset' | 'optimise' | 'loop';
 
@@ -10,70 +11,66 @@ export interface Callable {
 
 /** Structural subset of `MutableDecisionService` that `listCallables` reads. */
 export interface CallableSource {
-    get(path: string, filter?: 'ALL' | 'EXTERNAL_DEFINITIONS'): PortableNode | PortableError;
+    get(path: string, kinds?: readonly Kind[]): PortableNode | PortableError;
 }
 
-type PortableNodeLike = Record<string, unknown> & {'@kind'?: string};
-
-function isRecord(value: unknown): value is PortableNodeLike {
-    return typeof value === 'object' && value !== null;
-}
-
-// The engine reports an untyped callable parameter as the bare string `"any"` in a schema view.
-// A row with no declared type has no parsing rule, so such a callable is not listed.
-function hasOnlyTypedParameters(parameters: unknown): boolean {
-    if (!isRecord(parameters)) return true;
-    return Object.values(parameters).every((param) => param !== 'any');
-}
-
-const SCHEMA_KINDS: Record<string, CallableKind> = {
-    'function-schema': 'function',
-    'ruleset-schema': 'ruleset',
-    'loop-schema': 'loop',
-};
-
-// Recurses into `@kind: 'context'` nodes only — never into a `@body` — so a callable declared
-// inside another callable's body is never reached: `get('*', 'ALL')` doesn't expose bodies at all.
-function walkCallables(node: unknown, path: readonly string[], into: Callable[]): void {
-    if (!isRecord(node)) return;
-    for (const [key, value] of Object.entries(node)) {
-        if (key.startsWith('@') || !isRecord(value)) continue;
-        const kind = value['@kind'];
-        if (kind === 'context') {
-            walkCallables(value, [...path, key], into);
-        } else if (kind !== undefined && kind in SCHEMA_KINDS && hasOnlyTypedParameters(value['@parameters'])) {
-            into.push({path: [...path, key].join('.'), kind: SCHEMA_KINDS[kind]});
-        }
-    }
-}
-
-// `optimise` declarations are root-only and absent from `FIELDS`/`ALL` entirely — their catalog
-// row (the one carrying `@result`) lives only in the `EXTERNAL_DEFINITIONS` view.
-function collectOptimise(node: unknown): Callable[] {
-    const callables: Callable[] = [];
-    if (!isRecord(node)) return callables;
-    for (const [key, value] of Object.entries(node)) {
-        if (key.startsWith('@') || !isRecord(value)) continue;
-        if (value['@kind'] === 'optimise' && hasOnlyTypedParameters(value['@parameters'])) {
-            callables.push({path: key, kind: 'optimise'});
-        }
-    }
-    return callables;
+// A callable parameter without a type is `null` in the `parameters` (or `context`) map.
+function untypedNames(parameters: unknown): string[] {
+    if (!isRecord(parameters)) return [];
+    return Object.entries(parameters)
+        .filter(([, param]) => param === null || param === 'any')
+        .map(([name]) => name);
 }
 
 /**
- * Every fully typed user callable — `func`/`ruleset`/`loop` at any context depth (the `ALL` view)
- * and `optimise` (the `EXTERNAL_DEFINITIONS` view). A callable that declares any untyped
- * parameter is excluded.
+ * The untyped arguments of a callable (`func total(plan, tier: string)` -> `['plan']`). Such a function is generic:
+ * the engine types it at each call site and refuses to execute it directly, so it cannot be tested.
+ */
+export function untypedParameters(schema: unknown): string[] {
+    return untypedNames(callableParameters(schema));
+}
+
+function hasOnlyTypedParameters(parameters: unknown): boolean {
+    return untypedNames(parameters).length === 0;
+}
+
+const INTERFACE_KINDS: Record<string, CallableKind> = {
+    'method-interface': 'function',
+    'decision-interface': 'function',
+    'service-interface': 'function',
+    'ruleset-interface': 'ruleset',
+    'loop-interface': 'loop',
+    'optimise-interface': 'optimise',
+};
+
+/** The `kinds` of `get('*', kinds)` that `listCallables` reads: every callable interface, and the contexts. */
+const CALLABLE_VIEW: readonly Kind[] = ['context', ...Object.keys(INTERFACE_KINDS)] as Kind[];
+
+// Recurses into `context` nodes only — an interface node has no body, so a callable declared inside another callable's
+// body is never reached.
+function walkCallables(node: unknown, path: readonly string[], into: Callable[]): void {
+    for (const [key, value] of authoredEntries(node)) {
+        if (!isRecord(value)) continue;
+        const kind = value['@kind'];
+        if (kind === 'context') {
+            walkCallables(value, [...path, key], into);
+        } else if (
+            typeof kind === 'string' &&
+            kind in INTERFACE_KINDS &&
+            hasOnlyTypedParameters(callableParameters(value))
+        ) {
+            into.push({path: [...path, key].join('.'), kind: INTERFACE_KINDS[kind]});
+        }
+    }
+}
+
+/**
+ * Every fully typed user callable: `func`, `decision`, `service`, `ruleset` and `loop` at any context depth, and
+ * `optimise`. A callable that declares any untyped parameter is excluded.
  */
 export function listCallables(service: CallableSource): Callable[] {
     const callables: Callable[] = [];
-
-    const allView = service.get('*', 'ALL');
-    if (!isPortableError(allView)) walkCallables(allView, [], callables);
-
-    const externalView = service.get('*', 'EXTERNAL_DEFINITIONS');
-    if (!isPortableError(externalView)) callables.push(...collectOptimise(externalView));
-
+    const view = service.get('*', CALLABLE_VIEW);
+    if (!isPortableError(view)) walkCallables(view, [], callables);
     return callables;
 }

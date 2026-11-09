@@ -2,13 +2,16 @@ import type {PortableContext, PortableNode} from '@edgerules/portable';
 import type {BoxedRowData, BoxedRowKind, BoxedTableRowData, SignatureParameter} from '../boxed-editor-types';
 import {
     authoredEntries,
+    callableParameters,
     childPath,
+    fieldsOf,
     formatPortableValue,
     indexedPath,
+    isContextNode,
     isRecord,
     pathDepth,
     typeText,
-} from './portable-utils';
+} from '#lib/portableUtils';
 
 type PortableRecord = Record<string, unknown>;
 
@@ -67,12 +70,7 @@ function recordCells(record: unknown, columns: string[], nestedAsEmpty = false):
     return columns.map((column) => {
         const value = values.get(column);
         if (value === undefined) return '';
-        if (
-            nestedAsEmpty &&
-            (Array.isArray(value) ||
-                (isRecord(value) && (value['@kind'] === undefined || value['@kind'] === 'context')))
-        )
-            return '';
+        if (nestedAsEmpty && (Array.isArray(value) || isContextNode(value))) return '';
         return formatPortableValue(value);
     });
 }
@@ -91,8 +89,7 @@ function rowBase(kind: BoxedRowKind, path: string, name: string): BoxedRowData {
 
 function normalizeArray(name: string, path: string, values: PortableNode[], schema?: PortableNode): BoxedTableRowData {
     const relation =
-        values.some((value) => isRecord(value) && (value['@kind'] === undefined || value['@kind'] === 'context')) ||
-        (isRecord(schema) && isRecord(schema.items) && schema.items['@kind'] === 'type-definition');
+        values.some(isContextNode) || (isRecord(schema) && isRecord(schema.items) && schema.items['@kind'] === 'type');
     if (!relation) {
         return {
             ...rowBase('list', path, name),
@@ -111,11 +108,7 @@ function normalizeArray(name: string, path: string, values: PortableNode[], sche
             columns,
             cells: recordCells(value, columns, true),
             children: authoredEntries(value)
-                .filter(
-                    ([, child]) =>
-                        Array.isArray(child) ||
-                        (isRecord(child) && (child['@kind'] === undefined || child['@kind'] === 'context')),
-                )
+                .filter(([, child]) => Array.isArray(child) || isContextNode(child))
                 .map(([childName, child]) =>
                     normalizeNode(childName, childPath(indexedPath(path, index), childName), child),
                 ),
@@ -123,8 +116,13 @@ function normalizeArray(name: string, path: string, values: PortableNode[], sche
     };
 }
 
+// A `facts` declaration has its fields in `fields`, not in a `body`: its body reads as a context.
+function bodyOf(node: PortableRecord): unknown {
+    return node['@kind'] === 'facts' ? {'@kind': 'context', fields: fieldsOf(node) ?? {}} : node.body;
+}
+
 function normalizeFunction(name: string, path: string, node: PortableRecord): BoxedTableRowData {
-    const body = node['@body'];
+    const body = bodyOf(node);
     const inline = !isRecord(body) || body['@kind'] === 'expression';
     const children = inline
         ? [
@@ -138,21 +136,21 @@ function normalizeFunction(name: string, path: string, node: PortableRecord): Bo
         : normalizeContextChildren(body, path);
     return {
         ...rowBase('function', path, name),
-        parameters: parametersOf(node['@parameters']),
-        ...(typeText(node['@return']) ? {type: typeText(node['@return'])} : {}),
+        parameters: parametersOf(callableParameters(node)),
+        ...(typeText(node.return) ? {type: typeText(node.return)} : {}),
         children,
     };
 }
 
 function normalizeRuleset(name: string, path: string, node: PortableRecord): BoxedTableRowData {
-    const parameters = parametersOf(node['@parameters']);
+    const parameters = parametersOf(node.parameters);
     const conditionColumns = parameters.map((parameter) => parameter.name);
-    const rules = Array.isArray(node['@rules']) ? node['@rules'] : [];
-    const actionColumns = actionColumnsOf(rules, node['@default']);
+    const rules = Array.isArray(node.rules) ? node.rules : [];
+    const actionColumns = actionColumnsOf(rules, node.default);
     const children: BoxedRowData[] = [
         {
             ...rowBase('ruleset-hit-policy', childPath(path, 'hitPolicy'), 'hitPolicy'),
-            value: String(node['@hitPolicy'] ?? ''),
+            value: String(node.hitPolicy ?? ''),
             deletable: false,
         },
         ...rules.map((rule, index) => {
@@ -181,12 +179,12 @@ function normalizeRuleset(name: string, path: string, node: PortableRecord): Box
             return ruleRow;
         }),
     ];
-    if (node['@default'] !== undefined) {
+    if (node.default !== undefined) {
         children.push({
             ...rowBase('ruleset-default', childPath(path, 'default'), 'default'),
             actionColumns,
-            actions: recordCells(node['@default'], actionColumns),
-            deletable: node['@hitPolicy'] === 'collect-matches',
+            actions: recordCells(node.default, actionColumns),
+            deletable: node.hitPolicy === 'collect-matches',
         } as BoxedTableRowData);
     }
     return {
@@ -199,11 +197,11 @@ function normalizeRuleset(name: string, path: string, node: PortableRecord): Box
 }
 
 function normalizeOptimisation(name: string, path: string, node: PortableRecord): BoxedTableRowData {
-    const variables = isRecord(node['@variables']) ? authoredEntries(node['@variables']) : [];
-    const constraints = isRecord(node['@constraints']) ? authoredEntries(node['@constraints']) : [];
+    const variables = isRecord(node.variables) ? authoredEntries(node.variables) : [];
+    const constraints = isRecord(node.constraints) ? authoredEntries(node.constraints) : [];
     const children: BoxedRowData[] = [];
     for (const setting of ['using', 'bottlenecks', 'timeLimit'] as const) {
-        const value = node[`@${setting}`];
+        const value = node[setting];
         if (value !== undefined) {
             children.push({
                 ...rowBase('optimisation-setting', childPath(path, setting), setting),
@@ -219,10 +217,10 @@ function normalizeOptimisation(name: string, path: string, node: PortableRecord)
             value: formatPortableValue(variable),
         })),
     });
-    const direction = node['@maximise'] !== undefined ? 'maximise' : 'minimise';
+    const direction = node.maximise !== undefined ? 'maximise' : 'minimise';
     children.push({
         ...rowBase('optimisation-objective', childPath(path, direction), direction),
-        value: formatPortableValue(node[`@${direction}`]),
+        value: formatPortableValue(node[direction]),
         deletable: false,
     });
     children.push({
@@ -239,9 +237,14 @@ function normalizeOptimisation(name: string, path: string, node: PortableRecord)
     });
     return {
         ...rowBase('optimisation', path, name),
-        parameters: parametersOf(node['@parameters']),
+        parameters: parametersOf(node.parameters),
         children,
     };
+}
+
+// The engine marks no computed field: an `expression` node of the linked view is one.
+function isComputed(schema: unknown): boolean {
+    return isRecord(schema) && schema['@kind'] === 'expression';
 }
 
 export function normalizeNode(name: string, path: string, node: PortableNode, schema?: PortableNode): BoxedRowData {
@@ -251,25 +254,34 @@ export function normalizeNode(name: string, path: string, node: PortableNode, sc
             ...rowBase('field', path, name),
             value: formatPortableValue(node),
             ...(typeText(schema) ? {type: typeText(schema)} : {}),
-            ...(isRecord(schema) && schema.readOnly === true ? {readOnly: true} : {}),
+            ...(isComputed(schema) ? {readOnly: true} : {}),
         };
     }
 
     const record = node as unknown as PortableRecord;
     switch (record['@kind']) {
-        case 'type-definition':
+        case 'type':
             return {
                 ...rowBase('complexType', path, name),
                 children: normalizeContextChildren(record, path),
             };
-        case 'function':
+        case 'method':
             return normalizeFunction(name, path, record);
+        case 'service':
+        case 'decision':
+        case 'facts':
+            return {...normalizeFunction(name, path, record), keyword: record['@kind']};
         case 'ruleset':
             return normalizeRuleset(name, path, record);
         case 'optimise':
             return normalizeOptimisation(name, path, record);
+        case 'workbook':
+            return {
+                ...rowBase('context', path, name),
+                keyword: 'workbook',
+                children: normalizeContextChildren(record, path, schema),
+            };
         case 'context':
-        case undefined:
             return {
                 ...rowBase('context', path, name),
                 children: normalizeContextChildren(record, path, schema),
@@ -279,13 +291,13 @@ export function normalizeNode(name: string, path: string, node: PortableNode, sc
                 ...rowBase('field', path, name),
                 value: formatPortableValue(record),
                 ...(typeText(schema ?? record) ? {type: typeText(schema ?? record)} : {}),
-                ...(record.readOnly === true ? {readOnly: true} : {}),
+                ...(isComputed(schema ?? record) ? {readOnly: true} : {}),
             };
     }
 }
 
 export function normalizeContextChildren(node: unknown, path: string, schema?: unknown): BoxedRowData[] {
-    const schemaMap = isRecord(schema) ? schema : {};
+    const schemaMap = fieldsOf(schema) ?? {};
     return stableSort(
         authoredEntries(node).map(([name, child]) =>
             normalizeNode(name, childPath(path, name), child, schemaMap[name] as PortableNode | undefined),
@@ -293,11 +305,9 @@ export function normalizeContextChildren(node: unknown, path: string, schema?: u
     );
 }
 
-export function normalizeRoot(root: PortableContext, schema?: PortableNode): BoxedRowData {
-    const name = typeof root['@model-name'] === 'string' ? root['@model-name'] : 'Model';
+export function normalizeRoot(root: PortableContext, schema?: PortableNode, name?: string): BoxedRowData {
     return {
-        ...rowBase('model', '*', name),
-        ...(typeof root['@model-version'] === 'string' ? {modelVersion: root['@model-version']} : {}),
+        ...rowBase('model', '*', name || 'Model'),
         children: normalizeContextChildren(root, '*', schema),
     };
 }

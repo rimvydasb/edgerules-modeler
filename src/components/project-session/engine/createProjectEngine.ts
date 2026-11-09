@@ -43,8 +43,8 @@ export function createProjectEngine(engineClass: ProjectEngineClass, dsl: string
     }
 
     const facade: ProjectEngine = {
-        get: (path, filter) => current.get(path, filter),
-        getCode: (path, filter) => current.getCode(path, filter),
+        get: (path, kinds) => current.get(path, kinds),
+        getCode: (path) => current.getCode(path),
         toPortable: () => current.toPortable(),
         execute: (method, input) => current.execute(method, input),
         requiresSolver: () => current.requiresSolver(),

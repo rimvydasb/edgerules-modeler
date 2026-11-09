@@ -1,5 +1,5 @@
 import type {Meta, StoryObj} from '@storybook/react-vite';
-import {userEvent, within} from 'storybook/test';
+import {fn, userEvent, within} from 'storybook/test';
 import {ProjectExplorer} from '../../../src/components/project-explorer';
 import {MODEL_DSL} from '../../../src/components/project-explorer/testing/model.dsl';
 import {openStoryProject} from '../../support/storyProject';
@@ -10,8 +10,24 @@ async function buildService(code: string) {
 }
 
 const meta: Meta<typeof ProjectExplorer> = {
-    title: 'Project Explorer/ProjectExplorer',
+    title: 'Components/Project Explorer',
     component: ProjectExplorer,
+    args: {onCollapsedChange: fn(), readOnly: false},
+    // A side panel: fixed width, full height, with a frame like the Node palette of the Flow Editor.
+    decorators: [
+        (Story) => (
+            <div
+                style={{
+                    width: 256,
+                    height: 480,
+                    display: 'flex',
+                    border: '1px solid var(--mantine-color-default-border)',
+                }}
+            >
+                <Story />
+            </div>
+        ),
+    ],
 };
 
 export default meta;
@@ -20,34 +36,34 @@ type Story = StoryObj<typeof ProjectExplorer>;
 
 export const Default: Story = {
     loaders: [async () => ({service: await buildService(MODEL_DSL)})],
-    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} />,
+    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} style={{flex: 1}} />,
 };
 
+/** The workbook expanded to its nodes, and the tests of two subjects. */
 export const Expanded: Story = {
+    args: {testSubjects: ['*', 'riskScore'], onOpen: fn(), onCreateTest: fn()},
     loaders: [async () => ({service: await buildService(MODEL_DSL)})],
-    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} />,
+    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} style={{flex: 1}} />,
     play: async ({canvasElement}) => {
         const canvas = within(canvasElement);
-        await userEvent.click(await canvas.findByText('Types'));
-        await userEvent.click(await canvas.findByText('Variables'));
+        await userEvent.click(await canvas.findByText('loanBook'));
     },
 };
 
-export const WithLinkingError: Story = {
-    // `risk` (a `firstMatch` decision table) currently renders as a plain [ctx], not [dt] — the
-    // real engine does not yet project `@kind: 'invocation'` on read (known gap, see the plan and
-    // tree-model.test.ts). This story instead demonstrates the error-badge/tooltip path: a real
-    // CRUD `remove()` call leaves a dangling reference, and `box`'s next `get()` surfaces it.
-    //
-    // The `remove()` call happens in `play` (after the story has already mounted successfully),
-    // not in the loader — breaking the reference before mount would fail the *root* fetch instead,
-    // showing the top-level error state rather than a single node's badge/tooltip.
-    loaders: [async () => ({service: await buildService('{ box: { a: 1 b: a + 1 } }')})],
-    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} />,
-    play: async ({canvasElement, loaded}) => {
+/** The add button of a section header creates a new entity with `service.set` and opens it. */
+export const CreateEntity: Story = {
+    args: {onOpen: fn()},
+    loaders: [async () => ({service: await buildService(MODEL_DSL)})],
+    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} style={{flex: 1}} />,
+    play: async ({canvasElement}) => {
         const canvas = within(canvasElement);
-        await canvas.findByText('box');
-        loaded.service.remove('box.a');
-        await userEvent.click(canvas.getByText('box'));
+        await userEvent.click(await canvas.findByRole('button', {name: 'Add to Methods'}));
     },
+};
+
+/** The host lists the documents of the project: the Documents section comes first. A click opens `doc:README.md`. */
+export const Documents: Story = {
+    args: {documents: ['README.md'], onOpen: fn()},
+    loaders: [async () => ({service: await buildService(MODEL_DSL)})],
+    render: (args, {loaded}) => <ProjectExplorer {...args} service={loaded.service} style={{flex: 1}} />,
 };

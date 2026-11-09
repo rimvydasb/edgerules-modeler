@@ -82,7 +82,7 @@ test.describe('Boxed Editor / functions', () => {
         await openBoxedEditorStory(page, 'function-crud-playground');
         await page.getByTestId('append-payment').click();
         await chooseRowAction(page, 'payment.field', 'Delete');
-        await expectLiveModel(page, /"@body":\{"@kind":"expression"/);
+        await expectLiveModel(page, /"body":\{"@kind":"expression"/);
         await expectLiveResult(page, /"result":100/);
     });
 
@@ -91,7 +91,7 @@ test.describe('Boxed Editor / functions', () => {
         await chooseRowAction(page, '*', 'Add function');
         await chooseRowAction(page, 'function', 'Add argument');
         await chooseRowAction(page, 'function', 'Delete "arg" argument');
-        await expectLiveModel(page, /"@parameters":\{\}/);
+        await expectLiveModel(page, /"parameters":\{\}/);
         await expectLiveResult(page, '{}');
     });
 

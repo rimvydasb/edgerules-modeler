@@ -89,14 +89,12 @@ describe('node menu', () => {
         expect(labels).toEqual([
             'Rename node',
             'Rename field',
-            'Change callee…',
             'Duplicate',
             'Add description',
             'Add argument',
             'Open in decision table editor',
             'Open tests',
             'View as code',
-            'Remove from flow',
             'Delete',
         ]);
         expect(within(menu).getByText('This node')).toBeInTheDocument();
@@ -154,11 +152,10 @@ describe('node menu', () => {
         expect(input).toHaveAttribute('aria-invalid', 'true');
     });
 
-    it('Change callee opens the picker', async () => {
+    it('has no Change callee item: the callee picker changes the callee', async () => {
         renderNode('decision');
         await open();
-        fireEvent.click(screen.getByRole('menuitem', {name: 'Change callee…'}));
-        expect(await screen.findByLabelText('Search functions and rulesets')).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', {name: 'Change callee…'})).toBeNull();
     });
 
     it('adds and removes a description', async () => {
@@ -172,14 +169,6 @@ describe('node menu', () => {
         await open();
         fireEvent.click(screen.getByRole('menuitem', {name: 'Remove description'}));
         expect(documentation.getDescription('decision')).toBeUndefined();
-    });
-
-    it('removes the node from the flow and keeps the field', async () => {
-        const {service, mutable} = renderNode('decision');
-        await open();
-        fireEvent.click(screen.getByRole('menuitem', {name: 'Remove from flow'}));
-        expect((mutable.toPortable() as unknown as Record<string, unknown>).decision).toBeDefined();
-        expect(service.getFunctionNode('decision').callee?.path).toBe('risk');
     });
 });
 

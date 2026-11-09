@@ -1,6 +1,7 @@
 import {MutableDecisionService} from '@edgerules/node/mutable';
 import type {PortableNode} from '@edgerules/portable';
 import type {FlowEditorEngine} from '../service/createFlowEditorService';
+import {compactModel} from '#lib/testing/compactPortable';
 
 // The sample model of the FunctionNode design proposal, with the engine's own syntax.
 export const SAMPLE_MODEL = `{
@@ -29,6 +30,7 @@ export function sampleService(): {
     portable: () => Record<string, PortableNode>;
 } {
     const mutable = MutableDecisionService.fromCode(SAMPLE_MODEL);
-    const portable = () => mutable.toPortable() as unknown as Record<string, PortableNode>;
+    // The compact model (see `compactModel`): literals as JSON values, contexts as plain objects.
+    const portable = () => compactModel(mutable) as Record<string, PortableNode>;
     return {mutable, portable};
 }

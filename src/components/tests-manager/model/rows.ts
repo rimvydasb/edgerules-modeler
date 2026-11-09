@@ -1,4 +1,5 @@
-import {isPortableError} from '../../../lib/portable';
+import {isPortableError} from '#lib/portable';
+import {authoredEntries, callableParameters} from '#lib/portableUtils';
 import type {TestRow, TestSectionId} from '../../test-cases-service';
 import type {MutableDecisionService, TestSubject} from '../tests-manager-types';
 
@@ -14,14 +15,12 @@ interface Leaf {
     type: string;
 }
 
-// Root-level `@kind: 'type-definition'` entries from the `ALL` view — user-defined `type X: {...}`
-// declarations are root-only, so no recursion is needed to collect them.
+// Root-level `@kind: 'type'` entries of the model — user-defined `type X: {...}` declarations are
+// root-only, so no recursion is needed to collect them.
 function collectTypeDefinitions(node: unknown): TypeDefinitionMap {
     const defs: TypeDefinitionMap = {};
-    if (!isRecord(node)) return defs;
-    for (const [key, value] of Object.entries(node)) {
-        if (key.startsWith('@') || !isRecord(value)) continue;
-        if (value['@kind'] === 'type-definition') defs[key] = value;
+    for (const [key, value] of authoredEntries(node)) {
+        if (isRecord(value) && value['@kind'] === 'type') defs[key] = value;
     }
     return defs;
 }
@@ -34,8 +33,8 @@ function withZeroIndex(pathSoFar: readonly string[]): string[] {
     return [...pathSoFar.slice(0, -1), `${pathSoFar[pathSoFar.length - 1]}[0]`];
 }
 
-// Expands one type reference — a bare type-name string, a `{'@kind': 'type', type, items?}` typed
-// value, or an inline `{'@kind': 'type-definition', ...fields}` record — into its leaf paths.
+// Expands one type reference — a bare type-name string, a `{'@kind': 'placeholder', type, items?}`
+// placeholder, or an inline `{'@kind': 'type', fields}` structure type — into its leaf paths.
 // A user-defined type name is resolved through `typeDefs` and expanded recursively (the engine does
 // not resolve such paths itself); a type name absent from `typeDefs` (a scalar, or simply unknown)
 // becomes a single leaf.
@@ -70,7 +69,7 @@ function expandTypeRef(
         return;
     }
 
-    if (ref['@kind'] === 'type-definition') {
+    if (ref['@kind'] === 'type') {
         expandTypeDefinitionFields(pathSoFar, ref, typeDefs, into, seen);
         return;
     }
@@ -98,17 +97,21 @@ function expandTypeDefinitionFields(
     into: Leaf[],
     seen: ReadonlySet<string>,
 ): void {
-    for (const [fieldName, fieldRef] of Object.entries(typeDef)) {
-        if (fieldName.startsWith('@')) continue;
+    // An alias type (`type Amount: <number>`) has no fields: it reads as the type it names.
+    if (typeof typeDef['alias'] === 'string') {
+        expandTypeRef(pathSoFar, typeDef['alias'], typeDefs, into, seen);
+        return;
+    }
+    for (const [fieldName, fieldRef] of authoredEntries(typeDef)) {
         expandTypeRef([...pathSoFar, fieldName], fieldRef, typeDefs, into, seen);
     }
 }
 
-// Recurses into `@kind: 'context'` nodes of the `'*'` subject's `ALL` view, classifying every
-// `type`/`expression` leaf as an input (writable) or computed leaf. `function-schema`,
-// `ruleset-schema`, `loop-schema`, `optimise`, and `type-definition` entries are subjects (or type
-// sources) in their own right and contribute no row; neither does an opaque `invocation` call site
-// — its leaves surface later, from a run result (see `flattenResult`).
+// Recurses into `@kind: 'context'` nodes of the `'*'` subject's linked view, classifying every
+// `placeholder`/`expression` leaf as an input (writable) or computed leaf. Method, ruleset, loop,
+// optimise, facts and `type` entries are subjects (or type sources) in their own right and
+// contribute no row; neither does an opaque `invocation` call site — its leaves surface later, from
+// a run result (see `flattenResult`).
 function walkDataContext(
     node: unknown,
     pathSoFar: readonly string[],
@@ -116,14 +119,13 @@ function walkDataContext(
     inputs: Leaf[],
     computed: Leaf[],
 ): void {
-    if (!isRecord(node)) return;
-    for (const [key, value] of Object.entries(node)) {
-        if (key.startsWith('@') || !isRecord(value)) continue;
+    for (const [key, value] of authoredEntries(node)) {
+        if (!isRecord(value)) continue;
         const kind = value['@kind'];
         const nextPath = [...pathSoFar, key];
         if (kind === 'context') {
             walkDataContext(value, nextPath, typeDefs, inputs, computed);
-        } else if (kind === 'type') {
+        } else if (kind === 'placeholder') {
             if (value['writeOnly']) {
                 expandTypeRef(nextPath, value, typeDefs, inputs, new Set());
             } else {
@@ -131,7 +133,13 @@ function walkDataContext(
             }
         } else if (kind === 'expression') {
             const type = typeof value['type'] === 'string' ? (value['type'] as string) : 'any';
-            expandTypeRef(nextPath, {'@kind': 'type', type, items: value['items']}, typeDefs, computed, new Set());
+            expandTypeRef(
+                nextPath,
+                {'@kind': 'placeholder', type, items: value['items']},
+                typeDefs,
+                computed,
+                new Set(),
+            );
         }
     }
 }
@@ -148,12 +156,12 @@ function buildRows(inputs: Leaf[], computed: Leaf[]): TestRow[] {
 }
 
 // Derives `subject`'s rows straight from the engine schema: input rows from its writable leaves
-// (typed holes for the `'*'` model subject, `@parameters` for a callable), computed rows from its
-// computed leaves (data-context computed fields for `'*'`, `@return`/`@result` for a callable).
+// (typed holes for the `'*'` model subject, `parameters` for a callable), computed rows from its
+// computed leaves (data-context computed fields for `'*'`, the linked `return` for a callable).
 // Freshly derived computed rows always land in `validations` — a persisted promotion to
 // `assertions` is preserved by `TestCasesService.syncRows`, not by this pure function.
 export function deriveRows(service: MutableDecisionService, subject: TestSubject): TestRow[] {
-    const allView = service.get('*', 'ALL');
+    const allView = service.get('*');
     const typeDefs = isPortableError(allView) ? {} : collectTypeDefinitions(allView);
 
     const inputs: Leaf[] = [];
@@ -166,18 +174,17 @@ export function deriveRows(service: MutableDecisionService, subject: TestSubject
         return buildRows(inputs, computed);
     }
 
-    const schema: unknown =
-        subject.kind === 'optimise' ? service.get(subject.id, 'EXTERNAL_DEFINITIONS') : service.get(subject.id);
+    const schema: unknown = service.get(subject.id);
     if (isPortableError(schema) || !isRecord(schema)) return [];
 
-    const parameters = schema['@parameters'];
+    const parameters = callableParameters(schema);
     if (isRecord(parameters)) {
         for (const [name, paramRef] of Object.entries(parameters)) {
             expandTypeRef([name], paramRef, typeDefs, inputs, new Set());
         }
     }
 
-    const returnRef = subject.kind === 'optimise' ? schema['@result'] : schema['@return'];
+    const returnRef = schema['return'];
     if (returnRef !== undefined) {
         expandTypeRef([], returnRef, typeDefs, computed, new Set());
     }

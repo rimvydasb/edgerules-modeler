@@ -1,225 +1,562 @@
-import {useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode} from 'react';
-import {Alert, Tree, useTree, type RenderTreeNodePayload, type TreeNodeData} from '@mantine/core';
-import {IconChevronRight} from '@tabler/icons-react';
-import type {PortableContext, PortableError, PortableNode} from '@edgerules/portable';
-import {cx} from '../../ui/cx';
-import {isPortableError} from '../../lib/portable';
-import {groupContextChildren, listTypeEntries, ROOT_FETCH_PATH, ROOT_PATH, type NamedEntry} from './tree-model';
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type KeyboardEvent,
+    type MouseEvent,
+    type ReactElement,
+    type ReactNode,
+} from 'react';
+import {
+    ActionIcon,
+    Alert,
+    CloseButton,
+    Menu,
+    ScrollArea,
+    TextInput,
+    Tooltip,
+    Tree,
+    useTree,
+    type RenderTreeNodePayload,
+    type TreeNodeData,
+} from '@mantine/core';
+import {IconChevronRight, IconLayoutSidebarLeftCollapse, IconPlus, IconSearch} from '@tabler/icons-react';
+import type {PortableContext, PortableError, PortableNode, PortableSetValue} from '@edgerules/portable';
+import {cx} from '#ui/cx';
+import {isPortableError} from '#lib/portable';
+import {CREATE_OPTIONS, type CreateOption} from './create-templates';
+import {CreateDialog} from './CreateDialog';
 import {KindIcon, type IconKind} from './icons';
+import {
+    buildSections,
+    ROOT_FETCH_PATH,
+    type ExplorerEntry,
+    type ExplorerEntryKind,
+    type ExplorerSection,
+    type ExplorerSections,
+} from './tree-model';
 import * as classes from './projectExplorer.module.css';
 
-type GetFilter = 'FIELDS' | 'TYPE_DEFINITIONS' | 'FUNCTION_DEFINITIONS' | 'EXTERNAL_DEFINITIONS' | 'ALL';
-
 interface ProjectExplorerService {
-    get(path: string, filter?: GetFilter): PortableNode | PortableError;
+    get(path: string): PortableNode | PortableError;
+    // Creates the new types, methods, variables and workbooks; without it the explorer only reads.
+    set?(path: string, node: PortableSetValue): PortableNode | PortableError;
+}
+
+/** The entry the user opened: its kind and its fully qualified model path (the subject ID of a test). */
+export interface ProjectExplorerOpenTarget {
+    kind: ExplorerEntryKind;
+    path: string;
 }
 
 export interface ProjectExplorerProps {
-    /** The engine service to read the model from. Only `get` is used today; `set`/`remove`/`rename` support is coming. */
+    /** The engine service to read the model from, and to create new entities with `set`. */
     service: ProjectExplorerService;
-    /** Heading rendered above the tree; not a tree node itself. */
+    /** Title of the panel header; not a tree node itself. */
     rootLabel?: string;
-    onOpenVariables?: (contextPath: string) => void;
-    onOpenFunction?: (functionPath: string) => void;
-    onOpenDecisionTable?: (tablePath: string) => void;
-    onOpenTypes?: (focusTypeName?: string) => void;
+    /** Shows the rail of section icons instead of the panel. */
+    collapsed?: boolean;
+    /** Shows a hide button in the header; a rail icon expands the panel with its section open. */
+    onCollapsedChange?: (collapsed: boolean) => void;
+    /** Any value that changes with the model, e.g. the model version; a change re-reads the model. */
+    revision?: unknown;
+    /**
+     * The document files of the project, such as `README.md`; the explorer does not read them from the engine. An
+     * entry opens as `{kind: 'document', path: 'doc:README.md'}`. Without it there is no Documents section.
+     */
+    documents?: readonly string[];
+    /** The test subjects that have tests: '*' for the model, or a method path. */
+    testSubjects?: readonly string[];
+    /** Hides the add buttons of the sections. */
+    readOnly?: boolean;
+    /** A click on an entry, or a new entry. */
+    onOpen?: (target: ProjectExplorerOpenTarget) => void;
+    /** Adds a test to a subject; shows the add button of Tests. The explorer then opens the subject's tests. */
+    onCreateTest?: (subjectId: string) => void;
+    /**
+     * The entity the host shows: the explorer expands its section (and workbook) and selects its entry, or the entry of
+     * its nearest listed ancestor. `test` selects the entry of the subject in Tests. A change of the entry reveals it
+     * again.
+     */
+    selected?: {path: string; test?: boolean};
     className?: string;
     style?: CSSProperties;
 }
 
-function typesGroupItemId(): string {
-    return `${ROOT_PATH}::types`;
+const NO_SUBJECTS: readonly string[] = [];
+
+const SECTIONS: {section: ExplorerSection; label: string}[] = [
+    {section: 'documents', label: 'Documents'},
+    {section: 'types', label: 'Types'},
+    {section: 'factsLibrary', label: 'Facts Library'},
+    {section: 'methods', label: 'Methods'},
+    {section: 'decisions', label: 'Decisions'},
+    {section: 'services', label: 'Service Methods'},
+    {section: 'variables', label: 'Variables'},
+    {section: 'workbooks', label: 'Workbooks'},
+    {section: 'tests', label: 'Tests'},
+];
+
+function sectionItemId(section: ExplorerSection): string {
+    return `section:${section}`;
 }
 
-function varsGroupItemId(contextPath: string): string {
-    return `${contextPath}::vars`;
+// The expansion of the tree: a node value to whether it is expanded.
+type ExpandedState = Record<string, boolean>;
+
+// Every section starts expanded.
+const SECTIONS_EXPANDED: ExpandedState = Object.fromEntries(
+    SECTIONS.map(({section}) => [sectionItemId(section), true]),
+);
+
+// The entries whose label contains the query, ignoring case. A workbook stays with its matching nodes, and a matching
+// workbook keeps all its nodes.
+function filterEntries(entries: ExplorerEntry[], query: string): ExplorerEntry[] {
+    const matches = (entry: ExplorerEntry) => entry.label.toLowerCase().includes(query);
+    return entries.flatMap((entry) => {
+        if (matches(entry)) return [entry];
+        const children = entry.children?.filter(matches) ?? [];
+        return children.length > 0 ? [{...entry, children}] : [];
+    });
 }
 
-function typeEntryItemId(name: string): string {
-    return `@types.${name}`;
+// Every node of the tree expanded, while a search shows all its matches.
+function allExpanded(data: TreeNodeData[], state: ExpandedState = {}): ExpandedState {
+    for (const node of data) {
+        state[node.value] = true;
+        if (node.children) allExpanded(node.children, state);
+    }
+    return state;
 }
 
-function isFetchableContextPath(itemId: string): boolean {
-    return !itemId.includes('::') && !itemId.startsWith('@types.');
+function entryItemId(kind: ExplorerEntryKind, path: string): string {
+    return `${kind}:${path}`;
 }
 
-/** What a node renders: its icon kind, text and optional error badge. Kept in `nodeProps`. */
+/** What a node renders. Kept in `nodeProps`. */
 interface NodeMeta {
     kind: IconKind;
     text: string;
-    error?: PortableError;
+    section?: ExplorerSection; // set on a section header
+    count?: number; // the member count of a section
+    target?: ProjectExplorerOpenTarget; // set on an entry
 }
 
-function node(value: string, meta: NodeMeta | null, children?: TreeNodeData[]): TreeNodeData {
-    return {value, label: meta?.text ?? '', nodeProps: {meta}, ...(children ? {children} : {})};
+const CODE_KINDS = new Set<IconKind>(['function', 'service', 'ruleset', 'test']);
+
+/** Where an entry is in the tree: its section, its own item, and the item of its workbook for a node. */
+interface EntryLocation {
+    section: ExplorerSection;
+    itemId: string;
+    parentId?: string;
 }
 
-function renderNode(
-    {node: data, expanded, hasChildren, elementProps}: RenderTreeNodePayload,
-    onSelect: (value: string) => void,
-): ReactNode {
-    const meta = data.nodeProps?.meta as NodeMeta | null | undefined;
-    return (
-        <div
-            {...elementProps}
-            className={cx(elementProps.className, classes.node)}
-            onClick={(event) => {
-                elementProps.onClick(event);
-                onSelect(data.value);
-            }}
-        >
-            <IconChevronRight
-                size={14}
-                className={cx(classes.chevron, expanded && classes.chevronOpen, !hasChildren && classes.chevronHidden)}
-                aria-hidden="true"
-            />
-            {meta ? (
-                <span className={classes.label}>
-                    <KindIcon kind={meta.kind} error={meta.error} />
-                    <span>{meta.text}</span>
-                </span>
-            ) : null}
-        </div>
-    );
+function locate(sections: ExplorerSections, path: string, test: boolean): EntryLocation | undefined {
+    for (const {section} of SECTIONS) {
+        if ((section === 'tests') !== test) continue;
+        for (const entry of sections[section]) {
+            if (entry.path === path) return {section, itemId: entryItemId(entry.kind, entry.path)};
+            const child = entry.children?.find((candidate) => candidate.path === path);
+            if (child) {
+                return {
+                    section,
+                    itemId: entryItemId(child.kind, child.path),
+                    parentId: entryItemId(entry.kind, entry.path),
+                };
+            }
+        }
+    }
+    return undefined;
+}
+
+// The entry of `path`, or of its nearest listed ancestor: a field inside a context is not listed, its root context is.
+// A test subject has no ancestor in Tests.
+function locateEntry(sections: ExplorerSections, path: string, test: boolean): EntryLocation | undefined {
+    if (test) return locate(sections, path, true);
+    for (let current = path; ; current = current.slice(0, current.lastIndexOf('.'))) {
+        const location = locate(sections, current, false);
+        if (location || !current.includes('.')) return location;
+    }
+}
+
+function entryNode(entry: ExplorerEntry): TreeNodeData {
+    const meta: NodeMeta = {kind: entry.kind, text: entry.label, target: {kind: entry.kind, path: entry.path}};
+    return {
+        value: entryItemId(entry.kind, entry.path),
+        label: entry.label,
+        nodeProps: {meta},
+        ...(entry.children?.length ? {children: entry.children.map(entryNode)} : {}),
+    };
+}
+
+/** The new entity the name dialog is open for. */
+interface PendingCreate {
+    section: ExplorerSection;
+    option: CreateOption;
 }
 
 /**
- * Renders a tree view of an EdgeRules Portable Format model (docs/PROJECT_EXPLORER_STORY.md).
- * `[ctx]` nodes are fetched lazily (one `service.get(path)` call per expansion); `[types]`/`[vars]`
- * group expansion is client-side only since their children arrive with the containing fetch.
+ * The project tree: Documents, Types, Methods, Service Methods, Variables, Workbooks and Tests (docs/stories/project-explorer-redesign.md). It
+ * reads the model with `service.get` calls and reports the opened entry through `onOpen`; the host picks the
+ * editor. Each section header has an add button that creates a new entity with `service.set` and opens it.
  */
 export function ProjectExplorer({
     service,
     rootLabel = 'Project',
-    onOpenVariables,
-    onOpenFunction,
-    onOpenDecisionTable,
-    onOpenTypes,
+    collapsed = false,
+    onCollapsedChange,
+    revision,
+    documents,
+    testSubjects = NO_SUBJECTS,
+    readOnly = false,
+    onOpen,
+    onCreateTest,
+    selected,
     className,
     style,
 }: ProjectExplorerProps): ReactElement {
-    const [contextCache, setContextCache] = useState<Map<string, PortableNode | PortableError>>(
-        () => new Map([[ROOT_PATH, service.get(ROOT_FETCH_PATH)]]),
+    // A create bumps it, so a host without a `revision` sees the new entity too.
+    const [created, setCreated] = useState(0);
+    const model = useMemo(
+        () => service.get(ROOT_FETCH_PATH),
+        // `revision` and `created` stand for model changes the service does not report.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [service, revision, created],
     );
-    const [rootTypes] = useState<PortableNode | PortableError>(() => service.get(ROOT_FETCH_PATH, 'TYPE_DEFINITIONS'));
+    const sections = useMemo(
+        () => (isPortableError(model) ? undefined : buildSections(model as PortableContext, testSubjects, documents)),
+        [model, testSubjects, documents],
+    );
+    // The sections the explorer shows: Documents only for a host that lists documents.
+    const shown = useMemo(
+        () => SECTIONS.filter(({section}) => section !== 'documents' || documents !== undefined),
+        [documents],
+    );
 
+    const [query, setQuery] = useState('');
+    const search = query.trim().toLowerCase();
+    const [expanded, setExpanded] = useState<ExpandedState>(SECTIONS_EXPANDED);
+    const [pending, setPending] = useState<PendingCreate | undefined>();
+
+    const onOpenRef = useRef(onOpen);
+    onOpenRef.current = onOpen;
+
+    // A search hides the sections without matches.
+    const data = useMemo(
+        () =>
+            shown.flatMap(({section, label}) => {
+                const all = sections?.[section] ?? [];
+                const entries = search ? filterEntries(all, search) : all;
+                if (search && entries.length === 0) return [];
+                const meta: NodeMeta = {kind: section, text: label, section, count: entries.length};
+                return [{value: sectionItemId(section), label, nodeProps: {meta}, children: entries.map(entryNode)}];
+            }),
+        [shown, sections, search],
+    );
+
+    // A search shows every match: the tree is expanded while it lasts, and the user's expansion comes back after it.
     const tree = useTree({
-        onNodeExpand: (value) => {
-            if (!isFetchableContextPath(value) || contextCache.has(value)) return;
-            setContextCache((previous) => new Map(previous).set(value, service.get(value)));
+        expandedState: search ? allExpanded(data) : expanded,
+        onExpandedStateChange: (state) => {
+            if (!search) setExpanded(state);
         },
     });
 
-    const handlersRef = useRef({onOpenVariables, onOpenFunction, onOpenDecisionTable, onOpenTypes});
-    handlersRef.current = {onOpenVariables, onOpenFunction, onOpenDecisionTable, onOpenTypes};
-
-    const rootNode = contextCache.get(ROOT_PATH);
-    const {data, actions} = useMemo(() => {
-        // Populated while building the data below; consumed when a node is clicked.
-        const actions = new Map<string, () => void>();
-        function varsGroup(contextPath: string, vars: NamedEntry[]): TreeNodeData {
-            const itemId = varsGroupItemId(contextPath);
-            actions.set(itemId, () => handlersRef.current.onOpenVariables?.(contextPath));
-
-            return node(
-                itemId,
-                {kind: 'vars', text: 'Variables'},
-                vars.map((entry) => {
-                    actions.set(entry.path, () => handlersRef.current.onOpenVariables?.(contextPath));
-                    return node(entry.path, {kind: 'var', text: entry.name});
-                }),
-            );
+    // The entry of the entity the host shows: revealed whenever it changes, also after the user collapsed its section.
+    const rootRef = useRef<HTMLElement>(null);
+    const location = useMemo(
+        () => (sections && selected ? locateEntry(sections, selected.path, selected.test ?? false) : undefined),
+        [sections, selected?.path, selected?.test],
+    );
+    useEffect(() => {
+        if (!selected) return;
+        if (!location) {
+            tree.clearSelected();
+            return;
         }
-
-        function typesGroup(): TreeNodeData {
-            const itemId = typesGroupItemId();
-
-            if (isPortableError(rootTypes)) {
-                return node(itemId, {kind: 'types', text: 'Types', error: rootTypes});
-            }
-
-            actions.set(itemId, () => handlersRef.current.onOpenTypes?.());
-            const entries = listTypeEntries(rootTypes as PortableContext);
-
-            return node(
-                itemId,
-                {kind: 'types', text: 'Types'},
-                entries.map((entry) => {
-                    const entryItemId = typeEntryItemId(entry.name);
-                    actions.set(entryItemId, () => handlersRef.current.onOpenTypes?.(entry.name));
-                    return node(entryItemId, {kind: 'type', text: entry.name});
-                }),
-            );
-        }
-
-        function orderedEntry(entry: NamedEntry): TreeNodeData {
-            if (entry.kind === 'func') {
-                actions.set(entry.path, () => handlersRef.current.onOpenFunction?.(entry.path));
-                return node(entry.path, {kind: 'func', text: `${entry.name}()`});
-            }
-
-            if (entry.kind === 'dt') {
-                actions.set(entry.path, () => handlersRef.current.onOpenDecisionTable?.(entry.path));
-                return node(entry.path, {kind: 'dt', text: `${entry.name}()`});
-            }
-
-            // entry.kind === 'ctx'
-            const cached = contextCache.get(entry.path);
-            const error = cached !== undefined && isPortableError(cached) ? cached : undefined;
-            const meta: NodeMeta = {kind: 'ctx', text: entry.name, error};
-
-            if (error) {
-                // Treat as a leaf until the underlying model is fixed and the path resolves again.
-                return node(entry.path, meta);
-            }
-
-            return node(
-                entry.path,
-                meta,
-                cached !== undefined ? contextChildren(entry.path, false) : [node(`${entry.path}::placeholder`, null)],
-            );
-        }
-
-        function contextChildren(contextPath: string, isRoot: boolean): TreeNodeData[] {
-            const context = contextCache.get(contextPath) as PortableContext;
-            const {vars, ordered} = groupContextChildren(contextPath, context);
-            const children: TreeNodeData[] = [];
-
-            if (isRoot) {
-                children.push(typesGroup());
-            }
-            if (vars.length > 0) {
-                children.push(varsGroup(contextPath, vars));
-            }
-            for (const entry of ordered) {
-                children.push(orderedEntry(entry));
-            }
-            return children;
-        }
-
-        return {
-            data: isPortableError(rootNode) ? [] : contextChildren(ROOT_PATH, true),
-            actions,
-        };
+        const {section, itemId, parentId} = location;
+        setExpanded((current) => ({
+            ...current,
+            [sectionItemId(section)]: true,
+            ...(parentId !== undefined && {[parentId]: true}),
+        }));
+        tree.select(itemId);
+        // The entry renders once its section is expanded; it scrolls into view in the next frame.
+        const frame = requestAnimationFrame(() => {
+            const item = rootRef.current?.querySelector(`[role=treeitem][data-value="${CSS.escape(itemId)}"]`);
+            item?.scrollIntoView?.({block: 'nearest'});
+        });
+        return () => cancelAnimationFrame(frame);
+        // `tree` is a new object on every render; the reveal follows the located entry only.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [contextCache, rootTypes]);
+    }, [location?.itemId, selected === undefined]);
+
+    const expandOnly = (section: ExplorerSection) => {
+        setQuery('');
+        setExpanded((current) => ({
+            ...current,
+            ...Object.fromEntries(SECTIONS.map((item) => [sectionItemId(item.section), item.section === section])),
+        }));
+        onCollapsedChange?.(false);
+    };
+
+    // The names a new root entity must not take: root fields and types share one namespace for the user.
+    const taken = useMemo(() => {
+        const names = new Set<string>();
+        for (const entry of [
+            ...(sections?.types ?? []),
+            ...(sections?.variables ?? []),
+            ...(sections?.workbooks ?? []),
+        ])
+            names.add(entry.path);
+        for (const entry of [
+            ...(sections?.methods ?? []),
+            ...(sections?.decisions ?? []),
+            ...(sections?.services ?? []),
+        ])
+            if (!entry.path.includes('.')) names.add(entry.path);
+        return names;
+    }, [sections]);
+
+    const canCreate = !readOnly && service.set !== undefined;
+    const testSubjectOptions: {path: string; label: string; untypedArguments?: string[]}[] = [
+        {path: '*', label: 'Model'},
+        // The methods, the decisions and the services, by name.
+        ...[...(sections?.methods ?? []), ...(sections?.decisions ?? []), ...(sections?.services ?? [])]
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .map((entry) => ({
+                path: entry.path,
+                label: entry.label,
+                untypedArguments: entry.untypedArguments,
+            })),
+    ];
+    const hasGenericMethod = testSubjectOptions.some((subject) => subject.untypedArguments);
+
+    const open = (target: ProjectExplorerOpenTarget) => onOpenRef.current?.(target);
+
+    const createTest = (subjectId: string) => {
+        onCreateTest?.(subjectId);
+        tree.expand(sectionItemId('tests'));
+        tree.select(entryItemId('test', subjectId));
+        open({kind: 'test', path: subjectId});
+    };
+
+    function addButton(section: ExplorerSection, label: string): ReactNode {
+        const stop = {
+            onClick: (event: MouseEvent) => event.stopPropagation(),
+            onKeyDown: (event: KeyboardEvent) => event.stopPropagation(),
+        };
+        const trigger = (onClick?: () => void) => (
+            <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                className={classes.add}
+                aria-label={`Add to ${label}`}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onClick?.();
+                }}
+                onKeyDown={stop.onKeyDown}
+            >
+                <IconPlus size={14} />
+            </ActionIcon>
+        );
+
+        if (section === 'tests') {
+            if (readOnly || !onCreateTest) return null;
+            return (
+                <span {...stop}>
+                    <Menu position="bottom-end" withinPortal shadow="md">
+                        <Menu.Target>{trigger()}</Menu.Target>
+                        <Menu.Dropdown>
+                            <Menu.Label>New test of</Menu.Label>
+                            {testSubjectOptions.map((subject) => (
+                                <Menu.Item
+                                    key={subject.path}
+                                    disabled={subject.untypedArguments !== undefined}
+                                    rightSection={
+                                        subject.untypedArguments && (
+                                            <span className={classes.menuItemNote}>
+                                                untyped: {subject.untypedArguments.join(', ')}
+                                            </span>
+                                        )
+                                    }
+                                    onClick={() => createTest(subject.path)}
+                                >
+                                    {subject.label}
+                                </Menu.Item>
+                            ))}
+                            {hasGenericMethod && (
+                                <div className={classes.menuHint} data-testid="explorer-untyped-hint">
+                                    Only functions with typed arguments can be tested.
+                                </div>
+                            )}
+                        </Menu.Dropdown>
+                    </Menu>
+                </span>
+            );
+        }
+
+        // A document is a project file: the explorer does not create one.
+        if (section === 'documents' || section === 'factsLibrary' || section === 'decisions' || !canCreate) return null;
+        const options = CREATE_OPTIONS[section];
+        if (options.length === 1) {
+            return <span {...stop}>{trigger(() => setPending({section, option: options[0]!}))}</span>;
+        }
+        return (
+            <span {...stop}>
+                <Menu position="bottom-end" withinPortal shadow="md">
+                    <Menu.Target>{trigger()}</Menu.Target>
+                    <Menu.Dropdown>
+                        {options.map((option) => (
+                            <Menu.Item
+                                key={option.kind}
+                                leftSection={<KindIcon kind={option.kind} />}
+                                onClick={() => setPending({section, option})}
+                            >
+                                {option.label}
+                            </Menu.Item>
+                        ))}
+                    </Menu.Dropdown>
+                </Menu>
+            </span>
+        );
+    }
+
+    function renderNode({node: item, expanded, hasChildren, elementProps}: RenderTreeNodePayload): ReactNode {
+        const meta = item.nodeProps?.meta as NodeMeta | undefined;
+        if (!meta) return null;
+        return (
+            <div
+                {...elementProps}
+                className={cx(elementProps.className, classes.node, meta.section && classes.heading)}
+                onClick={(event) => {
+                    elementProps.onClick(event);
+                    // Only an entry is selected: a section header expands or collapses, and the entry stays selected.
+                    if (meta.target) {
+                        tree.select(item.value);
+                        open(meta.target);
+                    }
+                }}
+            >
+                <IconChevronRight
+                    size={14}
+                    className={cx(
+                        classes.chevron,
+                        expanded && classes.chevronOpen,
+                        !hasChildren && classes.chevronHidden,
+                    )}
+                    aria-hidden="true"
+                />
+                <span className={classes.label}>
+                    {meta.section ? null : <KindIcon kind={meta.kind} />}
+                    <span
+                        className={cx(
+                            classes.text,
+                            meta.section && classes.group,
+                            CODE_KINDS.has(meta.kind) && classes.textCode,
+                        )}
+                    >
+                        {meta.text}
+                    </span>
+                    {meta.count !== undefined ? <span className={classes.count}>{meta.count}</span> : null}
+                </span>
+                {meta.section ? addButton(meta.section, meta.text) : null}
+            </div>
+        );
+    }
+
+    if (collapsed) {
+        return (
+            <nav className={cx(classes.root, classes.rail, className)} style={style} aria-label="Project explorer">
+                {shown.map(({section, label}) => (
+                    <Tooltip key={section} label={label} position="right" withArrow>
+                        <button
+                            type="button"
+                            className={classes.railItem}
+                            aria-label={`Show ${label}`}
+                            onClick={() => expandOnly(section)}
+                        >
+                            <KindIcon kind={section} />
+                        </button>
+                    </Tooltip>
+                ))}
+            </nav>
+        );
+    }
 
     return (
-        <div className={className} style={style}>
-            {rootLabel ? <div className={classes.heading}>{rootLabel}</div> : null}
-            {isPortableError(rootNode) ? (
-                <Alert color="red" variant="light">
-                    {rootNode.message}
-                </Alert>
-            ) : (
-                <Tree
-                    data={data}
-                    tree={tree}
-                    levelOffset="md"
-                    expandOnClick
-                    renderNode={(payload) => renderNode(payload, (value) => actions.get(value)?.())}
+        <nav ref={rootRef} className={cx(classes.root, className)} style={style} aria-label="Project explorer">
+            {rootLabel || onCollapsedChange ? (
+                <div className={classes.header}>
+                    <span className={classes.title}>{rootLabel}</span>
+                    {onCollapsedChange ? (
+                        <Tooltip label="Hide project explorer" withArrow>
+                            <ActionIcon
+                                variant="subtle"
+                                color="gray"
+                                size="sm"
+                                aria-label="Hide project explorer"
+                                onClick={() => onCollapsedChange(true)}
+                            >
+                                <IconLayoutSidebarLeftCollapse size={16} />
+                            </ActionIcon>
+                        </Tooltip>
+                    ) : null}
+                </div>
+            ) : null}
+            <div className={classes.search}>
+                <TextInput
+                    size="xs"
+                    placeholder="Search project"
+                    aria-label="Search project"
+                    leftSection={<IconSearch size={14} />}
+                    rightSection={
+                        query && <CloseButton size="xs" aria-label="Clear search" onClick={() => setQuery('')} />
+                    }
+                    value={query}
+                    onChange={(event) => setQuery(event.currentTarget.value)}
                 />
-            )}
-        </div>
+            </div>
+            <ScrollArea className={classes.body} type="hover" scrollbarSize={6}>
+                {!isPortableError(model) && search && data.length === 0 ? (
+                    <div className={classes.empty}>No entries match “{query.trim()}”</div>
+                ) : null}
+                {isPortableError(model) ? (
+                    <Alert className={classes.error} color="red" variant="light">
+                        {model.message}
+                    </Alert>
+                ) : (
+                    <Tree
+                        className={classes.tree}
+                        data={data}
+                        tree={tree}
+                        levelOffset={20}
+                        expandOnClick
+                        renderNode={renderNode}
+                    />
+                )}
+            </ScrollArea>
+            {pending ? (
+                <CreateDialog
+                    option={pending.option}
+                    taken={taken}
+                    onCancel={() => setPending(undefined)}
+                    onCreate={(name) => {
+                        const result = service.set!(name, pending.option.template());
+                        if (isPortableError(result)) return result.message;
+                        setPending(undefined);
+                        setCreated((count) => count + 1);
+                        tree.expand(sectionItemId(pending.section));
+                        tree.select(entryItemId(pending.option.kind, name));
+                        open({kind: pending.option.kind, path: name});
+                        return undefined;
+                    }}
+                />
+            ) : null}
+        </nav>
     );
 }

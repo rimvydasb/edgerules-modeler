@@ -1,4 +1,4 @@
-import {IconDotsVertical, IconGripVertical} from '@tabler/icons-react';
+import {IconDotsVertical, IconGripVertical, IconLoader2} from '@tabler/icons-react';
 import {useSortable} from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import {useState, useSyncExternalStore, type CSSProperties, type ReactElement} from 'react';
@@ -6,7 +6,7 @@ import type {TestCase} from '../../test-cases-service';
 import {useTestsManagerContext} from '../context/TestsManagerContext';
 import {testCaseActionsFor} from '../menu/actions';
 import {TestsMenu} from '../menu/TestsMenu';
-import {cx} from '../../../ui/cx';
+import {cx} from '#ui/cx';
 import * as classes from './testsGrid.module.css';
 
 // Three fixed parts: a 40x40 drag handle (reorders the column via `useColumnDrag`'s
@@ -51,7 +51,7 @@ export function TestCaseHeaderCell({testCase}: {testCase: TestCase}): ReactEleme
                     {...sortable.listeners}
                     className={cx(classes.caseHandle, classes.drag)}
                 >
-                    <IconGripVertical size={16} />
+                    <IconGripVertical size={19} />
                 </span>
             )}
             <span
@@ -75,13 +75,20 @@ export function TestCaseHeaderCell({testCase}: {testCase: TestCase}): ReactEleme
                 ) : (
                     <span className={classes.caseNameText}>{testCase.name}</span>
                 )}
-                {isRunning ? <span data-testid={`running-${testCase.id}`}>⏳</span> : null}
+                {isRunning ? (
+                    <IconLoader2
+                        size={14}
+                        data-testid={`running-${testCase.id}`}
+                        aria-label="running"
+                        className={cx(classes.caseRunning, classes.spin)}
+                    />
+                ) : null}
             </span>
             {!readOnly && (
                 <span className={classes.caseMenu}>
                     <TestsMenu actions={testCaseActionsFor(testCase, testCasesService, runner)}>
                         <button type="button" aria-label={`case menu ${testCase.name}`} className={classes.iconButton}>
-                            <IconDotsVertical size={16} />
+                            <IconDotsVertical size={20} />
                         </button>
                     </TestsMenu>
                 </span>

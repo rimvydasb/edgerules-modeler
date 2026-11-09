@@ -1,6 +1,6 @@
 import {MutableDecisionService} from '@edgerules/node/mutable';
 import {describe, expect, it} from 'vitest';
-import {listCallables} from '../callables';
+import {listCallables, untypedParameters} from '../callables';
 
 const MODEL = `{
     library: {
@@ -54,5 +54,37 @@ describe('listCallables', () => {
 
     it('returns an empty list for a model without callables', () => {
         expect(listCallables(MutableDecisionService.fromCode('{ a: 1 }'))).toEqual([]);
+    });
+});
+
+describe('untypedParameters', () => {
+    it('lists the arguments without a type, in declaration order', () => {
+        const service = MutableDecisionService.fromCode(`{
+            func total(plan, tier: string, extra): { r: tier }
+            func typed(age: number): { r: age }
+        }`);
+        expect(untypedParameters(service.get('total'))).toEqual(['plan', 'extra']);
+        expect(untypedParameters(service.get('typed'))).toEqual([]);
+        expect(untypedParameters(undefined)).toEqual([]);
+    });
+});
+
+describe('decision declarations', () => {
+    const LAYERS = `{
+        type Applicant: { age: <number> }
+        facts ApplicantFacts(applicant: Applicant): { old: applicant.age > 60 }
+        decision Eligibility(applicant: Applicant): { adult: applicant.age >= 18 }
+        service approve(applicant: Applicant): { return: applicant.Eligibility.adult }
+    }`;
+
+    it('lists a decision as a function, and reads its `context` as its parameters', () => {
+        const service = MutableDecisionService.fromCode(LAYERS);
+        expect(listCallables(service)).toEqual(
+            expect.arrayContaining([
+                {path: 'Eligibility', kind: 'function'},
+                {path: 'approve', kind: 'function'},
+            ]),
+        );
+        expect(untypedParameters(service.get('Eligibility'))).toEqual([]);
     });
 });

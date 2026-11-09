@@ -1,16 +1,21 @@
 import type {
+    HitPolicy,
     PortableContext,
+    PortableExpression,
     PortableNode,
+    PortablePlaceholderValue,
+    PortableReturnType,
     PortableRule,
-    PortableRulesetDefinition,
-    PortableRulesetSchema,
-    PortableTypeDefinition,
+    PortableRuleset,
+    PortableType,
     PortableTypeReference,
-    PortableTypedValue,
 } from '@edgerules/portable';
 import type {CodeEditorEmbedContext} from '../code-editor/language/service';
 
-export type HitPolicy = PortableRulesetDefinition['@hitPolicy'];
+export type {HitPolicy};
+
+/** The `fields` of a `then` or `default` context: output column name -> cell value. */
+type ThenFields = PortableContext['fields'];
 
 export const HIT_POLICIES: Array<{value: HitPolicy; badge: string; label: string}> = [
     {value: 'first-match', badge: 'F', label: 'First match'},
@@ -57,25 +62,28 @@ function isExpressionNode(node: unknown): node is {expression: unknown} {
 }
 
 function isContextNode(node: unknown): node is PortableContext {
-    return isRecord(node) && (node['@kind'] === 'context' || node['@kind'] === undefined);
+    return isRecord(node) && node['@kind'] === 'context';
 }
 
-export function typeLabelOf(
-    type: PortableTypeReference | PortableTypedValue | PortableTypeDefinition | null | undefined,
-): string {
+function contextFields(node: unknown): ThenFields {
+    return isContextNode(node) && isRecord(node.fields) ? node.fields : {};
+}
+
+export function typeLabelOf(type: PortableReturnType | null | undefined): string {
     if (type === null || type === undefined) {
         return '';
     }
     if (typeof type === 'string') {
         return type;
     }
-    if (type['@kind'] === 'type-definition') {
+    if (type['@kind'] === 'type') {
         return 'object';
     }
-    const typed = type as PortableTypedValue;
+    const typed = type as PortablePlaceholderValue;
     if (typed.type === 'array') {
         const items = typed.items;
-        return `${typeof items === 'string' ? items : (items?.type ?? '')}[]`;
+        const itemType = typeof items === 'string' ? items : items?.['@kind'] === 'placeholder' ? items.type : '';
+        return `${itemType}[]`;
     }
     return typed.type ?? '';
 }
@@ -107,7 +115,7 @@ export function prettyUnaryTest(raw: string): string {
 }
 
 /** Serializes a Portable `then`/`default` cell value back to editable DSL text. */
-export function formatCellValue(node: PortableNode | undefined): string {
+export function formatCellValue(node: unknown): string {
     if (node === undefined) {
         return '';
     }
@@ -123,46 +131,50 @@ export function formatCellValue(node: PortableNode | undefined): string {
     if (isExpressionNode(node)) {
         return formatCellValue(node.expression as PortableNode);
     }
-    if (isRecord(node)) {
-        const entries = Object.entries(node)
-            .filter(([key]) => !key.startsWith('@'))
-            .map(([key, value]) => `${key}: ${formatCellValue(value as PortableNode)}`);
+    if (isContextNode(node)) {
+        const entries = Object.entries(contextFields(node)).map(
+            ([key, value]) => `${key}: ${formatCellValue(value as PortableNode)}`,
+        );
         return `{ ${entries.join(', ')} }`;
     }
     return String(node);
 }
 
-export function parameterNames(definition: PortableRulesetDefinition): string[] {
-    return Object.keys(definition['@parameters']);
+export function parameterNames(definition: PortableRuleset): string[] {
+    return Object.keys(definition.parameters);
 }
 
 function ruleThenIsScalar(rule: PortableRule): boolean {
     return !isContextNode(rule.then);
 }
 
+/**
+ * The table of `definition`. `schema` gives the inferred result type (`return`, a linked key): the linked `get` of the
+ * ruleset carries it, so `definition` itself is the schema when it comes from a linked `get`.
+ */
 export function buildTableModel(
-    definition: PortableRulesetDefinition,
-    schema?: PortableRulesetSchema,
+    definition: PortableRuleset,
+    schema?: {return?: PortableReturnType},
 ): DecisionTableModel {
-    const params = definition['@parameters'];
+    const params = definition.parameters;
     const inputs: DecisionTableColumn[] = Object.entries(params).map(([name, type]) => ({
         kind: 'input',
         name,
         typeLabel: typeLabelOf(type),
     }));
 
-    const rules = definition['@rules'];
+    const rules = definition.rules;
     const scorecard = rules.length > 0 && rules.every(ruleThenIsScalar);
 
-    const returnType = schema?.['@return'];
+    const returnType = (schema ?? definition).return;
     const returnFields =
-        isRecord(returnType) && returnType['@kind'] === 'type-definition'
-            ? (returnType as unknown as PortableTypeDefinition)
+        isRecord(returnType) && returnType['@kind'] === 'type'
+            ? ((returnType as PortableType).fields ?? {})
             : undefined;
 
     let outputs: DecisionTableColumn[];
     if (scorecard) {
-        // The schema's @return is the call result (an array under collect-matches); each cell
+        // The schema's `return` is the call result (an array under collect-matches); each cell
         // holds a single score, so strip the list suffix for the column label.
         const label = returnFields ? '' : typeLabelOf(returnType as PortableTypeReference);
         outputs = [
@@ -173,33 +185,36 @@ export function buildTableModel(
             },
         ];
     } else {
-        // Authored column order comes from the first rule's `then` (the schema's @return sorts
+        // Authored column order comes from the first rule's `then` (the schema's `return` sorts
         // fields alphabetically); the schema supplies the inferred types.
-        const firstThen = rules.find((rule) => isContextNode(rule.then))?.then ?? definition['@default'];
-        const names = firstThen
-            ? Object.keys(firstThen).filter((key) => !key.startsWith('@'))
-            : Object.keys(returnFields ?? {}).filter((key) => !key.startsWith('@'));
+        const firstThen = rules.find((rule) => isContextNode(rule.then))?.then ?? definition.default;
+        const names = isContextNode(firstThen)
+            ? Object.keys(contextFields(firstThen))
+            : Object.keys(returnFields ?? {});
         outputs = names.map((name) => ({
             kind: 'output',
             name,
-            typeLabel: typeLabelOf(returnFields?.[name] as PortableTypedValue | PortableTypeDefinition | undefined),
+            typeLabel: typeLabelOf(returnFields?.[name]),
         }));
     }
 
     const paramNames = inputs.map((column) => column.name);
     const rows = rules.map((rule) => ruleToRow(rule, paramNames, scorecard));
 
-    const defaultNode = definition['@default'];
+    const defaultNode = definition.default;
     const defaultRow = defaultNode
         ? scorecard || !isContextNode(defaultNode)
             ? {[SCALAR_OUTPUT]: formatCellValue(defaultNode)}
             : Object.fromEntries(
-                  outputs.map((column) => [column.name, formatCellValue(defaultNode[column.name] as PortableNode)]),
+                  outputs.map((column) => [
+                      column.name,
+                      formatCellValue(contextFields(defaultNode)[column.name] as PortableNode),
+                  ]),
               )
         : undefined;
 
     return {
-        hitPolicy: definition['@hitPolicy'],
+        hitPolicy: definition.hitPolicy,
         inputs,
         outputs,
         rows,
@@ -225,10 +240,8 @@ export function ruleToRow(rule: PortableRule, paramNames: string[], scorecard: b
     if (scorecard || !isContextNode(rule.then)) {
         then[SCALAR_OUTPUT] = formatCellValue(rule.then as PortableNode);
     } else {
-        for (const [key, value] of Object.entries(rule.then)) {
-            if (!key.startsWith('@')) {
-                then[key] = formatCellValue(value as PortableNode);
-            }
+        for (const [key, value] of Object.entries(contextFields(rule.then))) {
+            then[key] = formatCellValue(value as PortableNode);
         }
     }
 
@@ -237,12 +250,12 @@ export function ruleToRow(rule: PortableRule, paramNames: string[], scorecard: b
 
 /** Builds the Portable rule node a row edits back into; texts are DSL as the user typed them. */
 export function rowToRule(row: DecisionTableRow, scorecard: boolean): PortableRule {
-    const rule: PortableRule = {'@kind': 'rule', then: {}};
+    const rule: PortableRule = {'@kind': 'rule', then: {'@kind': 'context', fields: {}}};
 
     if (row.when.kind === 'expression') {
         const text = row.when.text.trim();
         if (text.length > 0) {
-            rule.when = {'@kind': 'expression', expression: text} as unknown as PortableRule['when'];
+            rule.when = {'@kind': 'expression', expression: text};
         }
     } else {
         const cells: Record<string, string> = {};
@@ -260,13 +273,17 @@ export function rowToRule(row: DecisionTableRow, scorecard: boolean): PortableRu
     if (scorecard) {
         const text = row.then[SCALAR_OUTPUT]?.trim() ?? '';
         const numeric = Number(text);
-        rule.then = (text.length > 0 && Number.isFinite(numeric) ? numeric : text) as unknown as PortableContext;
-    } else {
-        const then: PortableContext = {};
-        for (const [name, text] of Object.entries(row.then)) {
-            then[name] = text.trim();
-        }
+        const then: PortableExpression = {
+            '@kind': 'expression',
+            expression: text.length > 0 && Number.isFinite(numeric) ? numeric : text,
+        };
         rule.then = then;
+    } else {
+        const fields: ThenFields = {};
+        for (const [name, text] of Object.entries(row.then)) {
+            fields[name] = text.trim();
+        }
+        rule.then = {'@kind': 'context', fields};
     }
 
     if (row.name !== undefined && row.name.trim().length > 0) {
@@ -313,28 +330,28 @@ export function emptyRow(model: DecisionTableModel): DecisionTableRow {
     return row;
 }
 
-/** Clones a definition with a new rule list (all other `@` fields preserved). */
-export function withRules(definition: PortableRulesetDefinition, rules: PortableRule[]): PortableRulesetDefinition {
-    return {...definition, '@rules': rules};
+/** Clones a definition with a new rule list (all other fields preserved). */
+export function withRules(definition: PortableRuleset, rules: PortableRule[]): PortableRuleset {
+    return {...definition, rules};
 }
 
 /**
  * Clones a definition with a new hit policy, reconciling the fields the engine validates:
- * `collect-matches` forbids `@default`; `best-match` requires a `priority` on every rule and
+ * `collect-matches` forbids `default`; `best-match` requires a `priority` on every rule and
  * every other policy rejects it.
  */
-export function withHitPolicy(definition: PortableRulesetDefinition, hitPolicy: HitPolicy): PortableRulesetDefinition {
-    const next: PortableRulesetDefinition = {...definition, '@hitPolicy': hitPolicy};
+export function withHitPolicy(definition: PortableRuleset, hitPolicy: HitPolicy): PortableRuleset {
+    const next: PortableRuleset = {...definition, hitPolicy};
     if (hitPolicy === 'collect-matches') {
-        delete next['@default'];
+        delete next.default;
     }
     if (hitPolicy === 'best-match') {
-        next['@rules'] = definition['@rules'].map((rule, index) => ({
+        next.rules = definition.rules.map((rule, index) => ({
             ...rule,
             priority: rule.priority ?? index + 1,
         }));
     } else {
-        next['@rules'] = definition['@rules'].map((rule) => {
+        next.rules = definition.rules.map((rule) => {
             const {priority: _priority, ...rest} = rule;
             return rest as PortableRule;
         });
@@ -342,63 +359,44 @@ export function withHitPolicy(definition: PortableRulesetDefinition, hitPolicy: 
     return next;
 }
 
-function mapThens(
-    definition: PortableRulesetDefinition,
-    transform: (then: PortableContext) => PortableContext,
-): PortableRulesetDefinition {
-    const next: PortableRulesetDefinition = {
+// Applies `transform` to the `fields` of every context `then` and of a context `default`.
+function mapThens(definition: PortableRuleset, transform: (then: ThenFields) => ThenFields): PortableRuleset {
+    const mapContext = (node: PortableContext): PortableContext => ({...node, fields: transform({...node.fields})});
+    const next: PortableRuleset = {
         ...definition,
-        '@rules': definition['@rules'].map((rule) =>
-            isContextNode(rule.then) ? {...rule, then: transform({...rule.then})} : rule,
+        rules: definition.rules.map((rule) =>
+            isContextNode(rule.then) ? {...rule, then: mapContext(rule.then)} : rule,
         ),
     };
-    const defaultNode = definition['@default'];
+    const defaultNode = definition.default;
     if (defaultNode && isContextNode(defaultNode)) {
-        next['@default'] = transform({...defaultNode});
+        next.default = mapContext(defaultNode);
     }
     return next;
 }
 
-export function withOutputColumnAdded(
-    definition: PortableRulesetDefinition,
-    name: string,
-    cellText?: string,
-): PortableRulesetDefinition {
+export function withOutputColumnAdded(definition: PortableRuleset, name: string, cellText?: string): PortableRuleset {
     const text = cellText ?? "''";
     return mapThens(definition, (then) => ({...then, [name]: text}));
 }
 
-export function withOutputColumnRemoved(
-    definition: PortableRulesetDefinition,
-    name: string,
-): PortableRulesetDefinition {
+export function withOutputColumnRemoved(definition: PortableRuleset, name: string): PortableRuleset {
     return mapThens(definition, (then) => {
         const {[name]: _removed, ...rest} = then;
-        return rest as PortableContext;
+        return rest;
     });
 }
 
-export function withOutputColumnRenamed(
-    definition: PortableRulesetDefinition,
-    from: string,
-    to: string,
-): PortableRulesetDefinition {
-    return mapThens(
-        definition,
-        (then) =>
-            Object.fromEntries(
-                Object.entries(then).map(([key, value]) => [key === from ? to : key, value]),
-            ) as PortableContext,
+export function withOutputColumnRenamed(definition: PortableRuleset, from: string, to: string): PortableRuleset {
+    return mapThens(definition, (then) =>
+        Object.fromEntries(Object.entries(then).map(([key, value]) => [key === from ? to : key, value])),
     );
 }
 
 /** Reorders `then`/`default` fields to `order` (any fields not listed keep their relative position at the end). */
-export function withOutputColumnsReordered(
-    definition: PortableRulesetDefinition,
-    order: string[],
-): PortableRulesetDefinition {
+export function withOutputColumnsReordered(definition: PortableRuleset, order: string[]): PortableRuleset {
     return mapThens(definition, (then) => {
-        const next: PortableContext = {};
+        const next: ThenFields = {};
         for (const name of order) {
             if (Object.prototype.hasOwnProperty.call(then, name)) {
                 next[name] = then[name];
@@ -426,7 +424,7 @@ export function isValidColumnName(name: string): boolean {
 }
 
 /** A default value per parameter type, so a new input column doesn't break existing call sites. */
-function defaultValueForType(type: PortableTypeReference): PortableTypedValue['default'] {
+function defaultValueForType(type: PortableTypeReference): PortablePlaceholderValue['default'] {
     switch (type) {
         case 'number':
             return 0;
@@ -438,20 +436,20 @@ function defaultValueForType(type: PortableTypeReference): PortableTypedValue['d
 }
 
 export function withInputColumnAdded(
-    definition: PortableRulesetDefinition,
+    definition: PortableRuleset,
     name: string,
     type: PortableTypeReference,
-): PortableRulesetDefinition {
-    const parameter: PortableTypedValue = {'@kind': 'type', type, default: defaultValueForType(type)};
-    return {...definition, '@parameters': {...definition['@parameters'], [name]: parameter}};
+): PortableRuleset {
+    const parameter: PortablePlaceholderValue = {'@kind': 'placeholder', type, default: defaultValueForType(type)};
+    return {...definition, parameters: {...definition.parameters, [name]: parameter}};
 }
 
-export function withInputColumnRemoved(definition: PortableRulesetDefinition, name: string): PortableRulesetDefinition {
-    const {[name]: _removed, ...parameters} = definition['@parameters'];
+export function withInputColumnRemoved(definition: PortableRuleset, name: string): PortableRuleset {
+    const {[name]: _removed, ...parameters} = definition.parameters;
     return {
         ...definition,
-        '@parameters': parameters,
-        '@rules': definition['@rules'].map((rule) => {
+        parameters,
+        rules: definition.rules.map((rule) => {
             if (!rule.when || isExpressionNode(rule.when)) {
                 return rule;
             }
@@ -462,25 +460,21 @@ export function withInputColumnRemoved(definition: PortableRulesetDefinition, na
 }
 
 /**
- * Renames an input column: the `@parameters` key and every `cells`-form `when` key that
+ * Renames an input column: the `parameters` key and every `cells`-form `when` key that
  * references it. This is a **fallback** for services without `rename` support — prefer
  * `service.rename('<path>.parameters.<name>', '<path>.parameters.<newName>')`, which the engine
  * now relinks fully (cell-map `when`, boolean-expression `when`, and named-argument call sites
- * anywhere in the model; see docs/BUG_REPORTS.md history). This client-side rewrite only covers
- * `@parameters` and cell-map `when` rows: boolean-expression `when` rows and any external
+ * anywhere in the model; see docs/engine-bug-reports.md history). This client-side rewrite only covers
+ * `parameters` and cell-map `when` rows: boolean-expression `when` rows and any external
  * named-argument call site that still references the old name are **not** rewritten and must be
  * fixed manually (the engine will report an unresolved-reference/link error on the next write
  * touching them, not silently).
  */
-export function withInputColumnRenamed(
-    definition: PortableRulesetDefinition,
-    from: string,
-    to: string,
-): PortableRulesetDefinition {
+export function withInputColumnRenamed(definition: PortableRuleset, from: string, to: string): PortableRuleset {
     const parameters = Object.fromEntries(
-        Object.entries(definition['@parameters']).map(([key, value]) => [key === from ? to : key, value]),
+        Object.entries(definition.parameters).map(([key, value]) => [key === from ? to : key, value]),
     );
-    const rules = definition['@rules'].map((rule) => {
+    const rules = definition.rules.map((rule) => {
         if (!rule.when || isExpressionNode(rule.when) || !Object.prototype.hasOwnProperty.call(rule.when, from)) {
             return rule;
         }
@@ -489,28 +483,28 @@ export function withInputColumnRenamed(
         );
         return {...rule, when: cells};
     });
-    return {...definition, '@parameters': parameters, '@rules': rules};
+    return {...definition, parameters, rules};
 }
 
 /** Changes an input column's declared type, keeping the name and re-deriving its default. */
 export function withInputColumnTypeChanged(
-    definition: PortableRulesetDefinition,
+    definition: PortableRuleset,
     name: string,
     type: PortableTypeReference,
-): PortableRulesetDefinition {
-    const parameter: PortableTypedValue = {'@kind': 'type', type, default: defaultValueForType(type)};
-    return {...definition, '@parameters': {...definition['@parameters'], [name]: parameter}};
+): PortableRuleset {
+    const parameter: PortablePlaceholderValue = {'@kind': 'placeholder', type, default: defaultValueForType(type)};
+    return {...definition, parameters: {...definition.parameters, [name]: parameter}};
 }
 
 export function withDefaultRow(
-    definition: PortableRulesetDefinition,
-    defaultNode: PortableContext | undefined,
-): PortableRulesetDefinition {
+    definition: PortableRuleset,
+    defaultNode: PortableContext | PortableExpression | undefined,
+): PortableRuleset {
     const next = {...definition};
     if (defaultNode === undefined) {
-        delete next['@default'];
+        delete next.default;
     } else {
-        next['@default'] = defaultNode;
+        next.default = defaultNode;
     }
     return next;
 }
@@ -541,7 +535,7 @@ export function duplicatePriorities(rows: DecisionTableRow[]): Set<number> {
 // ── `when` cells ↔ boolean expression ───────────────────────────────────────
 //
 // Converting between the two `when` forms without changing what a rule matches is only possible
-// for a bounded subset of the unary-test grammar (see `../../../edgerules-v2/doc/architecture/EBNF.md`
+// for a bounded subset of the unary-test grammar (see `../../../edgerules/doc/architecture/EBNF.md`
 // `UnaryTest`) — a bare identifier cell (`age: isCore`) is genuinely ambiguous without knowing
 // whether the model declares `isCore` as a one-parameter function (a named unary test call) or a
 // field (a same-named equality target), which this component cannot resolve. Rather than guess and
@@ -774,8 +768,8 @@ export function parseExpressionToCells(paramNames: string[], expressionText: str
 }
 
 /** `(age: number, income: number, segment: string)` — the typed signature for display and embed contexts. */
-export function parameterSignature(definition: PortableRulesetDefinition): string {
-    return Object.entries(definition['@parameters'])
+export function parameterSignature(definition: PortableRuleset): string {
+    return Object.entries(definition.parameters)
         .map(([name, type]) => {
             const label = typeLabelOf(type);
             return label.length > 0 ? `${name}: ${label}` : name;
@@ -787,7 +781,7 @@ export function parameterSignature(definition: PortableRulesetDefinition): strin
  * Embed context validating a unary-test cell in a synthesized one-rule ruleset with this
  * table's signature, so `18..25` / `> 30000` / named tests lint and complete correctly.
  */
-export function whenCellEmbedContext(definition: PortableRulesetDefinition, parameter: string): CodeEditorEmbedContext {
+export function whenCellEmbedContext(definition: PortableRuleset, parameter: string): CodeEditorEmbedContext {
     const signature = parameterSignature(definition);
     return {
         prefix: `{ ruleset __cell(${signature}): { hitPolicy: "first-match" rules: [ { when: { ${parameter}: `,
@@ -796,7 +790,7 @@ export function whenCellEmbedContext(definition: PortableRulesetDefinition, para
 }
 
 /** Embed context for a boolean-expression `when` (parameters in scope, boolean expected). */
-export function whenExpressionEmbedContext(definition: PortableRulesetDefinition): CodeEditorEmbedContext {
+export function whenExpressionEmbedContext(definition: PortableRuleset): CodeEditorEmbedContext {
     const signature = parameterSignature(definition);
     return {
         prefix: `{ ruleset __cell(${signature}): { hitPolicy: "first-match" rules: [ { when: `,
@@ -805,7 +799,7 @@ export function whenExpressionEmbedContext(definition: PortableRulesetDefinition
 }
 
 /** Embed context for a `then` / default output cell (parameters in scope as function args). */
-export function thenCellEmbedContext(definition: PortableRulesetDefinition): CodeEditorEmbedContext {
+export function thenCellEmbedContext(definition: PortableRuleset): CodeEditorEmbedContext {
     const signature = parameterSignature(definition);
     return {
         prefix: `{ func __cell(${signature}): `,

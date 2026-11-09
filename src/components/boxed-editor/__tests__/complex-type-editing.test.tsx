@@ -6,6 +6,7 @@ import {MutableDecisionService} from '@edgerules/node/mutable';
 import {BoxedEditor} from '../BoxedEditor';
 import {createBoxedEditorService} from '../service/createBoxedEditorService';
 import {byCode} from './queries';
+import {compactModel} from '#lib/testing/compactPortable';
 
 const languageService = MutableDecisionService;
 
@@ -71,8 +72,8 @@ describe('complexType field editing', () => {
         await user.keyboard('{Enter}');
 
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-        expect(service.toPortable().Applicant).toMatchObject({
-            name: {'@kind': 'type', type: 'string', required: true},
+        expect(compactModel(service).Applicant).toMatchObject({
+            name: {'@kind': 'placeholder', type: 'string', required: true},
         });
     });
 
@@ -84,7 +85,7 @@ describe('complexType field editing', () => {
         await user.click(screen.getByText('(new field)'));
 
         expect(screen.getByText('field')).toBeInTheDocument();
-        expect(service.toPortable().Applicant).toMatchObject({field: 'string'});
+        expect(compactModel(service).Applicant).toMatchObject({field: 'string'});
     });
 
     it('adds a new field via the three-dot "Add field" menu action', async () => {
@@ -97,7 +98,7 @@ describe('complexType field editing', () => {
         await chooseAction(user, 1, 'Add field');
 
         expect(screen.getByText('field')).toBeInTheDocument();
-        expect(service.toPortable().Applicant).toMatchObject({field: 'string'});
+        expect(compactModel(service).Applicant).toMatchObject({field: 'string'});
     });
 
     it('deletes a type field via its three-dot menu', async () => {
@@ -111,7 +112,7 @@ describe('complexType field editing', () => {
         await chooseAction(user, nameRowIndex, 'Delete');
 
         expect(screen.queryByText('name')).not.toBeInTheDocument();
-        expect(service.toPortable().Applicant).not.toHaveProperty('name');
+        expect(compactModel(service).Applicant).not.toHaveProperty('name');
     });
 });
 
@@ -125,8 +126,8 @@ describe('row name editing', () => {
         await user.keyboard('{Control>}a{/Control}fullName{Enter}');
 
         expect(screen.getByText('fullName')).toBeInTheDocument();
-        expect(service.toPortable().Applicant).toMatchObject({fullName: {'@kind': 'type'}});
-        expect(service.toPortable().Applicant).not.toHaveProperty('name');
+        expect(compactModel(service).Applicant).toMatchObject({fullName: {'@kind': 'placeholder'}});
+        expect(compactModel(service).Applicant).not.toHaveProperty('name');
     });
 
     it('renames an ordinary context field via its name cell', async () => {
@@ -138,7 +139,7 @@ describe('row name editing', () => {
         await user.keyboard('{Control>}a{/Control}loanAmount{Enter}');
 
         expect(screen.getByText('loanAmount')).toBeInTheDocument();
-        const application = service.toPortable().application as Record<string, unknown>;
+        const application = compactModel(service).application as Record<string, unknown>;
         expect(application).toHaveProperty('loanAmount');
         expect(application).not.toHaveProperty('amount');
     });
@@ -154,7 +155,7 @@ describe('row name editing', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent('A field named "age" already exists.');
         // Still in the model unchanged, and the cell keeps focus/edit state (same "rejected
         // edit" contract as `ExpressionCell`) rather than reverting to static text.
-        expect(service.toPortable().Applicant).toHaveProperty('name');
+        expect(compactModel(service).Applicant).toHaveProperty('name');
         expect(screen.getByDisplayValue('age')).toBeInTheDocument();
     });
 
@@ -168,7 +169,7 @@ describe('row name editing', () => {
 
         expect(await screen.findByRole('alert')).toHaveTextContent('A field named "payment" already exists.');
         expect(screen.getByDisplayValue('payment')).toBeInTheDocument();
-        expect(service.toPortable()).toMatchObject({payment: 1, field: 2});
+        expect(compactModel(service)).toMatchObject({payment: 1, field: 2});
     });
 
     it('cancels a rename on Escape without committing', async () => {
@@ -180,7 +181,7 @@ describe('row name editing', () => {
         await user.keyboard('{Control>}a{/Control}whatever{Escape}');
 
         expect(screen.getByText('name')).toBeInTheDocument();
-        expect(service.toPortable().Applicant).toHaveProperty('name');
+        expect(compactModel(service).Applicant).toHaveProperty('name');
     });
 });
 

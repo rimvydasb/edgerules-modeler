@@ -1,6 +1,6 @@
-import {createChangeBatch, type ListenerSet} from '../../../lib/changeBatch';
+import {createChangeBatch, type ListenerSet} from '#lib/changeBatch';
 import {parseProjectBundle} from '../bundle/parseProjectBundle';
-import type {LoadedProject, ProjectBundle, ProjectLocator} from '../bundle/types';
+import type {LoadedProject, ModelMetadata, ProjectBundle, ProjectLocator} from '../bundle/types';
 import {createProjectEngine} from '../engine/createProjectEngine';
 import type {ProjectEngineClass} from '../engine/types';
 import {ProjectError, isProjectError, messageOf} from '../errors';
@@ -8,6 +8,7 @@ import type {ProjectRepository} from '../repository/types';
 import {createDocumentationStore} from '../stores/createDocumentationStore';
 import {createFlowMetadataStore} from '../stores/createFlowMetadataStore';
 import {createProjectTestsStore} from '../stores/createProjectTestsStore';
+import {createReadmeStore} from '../stores/createReadmeStore';
 import type {StoreContext} from '../stores/storeSupport';
 import type {
     CommandResult,
@@ -27,12 +28,13 @@ export interface ProjectSessionOptions {
     engine: ProjectEngineClass;
 }
 
-const SLICE_ORDER: readonly ProjectSlice[] = ['model', 'documentation', 'tests', 'flow'];
+const SLICE_ORDER: readonly ProjectSlice[] = ['model', 'documentation', 'tests', 'flow', 'readme'];
 
 // Everything a failed transaction restores.
 interface Checkpoint {
     dsl: string;
-    documents: Pick<ProjectBundle, 'documentation' | 'tests' | 'flow'>;
+    metadata: ModelMetadata;
+    documents: Pick<ProjectBundle, 'documentation' | 'tests' | 'flow' | 'readme'>;
     dirty: Set<ProjectSlice>;
     localVersion: number;
     modelVersion: number;
@@ -41,6 +43,16 @@ interface Checkpoint {
 function parentOf(path: string): string {
     const dot = path.lastIndexOf('.');
     return dot === -1 ? '' : path.slice(0, dot + 1);
+}
+
+// A blank value is no value.
+function cleanMetadata({name, version}: ModelMetadata): ModelMetadata {
+    const trimmedName = name?.trim();
+    const trimmedVersion = version?.trim();
+    return {
+        ...(trimmedName ? {name: trimmedName} : {}),
+        ...(trimmedVersion ? {version: trimmedVersion} : {}),
+    };
 }
 
 function toProjectError(error: unknown): ProjectError {
@@ -62,6 +74,8 @@ function check(result: unknown): void {
 export function createProjectSession({loaded, repository, engine: engineClass}: ProjectSessionOptions): ProjectSession {
     const bundle = parseProjectBundle(loaded.bundle);
     const {manifest} = bundle;
+    const {format, source, ...loadedMetadata} = manifest.model;
+    let metadata: ModelMetadata = cleanMetadata(loadedMetadata);
     const locator: ProjectLocator = {...loaded.locator};
 
     const batch = createChangeBatch();
@@ -107,6 +121,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
     const documentation = createDocumentationStore(contextFor('documentation'));
     const tests = createProjectTestsStore(contextFor('tests'));
     const flow = createFlowMetadataStore(contextFor('flow'));
+    const readme = createReadmeStore(contextFor('readme'));
 
     function replaceSlices(documents: Checkpoint['documents']): void {
         restoring = true;
@@ -114,6 +129,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
             documentation.replaceDocument(documents.documentation);
             tests.replaceDocument(documents.tests);
             flow.replaceDocument(documents.flow);
+            readme.replaceDocument(documents.readme);
         } finally {
             restoring = false;
         }
@@ -132,10 +148,12 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
     function checkpoint(): Checkpoint {
         return {
             dsl: engineHandle.facade.exportDsl(),
+            metadata,
             documents: {
                 documentation: documentation.exportDocument(),
                 tests: tests.exportDocument(),
                 flow: flow.exportDocument(),
+                readme: readme.exportDocument(),
             },
             dirty: new Set(dirty),
             localVersion,
@@ -145,6 +163,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
 
     function restore(saved: Checkpoint): void {
         engineHandle.load(saved.dsl, {link: false});
+        metadata = saved.metadata;
         replaceSlices(saved.documents);
         dirty.clear();
         for (const slice of saved.dirty) dirty.add(slice);
@@ -204,16 +223,25 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
         });
     }
 
+    function setModelMetadata(next: ModelMetadata): CommandResult {
+        const cleaned = cleanMetadata(next);
+        if (cleaned.name === metadata.name && cleaned.version === metadata.version) return {ok: true};
+        metadata = cleaned;
+        sliceChanged('model');
+        return {ok: true};
+    }
+
     const sliceReaders: {[K in ProjectSlice]: () => ProjectSliceSnapshots[K]} = {
         model() {
             // A closed session's engine is freed; its last snapshot stays readable.
             if (modelSnapshot && (isClosed() || modelSnapshot.version === modelVersion)) return modelSnapshot;
-            modelSnapshot = Object.freeze({version: modelVersion, dsl: engineHandle.facade.exportDsl()});
+            modelSnapshot = Object.freeze({version: modelVersion, dsl: engineHandle.facade.exportDsl(), metadata});
             return modelSnapshot;
         },
         documentation: () => documentation.exportDocument(),
         tests: () => tests.exportDocument(),
         flow: () => flow.exportDocument(),
+        readme: () => readme.exportDocument(),
     };
 
     const session: ProjectSession = {
@@ -224,6 +252,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
         documentation,
         tests,
         flow,
+        readme,
 
         getSnapshot() {
             snapshot ??= Object.freeze({
@@ -251,6 +280,8 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
                     return commitDsl(command.source);
                 case 'renamePath':
                     return renamePath(command.path, command.newName);
+                case 'setModelMetadata':
+                    return setModelMetadata(command.metadata);
             }
         },
 
@@ -271,11 +302,12 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
                 throw new ProjectError('invalid-state', `The model DSL is invalid: ${dslValidity.message}`);
             }
             return structuredClone({
-                manifest,
+                manifest: {...manifest, model: {format, source, ...metadata}},
                 model: engineHandle.facade.exportDsl(),
                 documentation: documentation.exportDocument(),
                 tests: tests.exportDocument(),
                 flow: flow.exportDocument(),
+                readme: readme.exportDocument(),
             });
         },
 

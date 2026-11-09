@@ -3,34 +3,45 @@ import {EditorState} from '@codemirror/state';
 import {forceLinting} from '@codemirror/lint';
 import {EditorView} from '@codemirror/view';
 import {edgeRulesExtensions} from './language/extensions';
+import {markdownExtensions} from './markdownExtensions';
 import type {CodeEditorService} from './language/service';
-import {cx} from '../../ui/cx';
+import {cx} from '#ui/cx';
 import * as classes from './codeEditor.module.css';
 
 export type {CodeEditorDiagnostic, CodeEditorDiagnosticsService, CodeEditorService} from './language/service';
 
-export interface CodeEditorProps {
+interface CodeEditorBaseProps {
     value: string;
     onChange: (value: string) => void;
-    /**
-     * EdgeRules language service — the dev builds of `MutableDecisionService` (from
-     * `@edgerules/web/mutable` or `@edgerules/node/mutable`) satisfy this directly. Diagnostics
-     * power lint markers; `completions` (when present) powers Ctrl+Space suggestions.
-     */
-    service: CodeEditorService;
     readOnly?: boolean;
     className?: string;
     style?: CSSProperties;
 }
 
+export type CodeEditorProps = CodeEditorBaseProps &
+    (
+        | {
+              language?: 'edgerules'; // the default
+              /**
+               * EdgeRules language service — the dev builds of `MutableDecisionService` (from
+               * `@edgerules/web/mutable` or `@edgerules/node/mutable`) satisfy this directly. Diagnostics
+               * power lint markers; `completions` (when present) powers Ctrl+Space suggestions.
+               */
+              service: CodeEditorService;
+          }
+        // Markdown source with highlighting; no diagnostics, completion or formatting, so no service.
+        | {language: 'markdown'; service?: undefined}
+    );
+
 /**
  * A controlled EdgeRules code editor powered by CodeMirror: DSL syntax highlighting,
  * engine-backed diagnostics and completions (Ctrl+Space), Ctrl+Click / F12 go-to-definition,
- * and Shift-Alt-F document formatting.
+ * and Shift-Alt-F document formatting. With `language: 'markdown'` it edits Markdown source instead.
  */
 export function CodeEditor({
     value,
     onChange,
+    language = 'edgerules',
     service,
     readOnly = false,
     className,
@@ -44,10 +55,10 @@ export function CodeEditor({
 
     useEffect(() => {
         serviceRef.current = service;
-        if (viewRef.current) {
+        if (viewRef.current && language === 'edgerules') {
             forceLinting(viewRef.current);
         }
-    }, [service]);
+    }, [service, language]);
 
     useEffect(() => {
         onChangeRef.current = onChange;
@@ -72,17 +83,20 @@ export function CodeEditor({
                         }
                         onChangeRef.current(update.state.doc.toString());
                     }),
-                    edgeRulesExtensions({
-                        service: () => serviceRef.current,
-                        variant: 'editor',
-                        lintDelay: 0,
-                    }),
+                    language === 'markdown'
+                        ? markdownExtensions()
+                        : edgeRulesExtensions({
+                              // The props type requires a service for the EdgeRules language.
+                              service: () => serviceRef.current!,
+                              variant: 'editor',
+                              lintDelay: 0,
+                          }),
                 ],
             }),
         });
 
         viewRef.current = view;
-        forceLinting(view);
+        if (language === 'edgerules') forceLinting(view);
 
         return () => {
             view.destroy();
@@ -90,7 +104,7 @@ export function CodeEditor({
         };
         // The initial doc is intentionally not a dependency; prop updates flow through the effect below.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [readOnly]);
+    }, [readOnly, language]);
 
     useEffect(() => {
         const view = viewRef.current;
@@ -112,7 +126,7 @@ export function CodeEditor({
 
     return (
         <div className={cx(classes.root, className)} style={style}>
-            <div ref={hostRef} />
+            <div ref={hostRef} className={classes.host} />
         </div>
     );
 }

@@ -1,7 +1,8 @@
 import {describe, expect, it, vi} from 'vitest';
 import {MutableDecisionService} from '@edgerules/node/mutable';
-import {isPortableError} from '../../../lib/portable';
+import {isPortableError} from '#lib/portable';
 import {createBoxedEditorService} from '../service/createBoxedEditorService';
+import {compactModel} from '#lib/testing/compactPortable';
 
 describe('BoxedEditorService mutations and cache', () => {
     it('round-trips expression, typed-input, and invocation field text', () => {
@@ -15,8 +16,8 @@ describe('BoxedEditorService mutations and cache', () => {
             name: 'value',
             value: '<number, required: true>',
         });
-        expect(mutable.toPortable().value).toMatchObject({
-            '@kind': 'type',
+        expect(compactModel(mutable).value).toMatchObject({
+            '@kind': 'placeholder',
             type: 'number',
             required: true,
         });
@@ -28,9 +29,9 @@ describe('BoxedEditorService mutations and cache', () => {
             name: 'value',
             value: 'round(1.2)',
         });
-        expect(mutable.toPortable().value).toMatchObject({
+        expect(compactModel(mutable).value).toMatchObject({
             '@kind': 'invocation',
-            '@method': 'round',
+            method: 'round',
         });
 
         service.setBoxedRowData('value', {
@@ -40,7 +41,7 @@ describe('BoxedEditorService mutations and cache', () => {
             name: 'value',
             value: 'other + 3',
         });
-        expect(mutable.toPortable().value).toMatchObject({
+        expect(mutable.toPortable().fields.value).toMatchObject({
             '@kind': 'expression',
             expression: 'other + 3',
         });
@@ -75,7 +76,7 @@ describe('BoxedEditorService mutations and cache', () => {
                 },
             ],
         });
-        expect(mutable.toPortable().ctx).toMatchObject({a: 1, b: 2});
+        expect(compactModel(mutable).ctx).toMatchObject({a: 1, b: 2});
 
         for (const path of ['xs', 'people', 'Person', 'f', 'r']) {
             const row = service.getBoxedRowsData('*').find((candidate) => candidate.path === path);
@@ -102,7 +103,7 @@ describe('BoxedEditorService mutations and cache', () => {
             isPortableError(
                 service.setBoxedRowData('people[0]', {
                     ...person!,
-                    cells: ["'Grace'"],
+                    cells: ['\"Grace\"'],
                 } as typeof person & {cells: string[]}),
             ),
         ).toBe(false);
@@ -130,14 +131,11 @@ describe('BoxedEditorService mutations and cache', () => {
             ),
         ).toBe(false);
 
-        expect(mutable.toPortable()).toMatchObject({
-            people: {
-                '@kind': 'expression',
-                expression: '[{ name: "Grace" }, { name: "Lin" }]',
-            },
+        expect(compactModel(mutable)).toMatchObject({
+            people: '[{ name: "Grace" }, { name: "Lin" }]',
             r: {
-                '@rules': [{when: {x: '<= 0'}, then: {result: 2}}],
-                '@default': {result: 3},
+                rules: [{when: {x: '<= 0'}, then: {result: 2}}],
+                default: {result: 3},
             },
         });
     });
@@ -180,19 +178,19 @@ describe('BoxedEditorService mutations and cache', () => {
         expect(service.move('plan.constraints.floor', 'plan.constraints', 0)).toBeUndefined();
         expect(service.remove('plan.constraints.ceiling')).toBeUndefined();
 
-        expect(mutable.get('plan', 'ALL')).toEqual({
+        expect(mutable.toPortable().fields.plan).toEqual({
             '@kind': 'optimise',
-            '@parameters': {x: 'number'},
-            '@variables': {
+            parameters: {x: 'number'},
+            variables: {
                 value: {
-                    '@kind': 'type',
+                    '@kind': 'placeholder',
                     type: 'number',
                     min: 0,
                     max: 10,
                 },
             },
-            '@minimise': '2 * value',
-            '@constraints': {floor: 'value >= 0'},
+            minimise: '2 * value',
+            constraints: {floor: 'value >= 0'},
         });
     });
 
@@ -271,7 +269,7 @@ describe('BoxedEditorService mutations and cache', () => {
         // The write is rolled back, not merely reported — the model still links and `amount` is
         // unchanged, unlike a `remove`/`rename` that breaks some other row's reference (Resolved
         // Decision #12), which is intentionally left uncorrected.
-        expect(mutable.toPortable()).toMatchObject({amount: 10});
+        expect(compactModel(mutable)).toMatchObject({amount: 10});
         expect(service.link()).toBeUndefined();
     });
 
@@ -290,7 +288,7 @@ describe('BoxedEditorService mutations and cache', () => {
         });
 
         expect(isPortableError(result)).toBe(false);
-        expect(mutable.toPortable()).toMatchObject({unrelated: 42});
+        expect(compactModel(mutable)).toMatchObject({unrelated: 42});
         expect(isPortableError(service.link())).toBe(true);
     });
 
@@ -326,9 +324,9 @@ describe('BoxedEditorService mutations and cache', () => {
         expect(service.move('factory.variables.b', 'factory.variables', 0)).toBeUndefined();
         expect(service.move('factory.constraints.cb', 'factory.constraints', 0)).toBeUndefined();
 
-        const optimisation = mutable.toPortable().factory as unknown as Record<string, Record<string, unknown>>;
-        expect(Object.keys(optimisation['@variables'])).toEqual(['b', 'a']);
-        expect(Object.keys(optimisation['@constraints'])).toEqual(['cb', 'ca']);
+        const optimisation = compactModel(mutable).factory as unknown as Record<string, Record<string, unknown>>;
+        expect(Object.keys(optimisation.variables)).toEqual(['b', 'a']);
+        expect(Object.keys(optimisation.constraints)).toEqual(['cb', 'ca']);
     });
 
     it('renames an optimisation variable and migrates its objective and constraints', () => {
@@ -344,9 +342,9 @@ describe('BoxedEditorService mutations and cache', () => {
 
         expect(service.rename('factory.variables.variable', 'loans')).toBeUndefined();
 
-        const optimisation = mutable.toPortable().factory as unknown as Record<string, unknown>;
-        expect(Object.keys(optimisation['@variables'] as Record<string, unknown>)).toEqual(['loans']);
-        expect(optimisation['@maximise']).toBe('loans');
-        expect((optimisation['@constraints'] as Record<string, unknown>).bound).toBe('loans >= 0');
+        const optimisation = compactModel(mutable).factory as unknown as Record<string, unknown>;
+        expect(Object.keys(optimisation.variables as Record<string, unknown>)).toEqual(['loans']);
+        expect(optimisation.maximise).toBe('loans');
+        expect((optimisation.constraints as Record<string, unknown>).bound).toBe('loans >= 0');
     });
 });

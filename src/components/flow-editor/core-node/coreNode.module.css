@@ -38,6 +38,12 @@
   box-sizing: border-box;
 }
 
+/* A node with a data table fits the table, from its header width up to a limit; the cells cut off past it. */
+.fit {
+  width: max-content;
+  max-width: 640px;
+}
+
 .selected {
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: 1px;
@@ -98,13 +104,19 @@
   white-space: nowrap;
 }
 
+/* The title keeps its width; the field path after it shrinks first, so a narrow node still shows its title. */
 .titleText {
+  flex-shrink: 0;
+  max-width: 100%;
   overflow: hidden;
   font-weight: 600;
   text-overflow: ellipsis;
 }
 
 .fieldName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--mantine-color-dimmed);
   font-family: var(--mantine-font-family-monospace);
   font-size: 12px;

@@ -14,6 +14,7 @@ import {
     type DragPayload,
     type DropTargetPayload,
 } from '../dnd/dropRules';
+import {compactModel} from '#lib/testing/compactPortable';
 
 function uniqueDbName(): string {
     return `dnd-test-${Math.random().toString(36).slice(2)}`;
@@ -179,7 +180,7 @@ describe('dropRules: helpers', () => {
 
     it('inferLiteralKind classifies scalar DSL literals', () => {
         expect(inferLiteralKind('"hello"')).toBe('string');
-        expect(inferLiteralKind("'hello'")).toBe('string');
+        expect(inferLiteralKind('\"hello\"')).toBe('string');
         expect(inferLiteralKind('42')).toBe('number');
         expect(inferLiteralKind('-3.5')).toBe('number');
         expect(inferLiteralKind('true')).toBe('boolean');
@@ -231,7 +232,7 @@ describe('BoxedEditor drag and drop', () => {
 
         dragRowOnto('row-a', 'row-c');
 
-        expect(Object.keys(mutable.toPortable())).toEqual(['@kind', 'b', 'c', 'a']);
+        expect(Object.keys(compactModel(mutable))).toEqual(['b', 'c', 'a']);
     });
 
     it('reparents a field into another context', () => {
@@ -241,10 +242,11 @@ describe('BoxedEditor drag and drop', () => {
 
         dragRowOnto('row-source.value', 'row-target.existing');
 
-        expect(mutable.toPortable()).toMatchObject({
-            source: {'@kind': 'context'},
-            target: {'@kind': 'context', value: 1, existing: 2},
+        expect(compactModel(mutable)).toMatchObject({
+            source: {},
+            target: {value: 1, existing: 2},
         });
+        expect(Object.keys(mutable.toPortable().fields.source as object)).toEqual(['@kind', 'fields']);
     });
 
     it('snaps back and issues no move() when a rule is dropped onto a foreign ruleset', () => {
@@ -265,9 +267,9 @@ describe('BoxedEditor drag and drop', () => {
         dragRowOnto('row-a.rules[0]', 'row-b.rules[0]');
 
         expect(moveSpy).not.toHaveBeenCalled();
-        expect(mutable.toPortable()).toMatchObject({
-            a: {'@rules': [{name: 'r1'}]},
-            b: {'@rules': [{name: 'r2'}]},
+        expect(compactModel(mutable)).toMatchObject({
+            a: {rules: [{name: 'r1'}]},
+            b: {rules: [{name: 'r2'}]},
         });
     });
 
@@ -302,7 +304,7 @@ describe('BoxedEditor drag and drop', () => {
         dragRowOnto('row-a', 'row-b');
 
         expect(moveSpy).not.toHaveBeenCalled();
-        expect(Object.keys(mutable.toPortable())).toEqual(['@kind', 'a', 'b']);
+        expect(Object.keys(compactModel(mutable))).toEqual(['a', 'b']);
     });
 
     it('migrates the description and test-case data of a moved field to its new path', async () => {
@@ -347,8 +349,8 @@ describe('BoxedEditor drag and drop', () => {
 
         dragRowOnto('row-source.value', 'row-target.existing');
 
-        expect(mutable.toPortable()).toMatchObject({
-            target: {'@kind': 'context', value: 1, existing: 2},
+        expect(compactModel(mutable)).toMatchObject({
+            target: {value: 1, existing: 2},
         });
         expect(documentationService.getDescription('target.value')).toBe('The starting value');
         expect(documentationService.getDescription('source.value')).toBeUndefined();

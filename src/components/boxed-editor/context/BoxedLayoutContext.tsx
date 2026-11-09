@@ -1,6 +1,6 @@
 import {createContext, useContext, useMemo, type ReactElement, type ReactNode} from 'react';
 import type {BoxedRowData} from '../boxed-editor-types';
-import {gridTemplateColumns, valueColumnUnits, VALUE_COLUMN_UNITS} from '../primitives/layout';
+import {fittedValueUnits, gridTemplateColumns, valueColumnUnits, VALUE_COLUMN_UNITS} from '../primitives/layout';
 import {useBoxedEditorContext} from './BoxedEditorContext';
 
 export interface BoxedLayout {
@@ -11,27 +11,53 @@ export interface BoxedLayout {
     showDescription: boolean;
     /** Hidden entirely (not just emptied) when no `testCasesService` is provided. */
     showTestResults: boolean;
+    /** The depth of the opened root path: its rows indent relative to it, so a nested root has no blank indents. */
+    baseDepth: number;
 }
 
-function buildLayout(showDescription: boolean, showTestResults: boolean, valueUnits: number): BoxedLayout {
+function buildLayout(
+    showDescription: boolean,
+    showTestResults: boolean,
+    valueUnits: number,
+    baseDepth = 0,
+): BoxedLayout {
     return {
         template: gridTemplateColumns({showDescription, showTestResults, valueUnits}),
         valueUnits,
         showDescription,
         showTestResults,
+        baseDepth,
     };
 }
 
 const BoxedLayoutContext = createContext<BoxedLayout | null>(null);
 
+export interface BoxedLayoutProviderProps {
+    rows: BoxedRowData[];
+    /** The editor's width in px; the value column widens to fill it. */
+    availableWidth?: number;
+    /** The depth of the opened root path (`0` for the model). */
+    baseDepth?: number;
+    children: ReactNode;
+}
+
 /** Computes the column layout once for the whole tree, so every row's borders land on the same steps. */
-export function BoxedLayoutProvider({rows, children}: {rows: BoxedRowData[]; children: ReactNode}): ReactElement {
+export function BoxedLayoutProvider({
+    rows,
+    availableWidth,
+    baseDepth = 0,
+    children,
+}: BoxedLayoutProviderProps): ReactElement {
     const {showDescription, showTestResults, testCasesService} = useBoxedEditorContext();
     const showTestResultsColumn = showTestResults && testCasesService !== undefined;
-    const valueUnits = useMemo(() => valueColumnUnits(rows), [rows]);
+    const contentUnits = useMemo(() => valueColumnUnits(rows), [rows]);
+    const valueUnits =
+        availableWidth !== undefined
+            ? fittedValueUnits(availableWidth, {showDescription, showTestResults: showTestResultsColumn}, contentUnits)
+            : contentUnits;
     const layout = useMemo(
-        () => buildLayout(showDescription, showTestResultsColumn, valueUnits),
-        [showDescription, showTestResultsColumn, valueUnits],
+        () => buildLayout(showDescription, showTestResultsColumn, valueUnits, baseDepth),
+        [showDescription, showTestResultsColumn, valueUnits, baseDepth],
     );
     return <BoxedLayoutContext.Provider value={layout}>{children}</BoxedLayoutContext.Provider>;
 }

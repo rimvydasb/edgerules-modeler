@@ -1,7 +1,13 @@
 import type {Node} from '@xyflow/react';
-import type {SignatureParameter} from '../../boxed-editor/boxed-editor-types';
-import type {CoreNodeData, CoreNodeMenuContext, MoveDirection, NodeEditing, RowEditing} from '../core-node';
-import type {FlowEditorOpenTarget} from '../flow-editor-types';
+import type {SignatureParameter} from '../../boxed-editor';
+import type {
+    CoreNodeData,
+    CoreNodeMenuContext,
+    FlowEditorOpenTarget,
+    MoveDirection,
+    NodeEditing,
+    RowEditing,
+} from '../core-node/types';
 
 /** ReactFlow node data of a FunctionNode; the node id is the field path. */
 export type FunctionNodeData = CoreNodeData;
@@ -13,7 +19,7 @@ export type CalleeKind = 'function' | 'ruleset';
 export interface CalleeRef {
     path: string; // dotted callee path, for example 'risk' or 'group.nested'
     kind: CalleeKind;
-    parameters: SignatureParameter[]; // from get(path, 'FIELDS')
+    parameters: SignatureParameter[]; // from get(path)
     returnLabel: string; // 'number' or '{ level, limit }'
 }
 
@@ -28,11 +34,12 @@ export interface NodeResult {
     name: string; // field name, or 'result' for an unnamed return
     type: string;
     renamable: boolean; // false for the unnamed return of a func
+    whole?: true; // the unnamed return: its pin reads the whole value of the node, not a field named 'result'
 }
 
 export interface FunctionNodeModel {
     field: string; // model field path
-    label?: string; // '@node-name'
+    label?: string; // '@name'
     callee?: CalleeRef; // undefined while no callee is picked
     arguments: NodeArgument[]; // one per callee parameter, in signature order
     results: NodeResult[]; // record fields, or one unnamed 'result'
@@ -51,7 +58,7 @@ export interface CalleePickerProps {
     callees: CalleeRef[];
     selected?: CalleeRef;
     disabled?: boolean;
-    opened: boolean; // controlled: the node menu opens it through Change callee…
+    opened: boolean; // controlled
     onOpenedChange: (opened: boolean) => void;
     onSelect: (method: string) => void;
 }
@@ -65,7 +72,6 @@ export interface KindIconProps {
 export interface FunctionNodeMenuContext extends CoreNodeMenuContext {
     model: FunctionNodeModel;
     onOpenNode?: (target: FlowEditorOpenTarget) => void;
-    onChangeCallee: () => void;
     onAddArgument: () => void;
 }
 

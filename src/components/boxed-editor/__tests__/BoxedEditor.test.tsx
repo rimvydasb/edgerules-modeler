@@ -41,6 +41,32 @@ describe('BoxedEditor', () => {
         expect(screen.getByText('amount')).toBeInTheDocument();
     });
 
+    it('renders an opened ruleset with its own header row, so its rules keep their columns', () => {
+        const service = createBoxedEditorService(
+            MutableDecisionService.fromCode(`{
+                ruleset band(age: number): {
+                    hitPolicy: "first-match"
+                    rules: [{ when: { age: < 30 }, then: { level: "young" } }]
+                    default: { level: "none" }
+                }
+            }`),
+        );
+        render(<BoxedEditor service={service} path="band" />);
+
+        expect(screen.getByTestId('row-band')).toHaveTextContent('band');
+        expect(screen.getByTestId('column-band-age')).toBeInTheDocument();
+        expect(screen.getByTestId('column-band-level')).toBeInTheDocument();
+        expect(screen.getByText('Rule 1')).toBeInTheDocument();
+    });
+
+    it('renders the own row of an opened plain field', () => {
+        render(<BoxedEditor service={buildService()} path="payment" />);
+
+        expect(screen.getByTestId('row-payment')).toHaveTextContent('payment');
+        expect(screen.getByText('42')).toBeInTheDocument();
+        expect(screen.queryByText('application')).not.toBeInTheDocument();
+    });
+
     it('hides the model header when showHeader is false', () => {
         render(<BoxedEditor service={buildService()} path="*" showHeader={false} />);
 
@@ -73,7 +99,7 @@ describe('BoxedEditor', () => {
     it('toggles the description and test-results columns via props', () => {
         const testCasesService = createTestCasesService('model', '*', {dbName: uniqueDbName()});
         const {container, rerender} = render(
-            <BoxedEditor service={buildService()} path="*" testCasesService={testCasesService} />,
+            <BoxedEditor service={buildService()} path="*" testCasesService={testCasesService} showTestResults />,
         );
         expect(container.querySelectorAll('[data-column="description"]').length).toBeGreaterThan(0);
         expect(container.querySelectorAll('[data-column="test-results"]').length).toBeGreaterThan(0);

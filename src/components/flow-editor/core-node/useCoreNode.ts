@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {isPortableError} from '../../../lib/portable';
+import {isPortableError} from '#lib/portable';
 import {useFlowEditor} from '../FlowEditorProvider';
 import {useNodeDescription} from './hooks';
 import type {CoreNodeMenuContext, NodeEditing} from './types';
@@ -28,7 +28,6 @@ export function useCoreNode<Row extends {kind: string} = never>(field: string) {
         onDuplicate: () => void runCommand(() => service.duplicate(field)),
         onAddDescription: () => setEditing({kind: 'description'}),
         onRemoveDescription: () => documentation?.setDescription(field, ''),
-        onRemoveFromFlow: () => void runCommand(() => service.removeFromFlow(field)),
         onDelete: () => {
             const failed = runCommand(() => service.deleteField(field));
             if (!failed) documentation?.setDescription(field, '');

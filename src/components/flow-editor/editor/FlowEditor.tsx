@@ -30,43 +30,85 @@ import {
     type DragEvent,
     type ReactElement,
 } from 'react';
-import {isPortableError} from '../../../lib/portable';
+import {isPortableError} from '#lib/portable';
 import {CHART_SIZE, ChartNode} from '../chart-node/ChartNode';
 import type {ChartNodeData} from '../chart-node/types';
+import {CanvasActionsProvider} from '../core-node';
+import {EXPRESSION_COLOR, EXPRESSION_PIN, ExpressionNode} from '../expression-node/ExpressionNode';
+import {expressionNodeWidth} from '../expression-node/layout';
 import {FlowEditorProvider, useFlowEditor} from '../FlowEditorProvider';
 import type {FlowEditorService, FlowNodeRef} from '../flow-editor-types';
 import {FunctionNode} from '../function-node/FunctionNode';
-import {InputNode} from '../input-node/InputNode';
+import {ListInputNode} from '../list-input-node/ListInputNode';
+import {ObjectInputNode} from '../object-input-node/ObjectInputNode';
 import {OutputNode, sourcePath} from '../output-node/OutputNode';
+import type {OutputNodeData} from '../output-node/types';
+import {ParameterNode} from '../parameter-node/ParameterNode';
+import {ADD_PIN, ReturnNode} from '../return-node/ReturnNode';
+import {ValueInputNode} from '../value-input-node/ValueInputNode';
 import {autoLayout, findFreeSpot, modelWires, outputWires, type LayoutKind, type Wire} from './graph';
 import {ICON_COLOR, NodePalette} from './NodePalette';
 import {DRAG_TYPE, paletteItems} from './paletteItems';
-import type {FlowChart, FlowEditorProps, FlowLayout, FlowOutput, PaletteItem} from './types';
+import type {
+    FlowChart,
+    FlowEditorProps,
+    FlowFocusRequest,
+    FlowLayout,
+    FlowOutput,
+    FlowSelection,
+    PaletteItem,
+} from './types';
 import styles from './flowEditor.module.css';
 
-const NODE_TYPES = {functionNode: FunctionNode, inputNode: InputNode, outputNode: OutputNode, chartNode: ChartNode};
+const NODE_TYPES = {
+    functionNode: FunctionNode,
+    objectInputNode: ObjectInputNode,
+    listInputNode: ListInputNode,
+    valueInputNode: ValueInputNode,
+    outputNode: OutputNode,
+    chartNode: ChartNode,
+    parameterNode: ParameterNode,
+    returnNode: ReturnNode,
+    expressionNode: ExpressionNode,
+};
 const TYPE_OF: Record<LayoutKind, keyof typeof NODE_TYPES> = {
     function: 'functionNode',
-    input: 'inputNode',
+    'object-input': 'objectInputNode',
+    'list-input': 'listInputNode',
+    'value-input': 'valueInputNode',
     output: 'outputNode',
     chart: 'chartNode',
+    parameter: 'parameterNode',
+    return: 'returnNode',
+    expression: 'expressionNode',
 };
 const KIND_OF: Record<string, LayoutKind> = {
     functionNode: 'function',
-    inputNode: 'input',
+    objectInputNode: 'object-input',
+    listInputNode: 'list-input',
+    valueInputNode: 'value-input',
     outputNode: 'output',
     chartNode: 'chart',
+    parameterNode: 'parameter',
+    returnNode: 'return',
+    expressionNode: 'expression',
 };
 // Output and chart nodes exist on the canvas only: the model never adds or removes them.
 const CANVAS_TYPES = new Set(['outputNode', 'chartNode']);
 const MINIMAP_COLOR: Record<LayoutKind, string> = {
-    input: ICON_COLOR.input,
+    'object-input': ICON_COLOR.input,
+    'list-input': ICON_COLOR.input,
+    'value-input': ICON_COLOR.input,
     function: ICON_COLOR.function,
     output: ICON_COLOR.output,
     chart: ICON_COLOR.chart,
+    parameter: ICON_COLOR.parameter,
+    return: ICON_COLOR.return,
+    expression: EXPRESSION_COLOR,
 };
 const ROW = 40;
 const FIT_VIEW = {padding: 0.15, maxZoom: 1};
+const FOCUS_VIEW = {padding: 0.6, maxZoom: 1, duration: 300};
 const WIRE_CLASS: Record<Wire['kind'], string> = {
     number: styles.wireNumber,
     string: styles.wireString,
@@ -77,18 +119,26 @@ const WIRE_CLASS: Record<Wire['kind'], string> = {
 };
 
 /**
- * The EdgeRules Flow Editor: a canvas of Input, Function, Output and Chart nodes with a node palette on the left.
- * Nodes and wires come from the model; positions, output nodes and chart nodes are presentation data reported
- * through `onLayoutChange`.
+ * The EdgeRules Flow Editor: a canvas of Input, Function, Output and Chart nodes with a node palette on the left; the
+ * flow of a `service` has Parameter, Function and Return nodes. Nodes and wires come from the model; positions,
+ * output nodes and chart nodes are presentation data reported through `onLayoutChange`.
  */
 export function FlowEditor({
     service,
+    revision,
     documentation,
     languageService,
     readOnly,
     onOpenNode,
     ...layout
 }: FlowEditorProps): ReactElement {
+    // Another editor of the same model changed it: the nodes, the wires and the outputs read it again.
+    const seenRevision = useRef(revision);
+    useEffect(() => {
+        if (revision === seenRevision.current) return;
+        seenRevision.current = revision;
+        service.invalidate();
+    }, [service, revision]);
     return (
         <ReactFlowProvider>
             <FlowEditorProvider
@@ -115,7 +165,18 @@ function useServiceVersion(service: FlowEditorService): number {
 function estimateSize(service: FlowEditorService, id: string, kind: LayoutKind): {width: number; height: number} {
     if (kind === 'output') return {width: 240, height: 2 * ROW};
     if (kind === 'chart') return CHART_SIZE;
-    if (kind === 'input') return {width: 280, height: (3 + Math.max(1, service.getInputNode(id).fields.length)) * ROW};
+    if (kind === 'object-input')
+        return {width: 280, height: (3 + Math.max(1, service.getObjectInputNode(id).fields.length)) * ROW};
+    if (kind === 'list-input')
+        return {width: 280, height: (3 + Math.max(1, service.getListInputNode(id).itemFields.length)) * ROW};
+    if (kind === 'value-input') return {width: 240, height: 3 * ROW};
+    if (kind === 'parameter')
+        return {width: 280, height: (3 + Math.max(1, service.getParameterNode(id).fields.length)) * ROW};
+    if (kind === 'return') {
+        const model = service.getReturnNode(id);
+        return {width: 320, height: (model.expression === undefined ? 4 + model.fields.length : 3) * ROW};
+    }
+    if (kind === 'expression') return {width: expressionNodeWidth(id), height: ROW};
     const model = service.getFunctionNode(id);
     if (!model.callee) return {width: 320, height: 3 * ROW};
     return {width: 360, height: (3 + Math.max(model.arguments.length, model.results.length)) * ROW};
@@ -138,11 +199,14 @@ function toEdge(wire: Wire, selected: ReadonlySet<string>): Edge {
         targetHandle: wire.targetHandle,
         className: `${styles.wire} ${WIRE_CLASS[wire.kind]}`,
         selected: selected.has(wire.id),
+        // A wire into an expression, or a returned expression, is a field its text reads: only an edit of the text
+        // removes it.
+        ...(wire.targetHandle === EXPRESSION_PIN && {deletable: false}),
     };
 }
 
 function sameData(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
-    return a.field === b.field && a.label === b.label && a.config === b.config;
+    return a.field === b.field && a.label === b.label && a.description === b.description && a.config === b.config;
 }
 
 /** 'output', then 'output2', 'output3'…: the first id with `prefix` that is not taken. */
@@ -176,7 +240,48 @@ function syncCharts(charts: FlowChart[], changes: NodeChange[]): FlowChart[] {
     return next;
 }
 
-function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defaultLayout' | 'onLayoutChange'>) {
+/** Keeps the output entries of the layout in step with their nodes: an OutputNode writes its title and description. */
+function syncOutputs(outputs: FlowOutput[], changes: NodeChange[]): FlowOutput[] {
+    let next = outputs;
+    for (const change of changes) {
+        if (change.type !== 'replace' || change.item.type !== 'outputNode') continue;
+        const {label, description} = change.item.data as OutputNodeData;
+        const output = next.find((candidate) => candidate.id === change.id);
+        if (!output || (output.label === label && output.description === description)) continue;
+        next = next.map((candidate) => (candidate.id === change.id ? {...candidate, label, description} : candidate));
+    }
+    return next;
+}
+
+/** The one selected node, or undefined when none or several are selected. */
+function selectionOf(
+    service: FlowEditorService,
+    nodes: Node[],
+    outputs: FlowOutput[],
+    charts: FlowChart[],
+): FlowSelection | undefined {
+    const chosen = nodes.filter((node) => node.selected);
+    if (chosen.length !== 1) return undefined;
+    const {id, type} = chosen[0];
+    const kind = KIND_OF[type ?? ''];
+    if (kind === 'output' || kind === 'chart') {
+        const sink = (kind === 'output' ? outputs : charts).find((candidate) => candidate.id === id);
+        const source = sink?.source && sourcePath(service, sink.source.node, sink.source.handle);
+        return {kind, id, label: sink?.label, source};
+    }
+    return kind ? {kind, field: id} : undefined;
+}
+
+function FlowCanvas({
+    defaultLayout,
+    onLayoutChange,
+    focusNode,
+    defaultPaletteCollapsed = false,
+    onSelectionChange,
+}: Pick<
+    FlowEditorProps,
+    'defaultLayout' | 'onLayoutChange' | 'focusNode' | 'defaultPaletteCollapsed' | 'onSelectionChange'
+>) {
     const {service, readOnly = false} = useFlowEditor();
     const flow = useReactFlow();
     const colorScheme = useComputedColorScheme('light');
@@ -187,7 +292,7 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
     const [charts, setCharts] = useState<FlowChart[]>(() => defaultLayout?.charts ?? []);
     const [nodes, setNodes] = useState<Node[]>([]);
     const [selectedEdges, setSelectedEdges] = useState<ReadonlySet<string>>(new Set());
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(defaultPaletteCollapsed);
     // Positions of nodes about to appear: a drop or a click on the palette, then the saved layout.
     const pending = useRef(new Map<string, XYPosition>(Object.entries(defaultLayout?.positions ?? {})));
     const select = useRef<string | undefined>(undefined);
@@ -198,7 +303,14 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
     const [fitOnInit] = useState(() => refs.length + outputs.length + charts.length > 0);
     const loaded = useRef(!fitOnInit);
     const wires = useMemo(
-        () => modelWires(refs, (field) => service.getFunctionNode(field)),
+        () =>
+            modelWires(
+                refs,
+                (field) => service.getFunctionNode(field),
+                (field) => service.getReturnNode(field),
+                (field) => service.getExpressionNode(field),
+                (field) => service.getParameterNode(field),
+            ),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [service, refs, version],
     );
@@ -221,7 +333,11 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
             size?: {width: number; height: number};
         }[] = [
             ...refs.map((ref: FlowNodeRef) => ({id: ref.field, kind: ref.kind, data: {field: ref.field}})),
-            ...outputs.map((output) => ({id: output.id, kind: 'output' as const, data: {label: output.label}})),
+            ...outputs.map((output) => ({
+                id: output.id,
+                kind: 'output' as const,
+                data: {label: output.label, description: output.description} satisfies OutputNodeData,
+            })),
             ...charts.map((chart) => ({
                 id: chart.id,
                 kind: 'chart' as const,
@@ -232,10 +348,12 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
         const wantedIds = new Set(wanted.map((node) => node.id));
         const removed = current.filter((node) => !wantedIds.has(node.id) && !CANVAS_TYPES.has(node.type ?? ''));
         const added = wanted.filter((node) => !byId.has(node.id));
+        // A field can change kind under the same id: an expression list becomes a list input.
+        const sameKind = (node: (typeof wanted)[number]) => byId.get(node.id)!.type === TYPE_OF[node.kind];
         const unchanged =
             added.length === 0 &&
             current.length === wanted.length &&
-            wanted.every((node) => sameData(byId.get(node.id)!.data, node.data));
+            wanted.every((node) => sameKind(node) && sameData(byId.get(node.id)!.data, node.data));
         if (unchanged) return;
 
         // A renamed field is one model node gone and one of the same kind added: it keeps its place and its outputs.
@@ -264,8 +382,10 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
                 if (existing)
                     return {
                         ...existing,
+                        type: TYPE_OF[node.kind],
                         data: sameData(existing.data, node.data) ? existing.data : node.data,
                         selected,
+                        deletable: isDeletable(node.kind),
                     };
                 return {
                     id: node.id,
@@ -273,12 +393,18 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
                     position: pending.current.get(node.id) ?? {x: 0, y: 0},
                     data: node.data,
                     selected,
-                    deletable: !readOnly,
+                    deletable: isDeletable(node.kind),
                     // A chart has a size of its own, which the resize handle changes; other nodes fit their rows.
                     ...node.size,
                 };
             }),
         );
+
+        // A parameter and the return are always on the flow of their service, and an expression on the flow of its
+        // context: their menus delete them from the model.
+        function isDeletable(kind: LayoutKind): boolean {
+            return !readOnly && kind !== 'parameter' && kind !== 'return' && kind !== 'expression';
+        }
 
         function initialPositions(unplaced: typeof wanted) {
             // The estimate misses descriptions and long names; the layout runs again once xyflow has measured.
@@ -336,6 +462,22 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
         onLayoutChange(layout);
     }, [nodes, outputs, charts, onLayoutChange]);
 
+    // Report the selected node when it changes: another node, its wire or its label, or no node at all.
+    // `version` reads the source path again after a change of the callee.
+    const selection = useMemo(
+        () => selectionOf(service, nodes, outputs, charts),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [service, nodes, outputs, charts, version],
+    );
+    const selectionKey = JSON.stringify(selection ?? null);
+    const reportedSelection = useRef('null');
+    useEffect(() => {
+        if (selectionKey === reportedSelection.current) return;
+        reportedSelection.current = selectionKey;
+        onSelectionChange?.(selection);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectionKey, onSelectionChange]);
+
     function viewportCenter(): XYPosition {
         const box = wrapper.current?.getBoundingClientRect();
         if (!box || box.width === 0) return {x: 0, y: 0};
@@ -361,19 +503,22 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
             setCharts([...charts, {id}]);
             return;
         }
-        if (action.kind === 'input') {
-            place(action.record);
-            if (isPortableError(service.addInputNode(action.record))) pending.current.delete(action.record);
-            return;
-        }
         if (action.kind === 'new-input') {
-            const created = service.createInputNode();
+            const created = service.createInputNode(action.input);
             if (!isPortableError(created)) place(created);
             return;
         }
-        const field = service.createDraftNode();
-        place(field);
-        if (action.callee) service.setCallee(field, action.callee);
+        if (action.kind === 'parameter' || action.kind === 'return' || action.kind === 'expression') {
+            const created =
+                action.kind === 'parameter'
+                    ? service.createParameter()
+                    : action.kind === 'return'
+                      ? service.createReturnNode()
+                      : service.createExpressionNode();
+            if (!isPortableError(created)) place(created);
+            return;
+        }
+        place(service.createDraftNode());
     };
 
     const onDrop = (event: DragEvent) => {
@@ -392,6 +537,10 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
 
     const outputIds = useMemo(() => new Set(outputs.map((output) => output.id)), [outputs]);
     const chartIds = useMemo(() => new Set(charts.map((chart) => chart.id)), [charts]);
+    const returnIds = useMemo(
+        () => new Set(refs.filter((ref) => ref.kind === 'return').map((ref) => ref.field)),
+        [refs],
+    );
 
     const onConnect = useCallback(
         (connection: Connection) => {
@@ -416,15 +565,24 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
                 );
                 return;
             }
+            const path = sourcePath(service, source, sourceHandle);
+            if (returnIds.has(target)) {
+                // The add pin adds a new field named after the wired value; a field pin rebinds that field.
+                const name = targetHandle === ADD_PIN ? undefined : targetHandle.slice('in:'.length);
+                service.bindReturnField(target, name, path);
+                return;
+            }
             // A rejected binding shows on the target node as its error row.
-            service.bindArgument(target, targetHandle.slice('in:'.length), sourcePath(source, sourceHandle));
+            service.bindArgument(target, targetHandle.slice('in:'.length), path);
         },
-        [service, outputIds, chartIds],
+        [service, outputIds, chartIds, returnIds],
     );
 
+    // The wires into an expression, or a returned expression, follow its text: a wire cannot change them.
     const isValidConnection: IsValidConnection = useCallback(
         (connection) =>
             connection.source !== connection.target &&
+            connection.targetHandle !== EXPRESSION_PIN &&
             Boolean(connection.sourceHandle?.startsWith('out:')) &&
             Boolean(connection.targetHandle?.startsWith('in:')),
         [],
@@ -433,10 +591,8 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
     // The editor applies deletions to the model itself; xyflow only reports them.
     const onBeforeDelete: OnBeforeDelete = useCallback(
         async ({nodes: doomedNodes, edges: doomedEdges}) => {
+            // A model node is always on the flow: only the menu Delete removes its field.
             const doomed = new Set(doomedNodes.map((node) => node.id));
-            for (const node of doomedNodes) {
-                if (!CANVAS_TYPES.has(node.type ?? '')) service.removeFromFlow(node.id);
-            }
             const removedOf = (type: string) =>
                 new Set(doomedNodes.filter((node) => node.type === type).map((node) => node.id));
             const removedOutputs = removedOf('outputNode');
@@ -446,17 +602,19 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
             const unwiredOutputs = new Set<string>();
             const unwiredCharts = new Set<string>();
             for (const edge of unwired) {
+                if (edge.targetHandle === EXPRESSION_PIN) continue;
                 if (outputIds.has(edge.target)) unwiredOutputs.add(edge.target);
                 else if (chartIds.has(edge.target)) unwiredCharts.add(edge.target);
+                // A wire into the return is a value the service returns: it leaves the return, unless a caller reads it.
+                else if (returnIds.has(edge.target) && edge.targetHandle)
+                    service.removeReturnField(edge.target, edge.targetHandle.slice('in:'.length));
                 else if (edge.targetHandle) service.unbindArgument(edge.target, edge.targetHandle.slice('in:'.length));
             }
             if (removedOutputs.size > 0 || unwiredOutputs.size > 0) {
                 setOutputs((current) =>
                     current
                         .filter((output) => !removedOutputs.has(output.id))
-                        .map((output) =>
-                            unwiredOutputs.has(output.id) ? {id: output.id, label: output.label} : output,
-                        ),
+                        .map((output) => (unwiredOutputs.has(output.id) ? {...output, source: undefined} : output)),
                 );
             }
             if (removedCharts.size > 0 || unwiredCharts.size > 0) {
@@ -469,13 +627,36 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
             }
             return false;
         },
-        [service, outputIds, chartIds],
+        [service, outputIds, chartIds, returnIds],
     );
 
     const onNodesChange = useCallback((changes: NodeChange[]) => {
         setNodes((current) => applyNodeChanges(changes, current));
+        setOutputs((current) => syncOutputs(current, changes));
         setCharts((current) => syncCharts(current, changes));
     }, []);
+
+    // A copy of an output goes under it, wired to the same pin, and becomes the selected node.
+    const canvasActions = useMemo(
+        () => ({
+            duplicateOutput(id: string) {
+                const original = outputs.find((output) => output.id === id);
+                const node = nodesRef.current.find((candidate) => candidate.id === id);
+                if (!original || !node) return;
+                const taken = new Set([
+                    ...outputs.map((output) => output.id),
+                    ...charts.map((chart) => chart.id),
+                    ...nodeIds,
+                ]);
+                const copy = {...original, id: nextCanvasId('output', taken)};
+                const height = sizeOf(node, service).height;
+                pending.current.set(copy.id, {x: node.position.x, y: node.position.y + height + 2 * ROW});
+                select.current = copy.id;
+                setOutputs([...outputs, copy]);
+            },
+        }),
+        [outputs, charts, nodeIds, service],
+    );
 
     const arrange = useCallback(
         (animate: boolean) => {
@@ -499,6 +680,24 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
         arrange(false);
     }, [measured, arrange]);
 
+    // The focus selects its node once the node exists, and centers it once xyflow measured the nodes: after the
+    // first fit and the auto layout, which both fit the view in the next frame, so the centering waits one more.
+    const selected = useRef<FlowFocusRequest | undefined>(undefined);
+    useEffect(() => {
+        if (!focusNode || selected.current === focusNode || !nodes.some((node) => node.id === focusNode.field)) return;
+        selected.current = focusNode;
+        setNodes((current) => current.map((node) => ({...node, selected: node.id === focusNode.field})));
+    }, [focusNode, nodes]);
+    useEffect(() => {
+        if (!focusNode || !measured) return;
+        let frame = window.requestAnimationFrame(() => {
+            frame = window.requestAnimationFrame(
+                () => void flow.fitView({nodes: [{id: focusNode.field}], ...FOCUS_VIEW}),
+            );
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [focusNode, measured, flow]);
+
     return (
         <div className={styles.editor} data-testid="flow-editor">
             {!readOnly && (
@@ -510,67 +709,78 @@ function FlowCanvas({defaultLayout, onLayoutChange}: Pick<FlowEditorProps, 'defa
                 />
             )}
             <div className={styles.canvas} ref={wrapper} onDrop={onDrop} onDragOver={onDragOver}>
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    nodeTypes={NODE_TYPES}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={(changes) =>
-                        setSelectedEdges((current) => {
-                            const next = new Set(current);
-                            for (const change of changes) {
-                                if (change.type !== 'select') continue;
-                                if (change.selected) next.add(change.id);
-                                else next.delete(change.id);
-                            }
-                            return next;
-                        })
-                    }
-                    onConnect={onConnect}
-                    isValidConnection={isValidConnection}
-                    onBeforeDelete={onBeforeDelete}
-                    nodesConnectable={!readOnly}
-                    deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
-                    colorMode={colorScheme}
-                    snapToGrid
-                    snapGrid={[20, 20]}
-                    minZoom={0.2}
-                    maxZoom={2}
-                    fitView={fitOnInit}
-                    fitViewOptions={FIT_VIEW}
-                    proOptions={{hideAttribution: true}}
-                >
-                    <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} className={styles.background} />
-                    <Controls position="bottom-left" showInteractive={false} className={styles.controls}>
-                        <ControlButton onClick={() => arrange(true)} title="Arrange nodes" aria-label="Arrange nodes">
-                            <IconLayoutDistributeHorizontal size={14} />
-                        </ControlButton>
-                    </Controls>
-                    {nodes.length > 0 && (
-                        <MiniMap
-                            position="bottom-right"
-                            pannable
-                            zoomable
-                            ariaLabel="Flow overview"
-                            className={styles.minimap}
-                            nodeColor={(node) => MINIMAP_COLOR[KIND_OF[node.type ?? ''] ?? 'function']}
-                            nodeBorderRadius={2}
+                <CanvasActionsProvider value={canvasActions}>
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        nodeTypes={NODE_TYPES}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={(changes) =>
+                            setSelectedEdges((current) => {
+                                const next = new Set(current);
+                                for (const change of changes) {
+                                    if (change.type !== 'select') continue;
+                                    if (change.selected) next.add(change.id);
+                                    else next.delete(change.id);
+                                }
+                                return next;
+                            })
+                        }
+                        onConnect={onConnect}
+                        isValidConnection={isValidConnection}
+                        onBeforeDelete={onBeforeDelete}
+                        nodesConnectable={!readOnly}
+                        deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
+                        colorMode={colorScheme}
+                        snapToGrid
+                        snapGrid={[20, 20]}
+                        minZoom={0.2}
+                        maxZoom={2}
+                        fitView={fitOnInit}
+                        fitViewOptions={FIT_VIEW}
+                        proOptions={{hideAttribution: true}}
+                    >
+                        <Background
+                            variant={BackgroundVariant.Dots}
+                            gap={20}
+                            size={1.2}
+                            className={styles.background}
                         />
-                    )}
-                    {nodes.length === 0 && (
-                        <Panel position="top-center" className={styles.emptyPanel}>
-                            <div className={styles.empty} data-testid="flow-editor-empty">
-                                <IconRoute size={28} stroke={1.5} className={styles.emptyIcon} />
-                                <strong>This flow has no nodes yet</strong>
-                                <span>
-                                    {readOnly
-                                        ? 'Nodes appear here when the model has fields annotated for the flow.'
-                                        : 'Drag a node from the palette onto the canvas, or click it to add it here.'}
-                                </span>
-                            </div>
-                        </Panel>
-                    )}
-                </ReactFlow>
+                        <Controls position="bottom-left" showInteractive={false} className={styles.controls}>
+                            <ControlButton
+                                onClick={() => arrange(true)}
+                                title="Arrange nodes"
+                                aria-label="Arrange nodes"
+                            >
+                                <IconLayoutDistributeHorizontal size={14} />
+                            </ControlButton>
+                        </Controls>
+                        {nodes.length > 0 && (
+                            <MiniMap
+                                position="bottom-right"
+                                pannable
+                                zoomable
+                                ariaLabel="Flow overview"
+                                className={styles.minimap}
+                                nodeColor={(node) => MINIMAP_COLOR[KIND_OF[node.type ?? ''] ?? 'function']}
+                                nodeBorderRadius={2}
+                            />
+                        )}
+                        {nodes.length === 0 && (
+                            <Panel position="top-center" className={styles.emptyPanel}>
+                                <div className={styles.empty} data-testid="flow-editor-empty">
+                                    <IconRoute size={28} stroke={1.5} className={styles.emptyIcon} />
+                                    <strong>This flow has no nodes yet</strong>
+                                    <span>
+                                        {readOnly
+                                            ? 'Nodes appear here when the workbook or the service has fields.'
+                                            : 'Drag a node from the palette onto the canvas, or click it to add it here.'}
+                                    </span>
+                                </div>
+                            </Panel>
+                        )}
+                    </ReactFlow>
+                </CanvasActionsProvider>
             </div>
         </div>
     );

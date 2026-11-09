@@ -1,6 +1,13 @@
 import type {ReactNode} from 'react';
+import type {BoxedEditorTargetKind} from '../../boxed-editor';
 import type {DocumentationService} from '../../documentation-service';
-import type {RowMenuItem} from '../../../ui/RowActionsMenu';
+import type {RowMenuItem} from '#ui/RowActionsMenu';
+
+/** Host routing target; reuses the Boxed Editor kinds and adds 'tests'. */
+export interface FlowEditorOpenTarget {
+    path: string; // callee path ('risk') or node field path ('decision')
+    kind: BoxedEditorTargetKind | 'tests';
+}
 
 /** ReactFlow data shared by every node kind; the node id is the field path. */
 // A type alias, not an interface: xyflow requires node data to be assignable to Record<string, unknown>.
@@ -68,6 +75,21 @@ export interface DescriptionRowProps {
     onEditingChange: (editing: boolean) => void;
 }
 
+export interface DescriptionLineProps {
+    description?: string;
+    ariaLabel: string; // label of the inline input
+    placeholder: string;
+    editing: boolean;
+    readOnly?: boolean;
+    onCommit: (text: string) => void; // trimmed; an empty text deletes the description
+    onEditingChange: (editing: boolean) => void;
+}
+
+/** Canvas actions of the FlowEditor that a canvas-only node cannot do through xyflow alone. */
+export interface CanvasActions {
+    duplicateOutput: (id: string) => void; // a copy of the output node with its wire, below it
+}
+
 export interface NodeMenuButtonProps {
     items: RowMenuItem[];
     ariaLabel: string;
@@ -78,10 +100,11 @@ export interface NodeMenuButtonProps {
 
 export interface NodeFrameProps {
     field: string; // model field path
-    label?: string; // '@node-name'; the title falls back to the field
+    label?: string; // '@name'; the title falls back to the field
     testId: string;
     selected?: boolean;
-    width: number; // px, from the node layout
+    width: number; // px, from the node layout; the least width when `fit` is set
+    fit?: boolean; // the node grows to fit its body, for example a data table, up to a limit
     color: string; // tile background
     icon: ReactNode; // tile content
     badge?: ReactNode; // after the field name, for example the draft badge
@@ -90,6 +113,7 @@ export interface NodeFrameProps {
     menuItems: RowMenuItem[];
     editing: NodeEditing<{kind: string}> | null;
     onEditingChange: (editing: CoreEditing | null) => void;
+    onRenameNode?: (text: string) => string | void; // replaces the '@name' write; returns an error text
     children: ReactNode; // the body: tracks, or an empty state
 }
 
@@ -116,12 +140,10 @@ export interface CoreNodeMenuContext {
     onDuplicate: () => void;
     onAddDescription: () => void;
     onRemoveDescription: () => void;
-    onRemoveFromFlow: () => void;
     onDelete: () => void;
 }
 
 export interface CoreNodeMenuSlots {
-    afterRename?: RowMenuItem[]; // "This node" items between Rename field and Duplicate
     middle?: RowMenuItem[]; // a node-kind group between "This node" and "Remove"
     middleGroup?: ReactNode; // label of the middle group
 }

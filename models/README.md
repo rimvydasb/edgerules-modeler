@@ -1,0 +1,39 @@
+# Models
+
+Complete, realistic EdgeRules projects that the components are tested and demonstrated with. Each model is one project
+bundle: the DSL model and the documentation, tests and flow slices that a host stores next to it.
+
+| Model                                         | Shows                                                                                                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [loan-repayment](loan-repayment/index.ts)     | Types, a decision table, functions, a `service`, two `workbook`s with charts, test suites                                                                                            |
+| [loan-origination](loan-origination/index.ts) | Layered: types with `facts`, a scorecard and three decision tables, `decision`s, policy rules, affordability, a `service`, two `workbook`s with charts, test suites over list inputs |
+| [client-outreach](client-outreach/index.ts)   | An `optimise` element (HiGHS MILP) over decision tables: which of 100 prospects to call, email or text in a day of two workers                                                       |
+
+## Layout of a Model
+
+```text
+models/<model-name>/
+├── index.ts          # <MODEL>_PROJECT: the ProjectBundleInput for ProjectFactory.createBundle, with the model name and version
+├── model.ts          # the EdgeRules DSL
+├── documentation.ts  # documentation.json: description by model path
+├── tests.ts          # tests.json: test suites by subject
+├── flow.ts           # flow.json: Flow Editor layouts (outputs, charts) by flow root
+├── clients.ts        # (optional) generated input data that model.ts and the tests share
+└── __tests__/        # vitest with the real @edgerules/node engine
+```
+
+## Rules
+
+- A model MUST link and execute with the engine version of `package.json`. Its `__tests__` prove it: every authored test
+  case passes through the Tests Manager runner, and every documentation path, output and chart source exists.
+- `stories/models/<Model>.stories.tsx` shows a model in the Shell (the Storybook group Models): it opens the model with
+  `openStoryProject(<MODEL>_PROJECT)`, one story per entity worth a look. Playwright specs of a model are in
+  `e2e/models/<model-name>.spec.ts`.
+- Give the model a `name` and a `version` in `index.ts`, a description of the model (`'*'`) and of every workbook in
+  `documentation.ts`, and a `name` to every `workbook` (its `@Name`): the Shell shows them in the breadcrumb and in the
+  workbook panels of the Flow view.
+- Keep values deterministic: tests and specs assert exact engine results.
+- A test row of a list element other than `[0]` (`applicants[1].name`) is `custom: true`. The schema derives only `[0]`,
+  so the Tests view drops a row it cannot derive unless the row is user-authored.
+- A model with an `optimise` element needs a solver: its `__tests__` register highs-js on the engine (`registerSolver`).
+  Without a solver, the optimisation result and everything after it is `Missing`.

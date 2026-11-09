@@ -1,7 +1,7 @@
 import {test, expect, type Page} from '@playwright/test';
 import {openStory} from '../support/storybook';
 
-const PREFIX = 'flow-editor-outputnode--';
+const PREFIX = 'components-flow-editor-output-node--';
 
 async function open(page: Page, story: string) {
     await openStory(page, `${PREFIX}${story}`);
@@ -29,4 +29,15 @@ test('shows the value of an unnamed result', async ({page}) => {
 test('shows the error row when the wired path does not exist', async ({page}) => {
     await open(page, 'missing-path');
     await expect(page.getByRole('alert')).toContainText('no decision.missing');
+});
+
+test('shows each value shape: single values in the row, lists and records as tables', async ({page}) => {
+    await openStory(page, `${PREFIX}kinds`);
+    const output = (field: string) => page.getByTestId(`output-node-output-${field}`);
+    await expect(output('amount').getByTestId('output-value')).toHaveText('2501', {timeout: 15_000});
+    await expect(output('label')).toHaveAttribute('data-shape', 'scalar');
+    await expect(output('scores')).toHaveAttribute('data-shape', 'list');
+    await expect(output('applicant')).toHaveAttribute('data-shape', 'record');
+    await expect(output('offers').getByTestId('output-value')).toHaveText('3 rows × 3 columns');
+    await expect(output('schedule').getByTestId('output-value')).toHaveText('12 rows × 5 columns');
 });

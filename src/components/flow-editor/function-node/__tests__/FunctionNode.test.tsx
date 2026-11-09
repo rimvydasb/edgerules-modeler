@@ -1,5 +1,5 @@
 import {fireEvent, screen, waitFor, within} from '@testing-library/react';
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {renderNode} from '../../testing/renderNode';
 
 describe('FunctionNode', () => {
@@ -98,7 +98,28 @@ describe('FunctionNode', () => {
     it('shows an error message on the pin row of a rejected binding', async () => {
         const {service} = renderNode('decision');
         service.bindArgument('decision', 'segment', 'applicant.age');
-        expect(await screen.findByRole('alert')).toHaveTextContent(/type mismatch/);
+        expect(await screen.findByRole('alert')).toHaveTextContent(/argument 'segment' expects string, found number/);
+    });
+});
+
+describe('FunctionNode callee shortcut', () => {
+    it('opens a function callee in the boxed editor', () => {
+        const onOpenNode = vi.fn();
+        renderNode('payment', {onOpenNode});
+        fireEvent.click(screen.getByRole('button', {name: 'Open monthly in boxed editor'}));
+        expect(onOpenNode).toHaveBeenCalledWith({path: 'monthly', kind: 'boxed-editor'});
+    });
+
+    it('opens a ruleset callee in the decision table editor', () => {
+        const onOpenNode = vi.fn();
+        renderNode('decision', {onOpenNode});
+        fireEvent.click(screen.getByRole('button', {name: 'Open risk in decision table editor'}));
+        expect(onOpenNode).toHaveBeenCalledWith({path: 'risk', kind: 'ruleset'});
+    });
+
+    it('is absent without a host handler', () => {
+        renderNode('decision');
+        expect(screen.queryByRole('button', {name: /^Open risk/})).not.toBeInTheDocument();
     });
 });
 

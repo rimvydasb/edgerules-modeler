@@ -19,3 +19,21 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The size of the list, table or record under the row. */
+.summary {
+  color: var(--mantine-color-dimmed);
+  font-family: inherit;
+}
+
+/* A node with a table fits the table, between the width of a one-value node and a limit; the table scrolls past it. */
+.tabular {
+  width: max-content;
+  min-width: 240px;
+  max-width: 640px;
+}
+
+/* The header row is 40px like every node row; the title sits in the middle of it. */
+.title {
+  align-self: center;
+}

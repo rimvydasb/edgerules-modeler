@@ -1,7 +1,7 @@
 import {test, expect, type Page} from '@playwright/test';
 import {openStory} from '../support/storybook';
 
-const PREFIX = 'flow-editor-functionnode--';
+const PREFIX = 'components-flow-editor-function-node--';
 
 async function open(page: Page, story: string) {
     await openStory(page, `${PREFIX}${story}`);
@@ -108,4 +108,22 @@ test('the argument menu disables Delete argument for a used parameter', async ({
     await page.getByRole('button', {name: 'Actions for argument age'}).click();
     await expect(page.getByRole('menuitem', {name: 'Move up'})).toHaveAttribute('data-disabled', 'true');
     await expect(page.getByRole('menuitem', {name: 'Delete argument'})).toHaveAttribute('data-disabled', 'true');
+});
+
+test('renames the node and keeps the editor open', async ({page}) => {
+    await open(page, 'default');
+
+    await page.getByRole('button', {name: 'Node actions'}).click();
+    await page.getByRole('menuitem', {name: 'Rename node'}).click();
+    const name = page.getByLabel(/Name of node /);
+    await expect(name).toBeVisible();
+    // The menu returns focus to its trigger after closing; that blur used to commit and close the editor.
+    await page.waitForTimeout(500);
+    await expect(name).toBeVisible();
+    await name.fill('Risk tier');
+    await name.press('Enter');
+
+    // The node title shows the '@name' annotation once the edit is committed.
+    await expect(name).toHaveCount(0);
+    await expect(page.locator('strong', {hasText: 'Risk tier'})).toBeVisible();
 });

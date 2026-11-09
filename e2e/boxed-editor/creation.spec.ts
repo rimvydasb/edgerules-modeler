@@ -8,7 +8,7 @@ test.describe('Boxed Editor / creation', () => {
         await chooseRowAction(page, '*', 'Add type');
 
         await expect(page.getByTestId('row-Type')).toBeVisible();
-        await expectLiveModel(page, /"Type":\{"@kind":"type-definition"\}/);
+        await expectLiveModel(page, /"Type":\{"@kind":"type","fields":\{\}\}/);
         await expect(page.getByTestId('live-result')).toHaveText('{}');
     });
 
@@ -20,7 +20,10 @@ test.describe('Boxed Editor / creation', () => {
         await chooseRowAction(page, 'field', 'Add type');
 
         await expect(page.getByTestId('row-field.Type')).toBeVisible();
-        await expectLiveModel(page, /"field":\{"@kind":"context","Type":\{"@kind":"type-definition"\}\}/);
+        await expectLiveModel(
+            page,
+            /"field":\{"@kind":"context","fields":\{"Type":\{"@kind":"type","fields":\{\}\}\}\}/,
+        );
     });
 
     test('adds fields to a newly created complex type', async ({page}) => {
@@ -32,7 +35,7 @@ test.describe('Boxed Editor / creation', () => {
 
         await expect(page.getByTestId('row-Type.field')).toBeVisible();
         await expect(page.getByTestId('row-Type.field2')).toBeVisible();
-        await expectLiveModel(page, /"Type":\{"@kind":"type-definition","field":"string","field2":"string"\}/);
+        await expectLiveModel(page, /"Type":\{"@kind":"type","fields":\{"field":"string","field2":"string"\}\}/);
     });
 
     test('references a newly created complex type from a field annotation', async ({page}) => {
@@ -42,7 +45,7 @@ test.describe('Boxed Editor / creation', () => {
 
         await commitExpression(page, 'field', '<Type, required: true>');
 
-        await expectLiveModel(page, /"field":\{"@kind":"type","type":"Type","required":true\}/);
+        await expectLiveModel(page, /"field":\{"@kind":"placeholder","type":"Type","required":true/);
         await expect(page.getByTestId('live-result')).not.toHaveText(/^error:/);
     });
 

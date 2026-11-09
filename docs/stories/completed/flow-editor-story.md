@@ -230,7 +230,6 @@ The node menu and the argument menu use `RowActionsMenu`. Disabled items show th
 | -------- | ------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Node     | This node          | Rename node                   | `setNodeName`                                                                                                  |
 | Node     | This node          | Rename field                  | `renameField`                                                                                                  |
-| Node     | This node          | Change callee…                | opens `CalleePicker`, then `setCallee`                                                                         |
 | Node     | This node          | Duplicate                     | `duplicate`                                                                                                    |
 | Node     | This node          | Add description               | shows the description row in edit mode; no description exists                                                  |
 | Node     | This node          | Remove description            | `documentation.setDescription(field, '')`; a description exists                                                |
@@ -450,12 +449,12 @@ Acceptance criteria:
 - [ ] Every command in `## Verification` passes
 - [ ] Storybook starts with `npm run storybook` and shows the FunctionNode stories
 
-# Flow Editor: InputNode
+# Flow Editor: ObjectInputNode
 
 ## Summary
 
-`InputNode` is the source node of the Flow Editor. It renders one model field annotated `@InputNode` whose value is a
-record (`@kind: 'context'`).
+`ObjectInputNode` is a source node of the Flow Editor. It renders one model field annotated `@InputNode` whose value is
+a record (`@kind: 'context'`). A list value is a `ListInputNode`.
 
 The node is a table with a Field column and a Value column, and one output pin per field. Wires from these pins feed the
 argument pins of a `FunctionNode`.
@@ -463,46 +462,46 @@ argument pins of a `FunctionNode`.
 The user edits a value in a `CodeEditorCell`, and the commit writes the expression to the model. Every FunctionNode and
 OutputNode that reads the field then recalculates.
 
-The proposal does not draw the InputNode. It is built from the FunctionNode parts: same 40px sheet, same header, band,
-pins, menu and inline edits. The tile uses the input color `#ed6c02`.
+The proposal does not draw the ObjectInputNode. It is built from the FunctionNode parts: same 40px sheet, same header,
+band, pins, menu and inline edits. The tile uses the input color `#ed6c02`.
 
 ## Technical Breakdown
 
-| File                                                            | Responsibility                                             |
-| --------------------------------------------------------------- | ---------------------------------------------------------- |
-| `src/components/flow-editor/input-node/types.ts`                | InputNode types: data, model, fields, menu contexts        |
-| `src/components/flow-editor/input-node/InputNode.tsx`           | The `@xyflow/react` custom node component                  |
-| `src/components/flow-editor/input-node/inputNodeMenus.tsx`      | Node menu and field menu                                   |
-| `src/components/flow-editor/input-node/InputValueCell.tsx`      | Value cell: highlighted text, `CodeEditorCell` in edit     |
-| `src/components/boxed-editor/service/embedContext.ts`           | Model text around a value, for diagnostics and completions |
-| `src/components/flow-editor/input-node/layout.ts`               | Record summary; delegates to `computeTrackLayout`          |
-| `src/components/flow-editor/service/createFlowEditorService.ts` | InputNode reads and writes                                 |
-| `src/components/flow-editor/input-node/__tests__/`              | RTL tests against the real `@edgerules/node` engine        |
-| `stories/components/flow-editor/InputNode.stories.tsx`          | Storybook stories against the real `@edgerules/web` engine |
+| File                                                                    | Responsibility                                             |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `src/components/flow-editor/object-input-node/types.ts`                 | ObjectInputNode types: data, model, fields, menu contexts  |
+| `src/components/flow-editor/object-input-node/ObjectInputNode.tsx`      | The `@xyflow/react` custom node component                  |
+| `src/components/flow-editor/object-input-node/objectInputNodeMenus.tsx` | Node menu and field menu                                   |
+| `src/components/flow-editor/object-input-node/InputValueCell.tsx`       | Value cell: highlighted text, `CodeEditorCell` in edit     |
+| `src/components/boxed-editor/service/embedContext.ts`                   | Model text around a value, for diagnostics and completions |
+| `src/components/flow-editor/object-input-node/layout.ts`                | Record summary; delegates to `computeTrackLayout`          |
+| `src/components/flow-editor/service/createFlowEditorService.ts`         | ObjectInputNode reads and writes                           |
+| `src/components/flow-editor/object-input-node/__tests__/`               | RTL tests against the real `@edgerules/node` engine        |
+| `stories/components/flow-editor/ObjectInputNode.stories.tsx`            | Storybook stories against the real `@edgerules/web` engine |
 
 ### Component API
 
 ```typescript
-interface InputNodeData {
+interface ObjectInputNodeData {
     field: string; // model field path of the input record, for example 'applicant'
 }
 
-interface InputField {
+interface ObjectInputField {
     name: string;
     type: string; // 'number', 'string[]', 'object' for a nested record
     value?: string; // expression text, for example '23' or "'retail'"; undefined for a nested record
     used: boolean; // an expression elsewhere in the model reads `<field>.<name>`; Delete field is disabled
 }
 
-interface InputNodeModel {
+interface ObjectInputNodeModel {
     field: string;
     label?: string; // '@node-name'
-    fields: InputField[]; // one output pin per field of the record
+    fields: ObjectInputField[]; // one output pin per field of the record
 }
 
 // Added to FlowEditorService
-getInputNode(field: string): InputNodeModel; // no fields when the record is not an InputNode
-listInputCandidates(): string[]; // record fields that are not yet an InputNode
+getObjectInputNode(field: string): ObjectInputNodeModel; // no fields when the record is not an ObjectInputNode
+listInputCandidates(): string[]; // record fields that are not yet an ObjectInputNode
 addInputNode(field: string): PortableError | void; // writes '@node: InputNode', link-checked
 addInputField(field: string, after?: string): PortableError | void; // appends a number field; after = undefined appends
 moveInputField(field: string, name: string, direction: 'up' | 'down'): PortableError | void;
@@ -515,19 +514,20 @@ inputValueContext(field: string, name: string): CodeEditorEmbedContext; // model
 languageService?: CodeEditorService; // diagnostics and completions of value cells; omit to show values read-only
 ```
 
-`setNodeName`, `renameField`, `duplicate`, `removeFromFlow` and `deleteField` act on an InputNode when `field` is one.
+`setNodeName`, `renameField`, `duplicate`, `removeFromFlow` and `deleteField` act on an ObjectInputNode when `field` is
+one.
 
 ### Node anatomy
 
-| Part            | Source                 | Behavior                                                                      |
-| --------------- | ---------------------- | ----------------------------------------------------------------------------- |
-| Kind tile       | -                      | Orange, input icon                                                            |
-| Header line 1   | `label`, `field`       | Bold label, mono field name, node menu ⋮                                      |
-| Header line 2   | `fields`               | INPUT label, `{ age, income }` summary, whole-record pin `out:*`              |
-| Description row | `DocumentationService` | Same as the FunctionNode                                                      |
-| Band            | `fields.length`        | FIELD or FIELDS over the names; VALUE or VALUES over the values               |
-| Field cell      | `InputField.name`      | Name; click to rename; field menu ⋮ at the end of the cell                    |
-| Value cell      | `InputField.value`     | Highlighted expression; click to edit in a `CodeEditorCell`; pin `out:<name>` |
+| Part            | Source                   | Behavior                                                                      |
+| --------------- | ------------------------ | ----------------------------------------------------------------------------- |
+| Kind tile       | -                        | Orange, input icon                                                            |
+| Header line 1   | `label`, `field`         | Bold label, mono field name, node menu ⋮                                      |
+| Header line 2   | `fields`                 | INPUT label, `{ age, income }` summary, whole-record pin `out:*`              |
+| Description row | `DocumentationService`   | Same as the FunctionNode                                                      |
+| Band            | `fields.length`          | FIELD or FIELDS over the names; VALUE or VALUES over the values               |
+| Field cell      | `ObjectInputField.name`  | Name; click to rename; field menu ⋮ at the end of the cell                    |
+| Value cell      | `ObjectInputField.value` | Highlighted expression; click to edit in a `CodeEditorCell`; pin `out:<name>` |
 
 - **Handle ids:** `out:<field>` and `out:*`. There are no input handles.
 - **Source path:** `<nodeId>.<field>`, or `<nodeId>` for `out:*`.
@@ -552,8 +552,8 @@ languageService?: CodeEditorService; // diagnostics and completions of value cel
 - Engine facts verified on `@edgerules/node` `0.0.6-alpha.202607291629`:
   - `set` on a record that already has annotations keeps them when the new node has none. `removeFromFlow` therefore
     calls `remove('<field>.@InputNode')`, which removes `@node` and `@node-name`.
-  - A plain value such as `amount: 5` takes no annotation, and `set` rejects `@kind: 'value'`. An InputNode is a record
-    only.
+  - A plain value such as `amount: 5` takes no annotation, and `set` rejects `@kind: 'value'`. An ObjectInputNode is a
+    record only.
   - `get(field, 'FIELDS')` on a record returns the typed fields with `readOnly: true`.
 - The field menu is the FunctionNode argument menu for a record field: Move up, Move down, Add field below, Delete field
   (disabled with the reason when `used`). The footer reads "Changes `<field>`". The dots are always visible, on the left
@@ -573,25 +573,138 @@ languageService?: CodeEditorService; // diagnostics and completions of value cel
 - `setInputFieldValue` writes the text with `set('<field>.<name>', text)` and a link check. A value whose type breaks a
   reader, for example a string for `risk(age: number)`, is reverted.
 - A nested record shows `{ … }` and is not editable. Without `languageService`, or in read-only mode, values are text.
+- The node shows at most 128 fields (`FIELD_LIMIT`), then a row of `…`. The summary line names at most 5 fields, then
+  `…`, so a large record keeps a narrow header.
+- In the Shell, selecting an input node that shows only a part of its data opens the split screen with the Boxed Editor
+  at the field path, as for an OutputNode (`useReducedSelection`). An ObjectInputNode shows a part when it has more than
+  128 fields or a value is cut off; a ListInputNode when its table is cut at 10 rows or 5 columns; a ValueInputNode when
+  its value is cut off.
 - The value editor has the `nodrag nowheel nokey` classes. Typing Backspace in it does not delete the selected node.
-- Dragging a wire from an InputNode is out of this story. Wires are written by the target FunctionNode (`bindArgument`).
+- Dragging a wire from an ObjectInputNode is out of this story. Wires are written by the target FunctionNode
+  (`bindArgument`).
 
 ## Tasks
 
-- [x] Add `InputNodeData`, `InputField`, `InputNodeModel` and the four service methods
-- [x] Write `InputNode` and `inputNodeMenuItems`; export `InputNode` from `edgerules-react/flow-editor`
-- [x] Add tests: `InputNode.test.tsx` and the `InputNode service` block in `createFlowEditorService.test.ts`
+- [x] Add `ObjectInputNodeData`, `ObjectInputField`, `ObjectInputNodeModel` and the four service methods
+- [x] Write `ObjectInputNode` and `objectInputNodeMenuItems`; export `ObjectInputNode` from
+      `edgerules-react/flow-editor`
+- [x] Add tests: `ObjectInputNode.test.tsx` and the `ObjectInputNode service` block in `createFlowEditorService.test.ts`
 - [x] Add the Storybook stories: Default, SingleField, Wired, NodeMenu, RenameField
 - [x] Update `README.md` and `docs/ARCHITECTURE.md`
-- [ ] Manual: `npm run storybook`, the InputNode stories in light and dark themes
+- [ ] Manual: `npm run storybook`, the ObjectInputNode stories in light and dark themes
 - [x] Field menu: Move up, Move down, Add field below, Delete field; Add field in the node menu
 - [x] Fix: wires follow their pins after Move up, Move down, add, delete and rename (`useSyncPins`, both nodes)
 - [x] Fix: field rename is path-based
-- [x] E2E tests for the InputNode in `e2e/flow-editor/input-node.spec.ts`
+- [x] E2E tests for the ObjectInputNode in `e2e/flow-editor/object-input-node.spec.ts`
 - [x] Value column: `InputValueCell`, `setInputFieldValue`, `inputValueContext`, `languageService` prop
-- [x] Tests: value edit in `InputNode.test.tsx`, `setInputFieldValue` in `createFlowEditorService.test.ts`
-- [x] Stories: ReadOnly, EditValue; `languageService` in the InputNode and FlowEditor stories
+- [x] Tests: value edit in `ObjectInputNode.test.tsx`, `setInputFieldValue` in `createFlowEditorService.test.ts`
+- [x] Stories: ReadOnly, EditValue; `languageService` in the ObjectInputNode and FlowEditor stories
 - [x] E2E: an input value edit recalculates the output nodes, in `e2e/flow-editor/flow-editor.spec.ts`
+
+# Flow Editor: ListInputNode
+
+## Summary
+
+`ListInputNode` is a source node of the Flow Editor. It renders one model field annotated `@InputNode` whose value is a
+list (`@kind: 'expression'` with a list type).
+
+The node has one output pin, `out:*`, for the whole list. The body shows the items as the engine evaluates them, in the
+table of an OutputNode (`output-node/ValueTable.tsx`): one row per item, one column per item field (or one `value`
+column for a list of plain values). The node shows at most 10 rows and 5 columns, then a row or column of `…`. The node
+grows to fit its table, from its header width up to 640px.
+
+## Technical Breakdown
+
+| File                                                               | Purpose                                                    |
+| ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `src/components/flow-editor/list-input-node/types.ts`              | Node data, model, item field and menu context types        |
+| `src/components/flow-editor/list-input-node/ListInputNode.tsx`     | The `@xyflow/react` custom node component                  |
+| `src/components/flow-editor/list-input-node/listInputNodeMenus.ts` | Node menu: the core groups and the "List" group            |
+| `src/components/flow-editor/list-input-node/layout.ts`             | Summary text; delegates to `computeTrackLayout`            |
+| `stories/components/flow-editor/ListInputNode.stories.tsx`         | Storybook stories against the real `@edgerules/web` engine |
+
+```typescript
+interface ListInputNodeModel {
+    field: string; // model field path
+    label?: string; // '@node-name'
+    type: string; // the list type, for example 'object[]' or 'number[]'
+    itemFields: ListItemField[]; // the fields of a record item; empty for a list of plain values
+}
+
+interface ListItemField {
+    name: string; // item field name
+    type: string; // 'number', 'string', 'object' for a nested record
+}
+
+getListInputNode(field: string): ListInputNodeModel; // no item fields when the list is not an input node
+listInputCandidates(): FlowNodeRef[]; // records ('object-input') and list literals ('list-input')
+```
+
+| Element      | Source                      | Content                                                       |
+| ------------ | --------------------------- | ------------------------------------------------------------- |
+| Summary line | `type`, `readOutput(field)` | `object[] · 100 items`; the count shows after the engine read |
+| Pin          | `out:*`                     | The whole list; a path binding `people` wires to it           |
+| Item table   | `readOutput(field)`         | The items: at most 10 rows and 5 columns, then `…`; no pins   |
+| Node menu    | `listInputNodeMenuItems`    | Core groups; "List": Open in boxed editor, View as code       |
+
+### Clarifications
+
+- `FlowNodeRef.kind` is `'function'`, `'object-input'`, `'list-input'` or `'value-input'`. Every input kind uses the
+  `@InputNode` annotation.
+- A list candidate is a list literal: the expression starts with `[`. A computed list is not offered in the palette.
+- `setNodeName`, `renameField`, `duplicate`, `removeFromFlow` and `deleteField` act on a list input as on a record
+  input.
+- The engine returns the inferred item fields in name order. The entry is in `docs/engine-bug-reports.md`.
+
+## Limitations
+
+- The node does not edit items. The user edits the list in the Boxed Editor or as code.
+- An untyped empty list `[]` evaluates to `Missing('empty list')`. The node shows that value as text.
+
+## Tasks
+
+- [x] Rename `InputNode` to `ObjectInputNode`, with its types, files, test ids and story
+- [x] Add `ListInputNode`, `getListInputNode` and the `'list-input'` node kind; list literals in `listInputCandidates`
+- [x] Add tests: `ListInputNode.test.tsx`, `layout.test.ts`, the list input block in `createFlowEditorService.test.ts`
+- [x] Add the Storybook stories: Default, ReadOnly
+- [ ] Manual: `npm run storybook`, the ListInputNode stories in light and dark themes
+
+# Flow Editor: ValueInputNode
+
+## Summary
+
+`ValueInputNode` is a source node of the Flow Editor. It renders one model field annotated `@InputNode` whose value is a
+single expression that is not a list, for example `age: 23` or `name: "Ann"`.
+
+The node has one row: the value, editable in a `CodeEditorCell` as in an ObjectInputNode, with one output pin `out:*`.
+The summary line shows the value type.
+
+| File                                                                 | Purpose                                                    |
+| -------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `src/components/flow-editor/value-input-node/ValueInputNode.tsx`     | The `@xyflow/react` custom node component                  |
+| `src/components/flow-editor/value-input-node/valueInputNodeMenus.ts` | Node menu: the core groups and the "Value" group           |
+| `src/components/flow-editor/value-input-node/layout.ts`              | One output track; `isReducedValueInput`                    |
+| `stories/components/flow-editor/ValueInputNode.stories.tsx`          | Storybook stories against the real `@edgerules/web` engine |
+
+```typescript
+interface ValueInputNodeModel {
+    field: string; // model field path
+    label?: string; // '@node-name'
+    type: string; // the value type, for example 'number' or 'string'
+    value?: string; // expression text; undefined when the field does not exist
+}
+
+getValueInputNode(field: string): ValueInputNodeModel;
+setInputValue(field: string, text: string): PortableError | void; // link-checked; keeps the annotations
+createInputNode(kind?: 'object-input' | 'list-input' | 'value-input'): string | PortableError;
+```
+
+### Clarifications
+
+- The engine accepts `@InputNode` on an expression. A plain value such as `amount: 5` is stored as a bare primitive, so
+  `addInputNode` does not annotate a single value: it accepts records and lists only. A value input comes from the
+  palette "Value input" (`value: 0`) or from an authored `@InputNode`.
+- `addInputNode` refuses a computed single value, such as `age * 2`, for the same reason.
 
 # Flow Editor: Canvas
 
@@ -636,6 +749,7 @@ interface FlowLayout {
 interface FlowOutput {
     id: string; // 'output', 'output2'
     label?: string;
+    description?: string; // note under the title, from the node menu
     source?: {node: string; handle: string}; // the result pin wired into the output
 }
 
@@ -649,18 +763,21 @@ createInputNode(): string | PortableError; // a new '@InputNode' record 'input�
 
 ### Palette
 
-| Group                | Item                            | Action                                                |
-| -------------------- | ------------------------------- | ----------------------------------------------------- |
-| Inputs               | New input                       | `createInputNode()`                                   |
-| Inputs               | One per `listInputCandidates()` | `addInputNode(record)`; the item leaves the palette   |
-| Functions & rulesets | Function call                   | `createDraftNode()`; the callee is picked on the node |
-| Functions & rulesets | One per `listCallees()`         | `createDraftNode()`, then `setCallee(field, path)`    |
-| Outputs              | Output                          | A canvas-only output node                             |
+| Group       | Item                            | Action                                                |
+| ----------- | ------------------------------- | ----------------------------------------------------- |
+| Inputs      | Object input                    | `createInputNode('object-input')`: a record           |
+| Inputs      | List input                      | `createInputNode('list-input')`: `[1, 2, 3]`          |
+| Inputs      | Value input                     | `createInputNode('value-input')`: `0`                 |
+| Inputs      | One per `listInputCandidates()` | `addInputNode(record)`; the item leaves the palette   |
+| Invocations | Invocation                      | `createDraftNode()`; the callee is picked on the node |
+| Outputs     | Output                          | A canvas-only output node                             |
+| Charts      | Chart                           | A canvas-only chart node                              |
 
 - A dropped node has its top-left corner at the drop point. A clicked node goes in the middle of the view, below any
   node in the way. The new node is selected.
-- Search matches every word against the title, the signature and the group name.
-- The collapsed palette is a 48px rail with the three generic items.
+- Search matches every word against the title, the detail line and the group name.
+- A group label has no item count.
+- The collapsed palette is a 48px rail with the generic items: the three new inputs, Invocation, Output and Chart.
 
 ### Canvas
 

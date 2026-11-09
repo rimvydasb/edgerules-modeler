@@ -1,13 +1,9 @@
-import {listCallables} from '../../../lib/callables';
+import {listCallables} from '#lib/callables';
 import type {MutableDecisionService, TestSubject} from '../tests-manager-types';
 
-// `'*'` plus every fully typed callable from `listCallables`.
+// `'*'` plus every fully typed callable from `listCallables`. The model has no name of its own.
 export function listTestSubjects(service: MutableDecisionService): TestSubject[] {
-    const portableRoot = service.toPortable();
-    const modelName =
-        typeof portableRoot['@model-name'] === 'string' ? (portableRoot['@model-name'] as string) : 'Model';
-
-    const subjects: TestSubject[] = [{id: '*', kind: 'model', name: modelName}];
+    const subjects: TestSubject[] = [{id: '*', kind: 'model', name: 'Model'}];
 
     for (const {path, kind} of listCallables(service)) {
         subjects.push({id: path, kind, name: path});

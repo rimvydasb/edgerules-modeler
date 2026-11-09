@@ -1,51 +1,55 @@
-import type {XYPosition} from '@xyflow/react';
-import type {ChartConfig} from '../chart-node/types';
+import type {FlowLayout} from '#lib/flowLayout';
 import type {CodeEditorService} from '../../code-editor-cell';
 import type {DocumentationService} from '../../documentation-service';
 import type {FlowEditorOpenTarget, FlowEditorService} from '../flow-editor-types';
 
 export interface FlowEditorProps {
     service: FlowEditorService; // engine-backed node service from createFlowEditorService()
+    revision?: number; // the model revision; a new value reads every node again after a change made outside this editor
     documentation?: DocumentationService; // stores node descriptions; omit to hide description UI
     languageService?: CodeEditorService; // diagnostics and completions of value cells; omit to show values read-only
     readOnly?: boolean; // hides the palette and disables wiring and removal; nodes still move
     onOpenNode?: (target: FlowEditorOpenTarget) => void; // routes "Open in…", "Open tests", "View as code" to the host
     defaultLayout?: FlowLayout; // positions and output nodes to start from; read on mount only
     onLayoutChange?: (layout: FlowLayout) => void; // after a node is moved, added or removed, or an output is rewired
+    focusNode?: FlowFocusRequest; // a new object selects that node and centers the view on it
+    defaultPaletteCollapsed?: boolean; // the node palette starts as the rail of node types; defaults to false
+    onSelectionChange?: (selection: FlowSelection | undefined) => void; // the one selected node; undefined for none or several
 }
 
-/** Presentation data of the canvas (`flow.json`); the model holds the semantics. */
-export interface FlowLayout {
-    positions: Record<string, XYPosition>; // node id -> top-left canvas position
-    outputs: FlowOutput[]; // output nodes exist on the canvas only
-    charts?: FlowChart[]; // chart nodes exist on the canvas only; reported only when there are some
+/**
+ * The one selected node of the canvas. A model node is a field of the model, or a parameter of a service; an output or
+ * a chart node is a sink that shows the value of the model path wired into it (`source`, undefined while nothing is
+ * wired).
+ */
+export type FlowSelection =
+    | {
+          kind: 'function' | 'object-input' | 'list-input' | 'value-input' | 'parameter' | 'return' | 'expression';
+          field: string;
+      }
+    | {kind: 'output' | 'chart'; id: string; label?: string; source?: string};
+
+/** Asks the canvas to select one node and center it; each new object is a new request. */
+export interface FlowFocusRequest {
+    field: string; // the field path of the node, for example 'loanBook.decision'
 }
 
-export interface FlowOutput {
-    id: string; // node id, for example 'output' or 'output2'
-    label?: string; // title; falls back to 'Output'
-    source?: {node: string; handle: string}; // the result pin wired into the output
-}
+export type {FlowChart, FlowLayout, FlowOutput} from '#lib/flowLayout';
 
-export interface FlowChart {
-    id: string; // node id, for example 'chart' or 'chart2'
-    label?: string; // title; falls back to 'Chart'
-    source?: {node: string; handle: string}; // the result pin wired into the chart
-    config?: ChartConfig; // undefined: configured automatically; a new wire clears it
-    size?: {width: number; height: number}; // px; the default size when absent
-}
-
-export type PaletteGroup = 'input' | 'function' | 'output' | 'chart';
+export type PaletteGroup = 'input' | 'function' | 'expression' | 'output' | 'chart';
 
 /** What a palette item creates. */
 export type PaletteAction =
-    | {kind: 'new-input'}
-    | {kind: 'input'; record: string} // annotate an existing record
-    | {kind: 'function'; callee?: string} // a draft node, with its callee picked when given
+    | {kind: 'new-input'; input: 'object-input' | 'list-input' | 'value-input'} // a new record, list or single value
+    | {kind: 'function'} // a draft invocation; the user picks what it invokes on the node
     | {kind: 'output'}
-    | {kind: 'chart'};
+    | {kind: 'chart'}
+    | {kind: 'expression'} // a new field of the flow context with the expression `0`
+    | {kind: 'parameter'} // a service only: a new parameter
+    | {kind: 'return'}; // a service only: a new `return` context with every value the service returns now
 
-export type PaletteIcon = 'input' | 'function' | 'ruleset' | 'output' | 'chart';
+export type PaletteIcon =
+    'input' | 'list-input' | 'value-input' | 'function' | 'expression' | 'output' | 'chart' | 'parameter' | 'return';
 
 export interface PaletteItem {
     id: string; // stable key, also the drag payload
@@ -53,7 +57,7 @@ export interface PaletteItem {
     icon: PaletteIcon;
     title: string;
     detail: string; // second line: signature or hint
-    label: string; // accessible name, for example 'Add ruleset risk'
+    label: string; // accessible name, for example 'Add list input'
     action: PaletteAction;
 }
 

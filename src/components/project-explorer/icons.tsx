@@ -1,52 +1,87 @@
 import type {ReactElement} from 'react';
-import {Indicator, Tooltip} from '@mantine/core';
 import {
+    IconBook2,
+    IconBox,
     IconBraces,
     IconCategory,
-    IconFolder,
-    IconList,
+    IconChartLine,
+    IconFileText,
+    IconFiles,
+    IconDatabase,
+    IconFlask,
+    IconGavel,
+    IconListCheck,
+    IconLogin2,
+    IconLogout2,
     IconMathFunction,
-    IconTable,
+    IconServer,
     IconTag,
+    IconVariable,
     type Icon,
 } from '@tabler/icons-react';
-import type {PortableError} from '@edgerules/portable';
+import {cx} from '#ui/cx';
+import {KIND_COLORS} from '#ui/kindColors';
+import type {ExplorerEntryKind, ExplorerSection} from './tree-model';
+import * as classes from './projectExplorer.module.css';
 
-export type IconKind = 'vars' | 'var' | 'ctx' | 'func' | 'dt' | 'types' | 'type';
+export type IconKind = ExplorerEntryKind | ExplorerSection;
 
 const ICON_BY_KIND: Record<IconKind, Icon> = {
-    vars: IconList,
-    var: IconBraces,
-    ctx: IconFolder,
-    func: IconMathFunction,
-    dt: IconTable,
+    documents: IconFiles,
+    document: IconFileText,
     types: IconCategory,
+    factsLibrary: IconDatabase,
+    methods: IconMathFunction,
+    decisions: IconGavel,
+    services: IconServer,
+    variables: IconVariable,
+    workbooks: IconBook2,
+    tests: IconFlask,
     type: IconTag,
+    facts: IconDatabase,
+    function: IconMathFunction,
+    decision: IconGavel,
+    service: IconMathFunction,
+    ruleset: IconListCheck,
+    context: IconBraces,
+    variable: IconVariable,
+    workbook: IconBook2,
+    'input-node': IconLogin2,
+    'function-node': IconMathFunction,
+    'output-node': IconLogout2,
+    'chart-node': IconChartLine,
+    node: IconBox,
+    test: IconFlask,
+};
+
+// The tile fill of each kind, in the shared kind colors and the Node palette colors of the Flow Editor. Sections,
+// contexts and variables have no kind color: a muted tile.
+const TILE_COLOR: Partial<Record<IconKind, string>> = {
+    type: KIND_COLORS.complexType,
+    facts: KIND_COLORS.facts,
+    function: KIND_COLORS.function,
+    decision: KIND_COLORS.decision,
+    service: KIND_COLORS.service,
+    ruleset: KIND_COLORS.ruleset,
+    workbook: KIND_COLORS.model,
+    'input-node': '#ed6c02',
+    'function-node': KIND_COLORS.function,
+    'output-node': '#2f9e44',
+    'chart-node': '#7048e8',
+    test: KIND_COLORS.test,
 };
 
 export interface KindIconProps {
     kind: IconKind;
-    /** When present, renders an error badge + a tooltip surfacing the message/location. */
-    error?: PortableError;
 }
 
-/** Icon for a tree node, per the story doc's icon table. Renders an error badge/tooltip when `error` is set. */
-export function KindIcon({kind, error}: KindIconProps): ReactElement {
+/** The icon tile of a tree node, like a Node palette tile. */
+export function KindIcon({kind}: KindIconProps): ReactElement {
     const Glyph = ICON_BY_KIND[kind];
-    const icon = <Glyph size={18} data-testid={`icon-${kind}`} />;
-
-    if (!error) {
-        return icon;
-    }
-
-    const location = error.location;
-    const locationSuffix = location?.line !== undefined ? ` (${location.line}:${location.column ?? 0})` : '';
-
+    const color = TILE_COLOR[kind];
     return (
-        <Tooltip label={`${error.message}${locationSuffix}`} withinPortal>
-            <Indicator color="red" size={8} offset={1} aria-label="error">
-                {icon}
-            </Indicator>
-        </Tooltip>
+        <span className={cx(classes.tile, !color && classes.tileMuted)} style={color ? {background: color} : undefined}>
+            <Glyph size={14} stroke={2} data-testid={`icon-${kind}`} />
+        </span>
     );
 }

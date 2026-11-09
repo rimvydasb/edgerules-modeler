@@ -1,3 +1,4 @@
+// oxlint-disable-next-line no-restricted-imports -- shown only for the row whose edit failed, like an error popover
 import {Alert} from '@mantine/core';
 import type {KeyboardEvent, ReactElement, ReactNode} from 'react';
 import {DescriptionCell} from '../cells/DescriptionCell';
@@ -9,8 +10,8 @@ import {useBoxedLayout} from '../context/BoxedLayoutContext';
 import type {BoxedRowData, BoxedRowKind} from '../boxed-editor-types';
 import {useRowDrag} from '../dnd/useRowDrag';
 import {useRowDrop} from '../dnd/useRowDrop';
-import {RowActionsMenu, type RowMenuItem} from '../../../ui/RowActionsMenu';
-import {cx} from '../../../ui/cx';
+import {RowActionsMenu, type RowMenuItem} from '#ui/RowActionsMenu';
+import {cx} from '#ui/cx';
 import * as classes from '../boxedEditor.module.css';
 import {Cell, Drag, RowActionsButton, ROW_HEIGHT, TALL_ROW_HEIGHT, TallIconHandle, TypeName} from '../primitives';
 
@@ -93,7 +94,7 @@ export function GenericRow({
     onActivate,
 }: GenericRowProps): ReactElement {
     const {showType} = useBoxedEditorContext();
-    const {template, showDescription, showTestResults: showTestResultsColumn} = useBoxedLayout();
+    const {template, showDescription, showTestResults: showTestResultsColumn, baseDepth} = useBoxedLayout();
     const {rowErrors} = useBoxedEditorUi();
     const rowError = row ? rowErrors.get(row.path) : undefined;
     const height = tall ? TALL_ROW_HEIGHT : ROW_HEIGHT;
@@ -128,7 +129,7 @@ export function GenericRow({
             }}
         >
             <div className={cx(classes.nameColumn, occupiesNameAndValue && classes.span2)}>
-                {Array.from({length: depth}, (_, index) => (
+                {Array.from({length: Math.max(0, depth - baseDepth)}, (_, index) => (
                     <div key={index} aria-hidden="true" className={classes.indent} />
                 ))}
                 {showDragHandle && !iconActsAsDragHandle && (
@@ -176,7 +177,11 @@ export function GenericRow({
                 <div aria-hidden="true" className={classes.actionsFiller} />
             )}
             {showDescription && <Cell column="description">{row && <DescriptionCell path={row.path} />}</Cell>}
-            {showTestResultsColumn && <Cell column="test-results">{row && <TestResultCell path={row.path} />}</Cell>}
+            {showTestResultsColumn && (
+                <Cell column="test-results">
+                    {row && <TestResultCell path={row.path} showSubjectResult={row.kind === 'ruleset'} />}
+                </Cell>
+            )}
             {rowError && (
                 <div className={classes.rowError}>
                     <Alert

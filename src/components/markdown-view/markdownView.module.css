@@ -1,0 +1,49 @@
+.root {
+  overflow-wrap: anywhere;
+}
+
+.root img {
+  max-width: 100%;
+}
+
+.root li > input[type='checkbox'] {
+  margin-inline-end: 0.25em;
+  vertical-align: middle;
+}
+
+/* Static token colours of `edgerules` fences — mirrors the CodeMirror highlight theme in code-editor/language. */
+.edgerules :global(.tok-keyword) {
+  color: light-dark(#7b1fa2, #c792ea);
+}
+.edgerules :global(.tok-atom) {
+  color: light-dark(#e65100, #d19a66);
+}
+.edgerules :global(.tok-bool) {
+  color: light-dark(#0b7285, #56b6c2);
+}
+.edgerules :global(.tok-number) {
+  color: light-dark(#098658, #b5cea8);
+}
+.edgerules :global(.tok-string) {
+  color: light-dark(#a31515, #ce9178);
+}
+.edgerules :global(.tok-comment) {
+  color: light-dark(#6a737d, #7f848e);
+  font-style: italic;
+}
+.edgerules :global(.tok-typeName) {
+  color: light-dark(#267f99, #4ec9b0);
+}
+.edgerules :global(.tok-propertyName) {
+  color: light-dark(#001080, #9cdcfe);
+}
+.edgerules :global(.tok-variableName) {
+  color: light-dark(#0070c1, #9cdcfe);
+}
+.edgerules :global(.tok-function) {
+  color: light-dark(#795e26, #dcdcaa);
+}
+.edgerules :global(.tok-self) {
+  color: light-dark(#0000ff, #569cd6);
+  font-style: italic;
+}

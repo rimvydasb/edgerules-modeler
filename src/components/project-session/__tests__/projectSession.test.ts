@@ -25,7 +25,7 @@ describe('ProjectSession — open', () => {
         const {session, bundle, locator} = await openFixtureProject({
             documentation: {schemaVersion: 1, byPath: {decision: 'Final decision'}},
             tests: RISK_TESTS,
-            flow: {schemaVersion: 1, layout: {positions: {decision: {x: 1, y: 2}}, outputs: []}},
+            flow: {schemaVersion: 2, layouts: {'*': {positions: {decision: {x: 1, y: 2}}, outputs: []}}},
         });
 
         expect(session.projectId).toBe(bundle.manifest.projectId);
@@ -50,8 +50,10 @@ describe('ProjectSession — open', () => {
                 .listTestCases()
                 .map((c) => c.name),
         ).toEqual(['Young']);
-        expect(session.flow.getLayout().positions).toEqual({decision: {x: 1, y: 2}});
+        expect(session.flow.getLayout('*').positions).toEqual({decision: {x: 1, y: 2}});
         expect(session.getSlice('tests')).toEqual(RISK_TESTS);
+        expect(session.readme.exportDocument()).toBe('# Loans\n');
+        expect(session.getSlice('readme')).toBe('# Loans\n');
     });
 });
 
@@ -94,7 +96,7 @@ describe('ProjectSession — changes and notifications', () => {
             documentation: {schemaVersion: 1, byPath: {decision: 'Why'}},
         });
         session.documentation.setDescription('decision', 'Why');
-        session.flow.setLayout({positions: {}, outputs: []});
+        session.flow.setLayout('*', {positions: {}, outputs: []});
         const service = session.tests.forSubject('*');
         service.syncRows([]);
         expect(session.getSnapshot().dirtySlices).toEqual([]);
@@ -127,7 +129,7 @@ describe('ProjectSession — changes and notifications', () => {
             session.engine.set('unused', {'@kind': 'expression', expression: '3'});
             session.documentation.setDescription('unused', 'One');
             session.documentation.setDescription('decision', 'Two');
-            session.flow.setLayout({positions: {decision: {x: 5, y: 5}}, outputs: []});
+            session.flow.setLayout('*', {positions: {decision: {x: 5, y: 5}}, outputs: []});
             expect(sessionListener).not.toHaveBeenCalled();
         });
 
@@ -153,7 +155,7 @@ describe('ProjectSession — changes and notifications', () => {
             session.engine.set('unused', {'@kind': 'expression', expression: '99'});
             session.documentation.setDescription('unused', 'Lost');
             session.tests.forSubject('risk').addTestCase('Lost');
-            session.flow.setLayout({positions: {unused: {x: 0, y: 0}}, outputs: []});
+            session.flow.setLayout('*', {positions: {unused: {x: 0, y: 0}}, outputs: []});
             throw new Error('boom');
         });
 
@@ -181,10 +183,12 @@ describe('ProjectSession — commands', () => {
             documentation: {schemaVersion: 1, byPath: {risk: 'Risk rule', 'risk.level': 'Band'}},
             tests: RISK_TESTS,
             flow: {
-                schemaVersion: 1,
-                layout: {
-                    positions: {risk: {x: 1, y: 1}},
-                    outputs: [{id: 'output', source: {node: 'risk', handle: 'level'}}],
+                schemaVersion: 2,
+                layouts: {
+                    '*': {
+                        positions: {risk: {x: 1, y: 1}},
+                        outputs: [{id: 'output', source: {node: 'risk', handle: 'level'}}],
+                    },
                 },
             },
         });
@@ -203,7 +207,7 @@ describe('ProjectSession — commands', () => {
                 .listTestCases()
                 .map((c) => c.name),
         ).toEqual(['Young']);
-        expect(session.getSlice('flow').layout).toEqual({
+        expect(session.getSlice('flow').layouts['*']).toEqual({
             positions: {score: {x: 1, y: 1}},
             outputs: [{id: 'output', source: {node: 'score', handle: 'level'}}],
         });
@@ -255,7 +259,7 @@ describe('ProjectSession — commands', () => {
 
         expect(session.execute({type: 'commitDsl', source: '{ a: 5 }'})).toEqual({ok: true});
         expect(session.getSnapshot()).toMatchObject({hasDslDraft: false, dslValidity: {status: 'valid'}});
-        expect(session.getDslDraft()).toBe('{ a: 5 }');
+        expect(session.getDslDraft()).toBe('{\n    a: 5\n}');
     });
 
     it('keeps a registered solver across a DSL commit', async () => {
@@ -273,6 +277,58 @@ describe('ProjectSession — commands', () => {
         expect(session.getDslDraft()).toBe('{ a: ');
         expect(session.getSnapshot()).toMatchObject({hasDslDraft: true, dirtySlices: []});
         expect(session.exportBundle().model).toBe(dsl);
+    });
+});
+
+describe('ProjectSession — model metadata', () => {
+    it('loads the model name and version of the manifest into the model slice, never into the model', async () => {
+        const {session} = await openFixtureProject({model: {dsl: '{ a: 1 }', name: 'Risk desk', version: '1.0.0'}});
+        expect(session.getSlice('model').metadata).toEqual({name: 'Risk desk', version: '1.0.0'});
+        // The Portable format has no key for the metadata, and the DSL has no syntax for it.
+        expect(JSON.stringify(session.engine.toPortable())).not.toContain('Risk desk');
+        expect(session.engine.exportDsl()).not.toContain('Risk desk');
+    });
+
+    it('replaces the metadata, marks the model dirty and saves it in the manifest', async () => {
+        const {session, repository, locator} = await openFixtureProject({model: {dsl: '{ a: 1 }', name: 'Old'}});
+        const {version} = session.getSlice('model');
+
+        expect(session.execute({type: 'setModelMetadata', metadata: {name: ' New ', version: '2.0'}})).toEqual({
+            ok: true,
+        });
+        expect(session.getSlice('model')).toMatchObject({
+            version: version + 1,
+            metadata: {name: 'New', version: '2.0'},
+        });
+        expect(session.getSnapshot().dirtySlices).toEqual(['model']);
+
+        await session.save();
+        expect((await repository.load(locator)).bundle.manifest.model).toEqual({
+            format: 'dsl',
+            source: 'model/main.edge',
+            name: 'New',
+            version: '2.0',
+        });
+    });
+
+    it('removes a blank value and counts an equal value as no change', async () => {
+        const {session} = await openFixtureProject({model: {dsl: '{ a: 1 }', name: 'Desk', version: '1'}});
+        const before = session.getSnapshot().localVersion;
+        session.execute({type: 'setModelMetadata', metadata: {name: 'Desk', version: '1'}});
+        expect(session.getSnapshot().localVersion).toBe(before);
+
+        session.execute({type: 'setModelMetadata', metadata: {name: '  ', version: '1'}});
+        expect(session.getSlice('model').metadata).toEqual({version: '1'});
+    });
+
+    it('rolls the metadata back with a failed transaction', async () => {
+        const {session} = await openFixtureProject({model: {dsl: '{ a: 1 }', name: 'Desk'}});
+        const result = session.transaction(() => {
+            session.execute({type: 'setModelMetadata', metadata: {name: 'Other'}});
+            throw new Error('stop');
+        });
+        expect(result.ok).toBe(false);
+        expect(session.getSlice('model').metadata).toEqual({name: 'Desk'});
     });
 });
 
@@ -299,11 +355,43 @@ describe('ProjectSession — save', () => {
         session.subscribe(() => phases.push(session.getSnapshot().phase));
 
         const saving = session.save();
-        session.flow.setLayout({positions: {decision: {x: 3, y: 3}}, outputs: []});
+        session.flow.setLayout('*', {positions: {decision: {x: 3, y: 3}}, outputs: []});
         await saving;
 
         expect(phases[0]).toBe('saving');
         expect(session.getSnapshot()).toMatchObject({phase: 'ready', dirtySlices: ['documentation', 'flow']});
+    });
+
+    it('saves a README edit and a model edit as one revision', async () => {
+        const {session, repository, locator} = await openFixtureProject();
+        const listener = vi.fn();
+        session.readme.subscribe(listener);
+
+        session.readme.setMarkdown('# Loans\n\nRisk by [age](model:applicant.age).\n');
+        session.readme.setMarkdown('# Loans\n\nRisk by [age](model:applicant.age).\n'); // equal text is no change
+        session.engine.set('unused', {'@kind': 'expression', expression: '8'});
+        expect(listener).toHaveBeenCalledTimes(1);
+        expect(session.getSnapshot().dirtySlices).toEqual(['model', 'readme']);
+
+        const result = await session.save();
+
+        expect(result.revision).toBe('2');
+        expect(session.getSnapshot().dirtySlices).toEqual([]);
+        const stored = await repository.load(locator);
+        expect(stored.revision).toBe('2');
+        expect(stored.bundle.readme).toBe('# Loans\n\nRisk by [age](model:applicant.age).\n');
+        expect(stored.bundle.model).toContain('unused: 8');
+    });
+
+    it('rolls the README back with a failed transaction', async () => {
+        const {session} = await openFixtureProject({readme: '# Authored\n'});
+        const result = session.transaction(() => {
+            session.readme.setMarkdown('# Changed\n');
+            throw new Error('stop');
+        });
+        expect(result.ok).toBe(false);
+        expect(session.getSlice('readme')).toBe('# Authored\n');
+        expect(session.getSnapshot().dirtySlices).toEqual([]);
     });
 
     it('enters the conflict phase when the stored revision moved on', async () => {

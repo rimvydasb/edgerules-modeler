@@ -1,0 +1,762 @@
+/*
+ * The Shell: a one-step header row on the same ruled sheet as the Boxed Editor (40px step, 1px border lines,
+ * muted header fill), and the active editor filling the body below it. The body has no gap to the header: it moves
+ * up by one pixel, so the top frame line of the editor lies on the bottom line of the header — one line, not two.
+ */
+.root {
+  --sh-border: var(--mantine-color-default-border);
+  --sh-muted: var(--mantine-color-default-hover);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Everything below the header row: the Project Explorer and the main column. */
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The active editor and the status line, right of the Project Explorer. */
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * The Project Explorer side panel, below the header row on the left. Like the body, it moves up by one pixel onto the
+ * bottom line of the header, and its right frame line is the left frame line of the editor: one line, not two.
+ */
+.explorer {
+  flex: 0 0 256px;
+  margin-top: -1px;
+  margin-right: -1px;
+  border: 1px solid var(--sh-border);
+}
+
+/* The collapsed Project Explorer is a rail of section icons, one header icon square wide: its right frame line
+ * continues the right line of the kind icon square. A rail icon opens the panel again. */
+.explorerCollapsed {
+  flex-basis: 41px;
+}
+
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------- header row */
+.header {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  height: 41px; /* the frame lines and one 39px step, like the first row of a Boxed Editor grid */
+  border: 1px solid var(--sh-border);
+  background-color: var(--sh-muted);
+  font-size: var(--mantine-font-size-sm);
+}
+
+/* The icon square of the root path kind, like the icon of a Boxed Editor header row. It opens the Flow (or Boxed) view. */
+.kindIcon {
+  display: flex;
+  width: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--sh-border);
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+  cursor: pointer;
+}
+
+/* A colored square brightens; the muted context square (no inline fill) gets the hover fill of a header cell. */
+.kindIcon:hover {
+  background-color: var(--sh-border);
+  filter: brightness(1.15);
+}
+
+.kindIcon:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.breadcrumbs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.separator {
+  flex-shrink: 0;
+  color: var(--mantine-color-dimmed);
+}
+
+.crumb {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+  font: inherit;
+  cursor: pointer;
+}
+
+.crumb:hover {
+  background-color: var(--sh-border);
+  color: var(--mantine-color-text);
+}
+
+.crumb:focus-visible,
+.viewButton:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+/* The model name as the only crumb: it reads as the current item, and still opens the model root. */
+.crumbCurrent {
+  color: var(--mantine-color-text);
+  font-weight: 600;
+}
+
+.current {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline: 4px;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- view switch: one cell per view */
+.viewSwitch {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.viewButton {
+  display: flex;
+  width: 120px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--sh-border);
+  background-color: var(--sh-muted);
+  color: var(--mantine-color-dimmed);
+  font: inherit;
+  cursor: pointer;
+}
+
+.viewButton:hover {
+  background-color: var(--sh-border);
+}
+
+/* The active view reads as an open cell of the sheet, underlined in the primary color. */
+.viewButtonActive,
+.viewButtonActive:hover {
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--mantine-primary-color-filled);
+  cursor: default;
+}
+
+/* The Flow view of a root path that has no flow: a ruleset, a type or a plain field. */
+.viewButton:disabled,
+.viewButton:disabled:hover {
+  background-color: var(--sh-muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The note under a disabled menu item: why the Tests cell of a generic function creates no tests. */
+.menuHint {
+  display: flex;
+  max-width: 280px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 12px 8px;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.4;
+}
+
+.menuHint strong {
+  color: var(--mantine-color-text);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- settings of the root path */
+/* One step cell left of the view switch, like the split screen toggle on its right. */
+.settingsButton {
+  width: 40px;
+  flex-shrink: 0;
+}
+
+/*
+ * The settings dialog: a sheet of glass in the drawing of a Flow node and a Boxed Editor grid. Sharp corners, 1px
+ * lines that each have one owner (a row owns its bottom line), a one-step muted header with the kind tile, and the page
+ * behind it blurred. The dialog is in a portal, outside `.root`: it reads the Mantine colors directly.
+ */
+.settingsDialog {
+  --st-border: var(--mantine-color-default-border);
+  --st-glass: color-mix(in srgb, var(--mantine-color-body) 66%, transparent);
+  --st-muted: color-mix(in srgb, var(--mantine-color-default-hover) 70%, transparent);
+  overflow: hidden;
+  border: 1px solid var(--st-border);
+  border-radius: 0;
+  background-color: var(--st-glass);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.05),
+    0 12px 32px rgb(0 0 0 / 0.14);
+}
+
+.settingsDialog *,
+.settingsDialog *::before,
+.settingsDialog *::after {
+  box-sizing: border-box;
+}
+
+/* The header row of a node: the kind tile, the title, and the close button as a step cell on the right. */
+.settingsHeader {
+  min-height: 0;
+  height: 40px;
+  padding: 0;
+  border-bottom: 1px solid var(--st-border);
+  background-color: var(--st-muted);
+}
+
+.settingsTitle {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  align-self: stretch;
+  min-width: 0;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+}
+
+.settingsTile {
+  display: flex;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--st-border);
+  background-color: #17191c; /* KIND_COLORS.model */
+  color: #fff;
+}
+
+.settingsTitleText {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-inline: 10px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.settingsClose {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  margin: 0;
+  border: 0;
+  border-left: 1px solid var(--st-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+}
+
+.settingsClose:hover {
+  background-color: var(--st-border);
+  color: var(--mantine-color-text);
+}
+
+.settingsBody {
+  padding: 0;
+}
+
+.settingsForm {
+  display: flex;
+  flex-direction: column;
+}
+
+/* One field row: the label column of a Boxed Editor name cell, and the value cell beside it. */
+.settingsField {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  min-height: 40px;
+  border-bottom: 1px solid var(--st-border);
+}
+
+.settingsLabel {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 10px;
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  line-height: 20px;
+}
+
+/* The hint of a field is a note row under it across both columns, like the description row of a Flow node. */
+.settingsHint {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  padding: 6px 10px;
+  border-top: 1px solid var(--st-border);
+  background-color: var(--st-muted);
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.4;
+}
+
+/* The label column has its own line, like the name column of the grid. */
+.settingsInputCell {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  border-left: 1px solid var(--st-border);
+}
+
+.settingsField .settingsInputCell .settingsInput {
+  height: 100%;
+  min-height: 39px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 0;
+  /* The value cells are the open (white) fill of the sheet, like the value cells of the grid. */
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 20px;
+}
+
+/* The focused value cell, as the focused cell of the grid: a 2px primary line inside it. */
+.settingsField .settingsInputCell .settingsInput:focus {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.settingsError {
+  padding: 10px;
+  border-bottom: 1px solid var(--st-border);
+  background-color: color-mix(in srgb, var(--mantine-color-red-filled) 10%, transparent);
+  color: var(--mantine-color-red-text);
+  font-size: var(--mantine-font-size-sm);
+}
+
+/* The bottom row: step cells right-aligned, like the view switch of the Shell header. */
+.settingsActions {
+  display: flex;
+  justify-content: flex-end;
+  height: 40px;
+  background-color: var(--st-muted);
+}
+
+.settingsAction {
+  width: 120px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--st-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--mantine-color-text);
+  font: inherit;
+  font-size: var(--mantine-font-size-sm);
+  cursor: pointer;
+}
+
+.settingsAction:hover {
+  background-color: var(--st-border);
+}
+
+.settingsAction:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+/* Save reads as the active cell: the open fill of the sheet, underlined in the primary color. */
+.settingsSave {
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-primary-color-filled);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--mantine-primary-color-filled);
+}
+
+.settingsSave:hover {
+  background-color: var(--mantine-primary-color-light);
+}
+
+/* ---------------------------------------------------------------- body and status */
+.body {
+  flex: 1;
+  min-height: 0;
+  margin-top: -1px;
+  overflow: auto;
+}
+
+.status {
+  flex: none;
+  margin-top: var(--mantine-spacing-xs);
+}
+
+/* ---------------------------------------------------------------- split screen toggle and the split Flow view */
+/* One step cell right of the view switch, like the kind icon square on the left. */
+.splitToggle {
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.splitToggleOn,
+.splitToggleOn:hover {
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+  box-shadow: inset 0 -2px 0 var(--mantine-primary-color-filled);
+}
+
+/* The Flow view: the canvas, and the selected node on the right while the split screen is on. */
+.split {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.splitCanvas {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * The selected node beside the canvas. The panel draws the line between the canvas and the panel itself, on the right
+ * frame line of the canvas: one line, not two. The sheet inside moves left by one pixel under that line, so its own
+ * left frame line does not double it.
+ */
+.splitPanel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  margin-left: -1px;
+  /* Positioned like the canvas, and later in the tree: its line paints over the canvas's last pixel, not under it. */
+  position: relative;
+  overflow: auto;
+  border-left: 1px solid var(--sh-border);
+  background-color: var(--mantine-color-body);
+}
+
+.splitPanel > * {
+  margin-left: -1px;
+}
+
+/* ---------------------------------------------------------------- workbook picker */
+/*
+ * The dotted canvas of the Flow Editor, with the panel groups in the very center. Like the Flow Editor, it has a frame
+ * line: its top line lies on the bottom line of the header, its left line on the right line of the Project Explorer.
+ */
+.workbooks {
+  --wb-canvas: var(--mantine-color-gray-0);
+  --wb-dot: #ced4da;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  align-items: center;
+  /* `safe`: a picker taller than the body scrolls from its top, not from its middle. */
+  justify-content: safe center;
+  height: 100%;
+  padding: 24px;
+  overflow: auto;
+  border: 1px solid var(--sh-border);
+  background-color: var(--wb-canvas);
+  background-image: radial-gradient(circle, var(--wb-dot) 0.7px, transparent 0.8px);
+  background-size: 20px 20px;
+}
+
+:global([data-mantine-color-scheme='dark']) .workbooks {
+  --wb-canvas: var(--mantine-color-dark-8);
+  --wb-dot: #3a3a3a;
+}
+
+/* The workbooks, then the services: a title and a row of panels each. */
+.workbookGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+.workbookGroupTitle {
+  margin: 0;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* A grid of at most 3 panels per row; a narrow body shows fewer columns. The add panels are grid items too. */
+.workbookPanels {
+  --wb-panel: 340px;
+  --wb-gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, var(--wb-panel));
+  gap: var(--wb-gap);
+  justify-content: center;
+  width: 100%;
+  max-width: calc(3 * var(--wb-panel) + 2 * var(--wb-gap));
+}
+
+/*
+ * The README panel above the workbooks: the width of 3 panels and 2 gaps, the height of its content, at most 2 panel
+ * heights and 1 gap. Content above the maximum height is cut off with a fade.
+ */
+.readmePanel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: calc(3 * 340px + 2 * 24px);
+  max-height: calc(2 * 196px + 24px);
+  padding: 20px;
+  border: 1px solid var(--sh-border);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-xs);
+  color: var(--mantine-color-text);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.readmePanel:hover {
+  border-color: var(--mantine-primary-color-filled);
+  box-shadow: var(--mantine-shadow-md);
+}
+
+.readmeContent {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.readmeContent > :first-child > :first-child {
+  margin-top: 0;
+}
+
+.readmeContentCut {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 48px), transparent);
+}
+
+.readmeOpen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mantine-primary-color-filled);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.readmeOpen:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+.workbookPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 340px;
+  min-height: 196px;
+  padding: 20px;
+  border: 1px solid var(--sh-border);
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-xs);
+  color: var(--mantine-color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.workbookPanel:hover {
+  border-color: var(--mantine-primary-color-filled);
+  box-shadow: var(--mantine-shadow-md);
+  transform: translateY(-2px);
+}
+
+.workbookPanel:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+.workbookHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* The kind icon square of a workbook, as in the Shell header. */
+.workbookIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.workbookTitles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.workbookTitle {
+  overflow: hidden;
+  font-size: var(--mantine-font-size-lg);
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbookField {
+  overflow: hidden;
+  color: var(--mantine-color-dimmed);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Three lines at most; the panels of one row keep one height. */
+.workbookDescription,
+.workbookNoDescription {
+  display: -webkit-box;
+  flex: 1;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.5;
+}
+
+.workbookDescription {
+  color: var(--mantine-color-text);
+}
+
+.workbookNoDescription {
+  color: var(--mantine-color-dimmed);
+  font-style: italic;
+}
+
+.workbookFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--sh-border);
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.workbookOpen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--mantine-primary-color-filled);
+  font-weight: 600;
+}
+
+/* The panel that creates a new workbook: the size of a workbook panel, a dashed outline and a plus. */
+.workbookAdd {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 340px;
+  min-height: 196px;
+  padding: 20px;
+  border: 1px dashed var(--sh-border);
+  border-radius: var(--mantine-radius-md);
+  background-color: transparent;
+  color: var(--mantine-color-dimmed);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.workbookAdd:hover {
+  border-color: var(--mantine-primary-color-filled);
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-primary-color-filled);
+}
+
+.workbookAdd:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+.workbookAddIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px dashed currentColor;
+  border-radius: 50%;
+}
+
+/* ---------------------------------------------------------------- document */
+/* The Preview view of a document: the rendered Markdown on a page, in a frame like the other views. */
+.document {
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--sh-border);
+}
+
+.documentPage {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 32px 48px;
+}
+
+.documentEmpty {
+  color: var(--mantine-color-dimmed);
+  font-style: italic;
+}

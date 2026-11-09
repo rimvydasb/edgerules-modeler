@@ -30,20 +30,20 @@ test.describe('Boxed Editor / rename', () => {
     test('renames a function and migrates its call site', async ({page}) => {
         await openBoxedEditorStory(page, 'function-crud-playground');
         await renameRow(page, 'payment', 'installment');
-        await expectLiveModel(page, /"@method":"installment"/);
+        await expectLiveModel(page, /"method":"installment"/);
     });
 
     test('renames a row referenced from a decision-table rule', async ({page}) => {
         await openBoxedEditorStory(page, 'decision-table-crud-playground');
         await renameHeader(page, 'risk', 'age', 'years');
-        await expectLiveModel(page, /"@parameters":\{"years"/);
+        await expectLiveModel(page, /"parameters":\{"years"/);
         await expectLiveModel(page, /"when":\{"years"/);
     });
 
     test('renames a row referenced from an optimisation constraint', async ({page}) => {
         await openBoxedEditorStory(page, 'full-model');
         await renameRow(page, 'factoryProduction.variables.chairs', 'stools');
-        await expectLiveModel(page, /"@maximise":"15 \* stools/);
+        await expectLiveModel(page, /"maximise":"15 \* stools/);
         await expectLiveModel(page, /"workerCapacity":"1 \* stools/);
     });
 

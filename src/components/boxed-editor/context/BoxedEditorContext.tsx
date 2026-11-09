@@ -1,5 +1,5 @@
 import {createContext, useContext, useEffect, type ReactElement, type ReactNode} from 'react';
-import type {PortableRootContext} from '@edgerules/portable';
+import type {PortableContext} from '@edgerules/portable';
 import type {CodeEditorService} from '../../code-editor';
 import type {DocumentationService} from '../../documentation-service';
 import type {TestCasesService, TestSubjectId} from '../../test-cases-service';
@@ -13,6 +13,12 @@ export interface BoxedEditorContextValue {
     showDescription: boolean;
     showTestResults: boolean;
     showType: boolean;
+    /** The `Expand` header button: the host opens the editor's path in a full view. Absent: no button. */
+    onExpand?: () => void;
+    /** Header toggles of the description and test-results columns. Absent in harnesses that mount only this provider;
+     * the header then hides its toggles. */
+    setShowDescription?: (show: boolean) => void;
+    setShowTestResults?: (show: boolean) => void;
     languageService?: CodeEditorService;
     documentationService?: DocumentationService;
     testCasesService?: TestCasesService;
@@ -23,7 +29,7 @@ export interface BoxedEditorContextValue {
      * `BoxedEditorTestContext` compares it against each result set's `modelRevision` for staleness. */
     revision?: string | number;
     /** Fired once per successful committed mutation, by `useRowCommands`. */
-    onChange?: (snapshot: PortableRootContext) => void;
+    onChange?: (snapshot: PortableContext) => void;
     /** Routes `View as code` (and any future host-editor handoff) to the host. */
     onOpenNode?: (target: BoxedEditorOpenTarget) => void;
 }
