@@ -330,7 +330,9 @@ function exampleToFiles(project: ProjectBundleInput, example: ExampleMetadata): 
 
 ## Architecture Changes
 
-- `project-session` exports `exampleFromFiles`, `exampleToFiles` and `ExampleMetadata`.
+- `project-session` exports `exampleFromFiles`, `exampleToFiles`, `exampleMetadataOf` and `ExampleMetadata`.
+- `tests-manager` exports `runTestSuite`: it runs an authored test suite against an engine without a user interface,
+  with the runner and the cell comparison of the Tests view. `validate.mjs` uses it for the Tests check.
 - The npm package publishes the JSON Schemas of the example files under `schemas/`.
 - `package.json` gets a `prepare` script that builds `dist/`, so that a Git dependency installs a build.
 - `scripts/export-examples.ts` exports the projects of `models/` to `../edgerules-examples`. It is a development script
@@ -374,12 +376,12 @@ function exampleToFiles(project: ProjectBundleInput, example: ExampleMetadata): 
       added: `exampleFromFiles` reads the manifest as plain JSON
 - [x] Implement `exampleFromFiles` and `exampleToFiles` with fixed key order and rounded flow positions. The JSON writer
       prints the layout of Prettier, so `prettier --check` accepts the files
-- [ ] Write JSON Schemas for the manifest, `descriptions.json`, a test suite and `layout.json`; publish them in the
+- [x] Write JSON Schemas for the manifest, `descriptions.json`, a test suite and `layout.json`; publish them in the
       package
 - [x] Add a small example directory as a test fixture in `project-session/__tests__/fixtures/`
 - [x] Write `scripts/export-examples.ts`: it exports the 3 examples of "First examples" to `../edgerules-examples`. It
       runs with `node scripts/export-examples.ts` and loads `models/` with Vite, so `README.md?raw` resolves
-- [ ] Add a `prepare` script that builds `dist/`, so that a Git dependency on `edgerules-react` installs a build
+- [x] Add a `prepare` script that builds `dist/`, so that a Git dependency on `edgerules-react` installs a build
 - [x] Add tests for the code of this phase
 
 Acceptance criteria:
@@ -399,28 +401,28 @@ This phase runs in `../edgerules-examples`. The Examples Library story reads the
 - [ ] Add `edgerules-react` as a Git devDependency (`github:rimvydasb/edgerules-react#<tag>`) until its first npm
       release
 - [x] Write the `README.md` of each of the 3 examples
-- [ ] Register highs-js in `validate.mjs` for an example that requires `milp-solver`
+- [x] Register highs-js in `validate.mjs` for an example that requires `milp-solver`
 - [x] Write `tooling/build-index.sh` with `--check` and `--out`
-- [ ] Write `tooling/validate.sh` and `tooling/validate.mjs`
-- [ ] Add the pull request and `main` workflows
-- [ ] Add `CONTRIBUTING.md` with the README sections, the feature vocabulary, the version rule and the local commands
-- [ ] Add tests for the scripts: a fixture repository with two versions of one example
+- [x] Write `tooling/validate.sh` and `tooling/validate.mjs`
+- [x] Add the pull request and `main` workflows
+- [x] Add `CONTRIBUTING.md` with the README sections, the feature vocabulary, the version rule and the local commands
+- [x] Add tests for the scripts: a fixture repository with two versions of one example
 - [ ] Push the repository to the public GitHub repository `rimvydasb/edgerules-examples`
 
 Acceptance criteria:
 
-- [ ] `tooling/validate.sh` passes for the 3 first examples, the test suites of `client-outreach` included
+- [x] `tooling/validate.sh` passes for the 3 first examples, the test suites of `client-outreach` included
 - [ ] `tooling/build-index.sh` on macOS and on the CI runner gives identical `library.json` files
-- [ ] `tooling/build-index.sh` on the fixture repository lists both versions with their commits
-- [ ] A pull request with a failing test case fails `validate.sh`
-- [ ] A pull request that changes an example without a new `model.version` fails `validate.sh`
+- [x] `tooling/build-index.sh` on the fixture repository lists both versions with their commits
+- [x] A pull request with a failing test case fails `validate.sh`
+- [x] A pull request that changes an example without a new `model.version` fails `validate.sh`
 - [ ] A push to `main` with a new `model.version` commits `library.json` with the new version
 - [ ] `curl https://cdn.jsdelivr.net/gh/rimvydasb/edgerules-examples@main/library.json` returns the 3 examples
 
 **Phase X:**
 
-- [ ] Update `docs/architecture.md` with the changes from `## Architecture Changes`
-- [ ] Update `global-project-management.md` §11 to reference this story
+- [x] Update `docs/architecture.md` with the changes from `## Architecture Changes`
+- [x] Update `global-project-management.md` §11 to reference this story
 - [ ] Review the implementation against this story and the project conventions
 
 Acceptance criteria:

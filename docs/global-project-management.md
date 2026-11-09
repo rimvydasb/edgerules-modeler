@@ -557,6 +557,11 @@ flowchart LR
 
 ## 11. Public examples library
 
+> The repository layout, the publishing pipeline and the checks of this section are refined by
+> [examples-repository-story.md](stories/examples-repository-story.md). The story replaces the `.erproject` bundles and
+> `catalog.json` of §11.2 and §11.4 with per-file reads at a pinned commit and the index `library.json`; the story is
+> authoritative where the two differ.
+
 ### 11.1 Source of truth
 
 Create a separate repository:

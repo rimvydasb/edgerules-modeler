@@ -19,6 +19,8 @@ import {prettierJson} from './prettierJson';
 export const EXAMPLE_README_FILE = 'README.md';
 export const EXAMPLE_DOCUMENTATION_FILE = 'docs/descriptions.json';
 export const EXAMPLE_FLOW_FILE = 'flow/layout.json';
+// An example sits at `examples/<industry>/<slug>/`, three levels below the repository root.
+export const EXAMPLE_SCHEMA = '../../../node_modules/edgerules-react/schemas/example.schema.json';
 const TEST_SUITE_SUFFIX = '.tests.json';
 const SUBJECT_PATTERN = /^[A-Za-z0-9_-]+$/;
 
@@ -40,6 +42,7 @@ export interface ExampleMetadata {
 
 // Fixed key orders keep the diff of a change to one line. Keys that are not listed follow, sorted.
 const MANIFEST_KEYS = [
+    '$schema',
     'kind',
     'formatVersion',
     'name',
@@ -145,6 +148,7 @@ export function exampleToFiles(project: ProjectBundleInput, example: ExampleMeta
     files[PROJECT_MANIFEST_FILE] = prettierJson({
         ...ordered(
             {
+                $schema: EXAMPLE_SCHEMA,
                 kind: 'EdgeRulesProject',
                 formatVersion: PROJECT_FORMAT_VERSION,
                 name: project.name,

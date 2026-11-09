@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EdgeRules test suite",
+  "description": "tests/<subject>.tests.json: the rows and the test cases of one subject. Results are never stored.",
+  "type": "object",
+  "required": ["rows", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "section", "order", "present"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string"},
+          "section": {"enum": ["inputs", "assertions", "validations"]},
+          "order": {"type": "integer", "minimum": 0},
+          "type": {"type": "string"},
+          "present": {"type": "boolean"},
+          "custom": {"type": "boolean"}
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "order", "inputs", "assertions"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string"},
+          "order": {"type": "integer", "minimum": 0},
+          "inputs": {"type": "object", "additionalProperties": {"type": "string"}},
+          "assertions": {"type": "object", "additionalProperties": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

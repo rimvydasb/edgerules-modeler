@@ -193,6 +193,12 @@ Each component has two entry points for imports from other modules:
 > (`edgerules-react/project-session`); see [project-session-story.md](project-session-story.md). Undo/redo, the
 > `ProjectDraftStore`, `TestRunCache`, conflict resolution and the GitHub/S3 adapters are not.
 
+`project-session` also converts a project to and from the files of an example directory of `edgerules-examples`:
+`exampleToFiles` writes canonical text (fixed key order, positions rounded to whole pixels, Prettier-stable JSON),
+`exampleFromFiles` reads it, and neither uses an engine. The JSON Schemas of those files are published under `schemas/`
+of the npm package. `tests-manager` exports `runTestSuite`, a headless run of an authored test suite. See
+[examples-repository-story.md](stories/examples-repository-story.md).
+
 ### Primary decision
 
 Do **not** create a state-owning React component named `ProjectState`.

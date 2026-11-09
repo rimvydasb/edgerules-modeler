@@ -7,6 +7,7 @@
   "sideEffects": false,
   "files": [
     "dist",
+    "schemas",
     "README.md",
     "LICENSE"
   ],
@@ -140,7 +141,8 @@
         "types": "./dist/components/shell/index.d.cts",
         "default": "./dist/components/shell/index.cjs"
       }
-    }
+    },
+    "./schemas/*": "./schemas/*"
   },
   "imports": {
     "#lib/*": "./src/lib/*.ts",
@@ -165,7 +167,8 @@
     "storybook:build": "storybook build",
     "e2e": "playwright test",
     "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known --output-type err-long",
-    "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs"
+    "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "@codemirror/autocomplete": "^6.0.0",

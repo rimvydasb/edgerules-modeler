@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EdgeRules flow layout",
+  "description": "flow/layout.json: outputs, charts and node positions of the Flow Editor canvases, by flow root.",
+  "type": "object",
+  "required": ["schemaVersion", "layouts"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 2},
+    "layouts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["positions", "outputs"],
+        "additionalProperties": false,
+        "properties": {
+          "positions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}
+            }
+          },
+          "outputs": {"type": "array", "items": {"$ref": "#/definitions/node"}},
+          "charts": {"type": "array", "items": {"$ref": "#/definitions/chart"}}
+        }
+      }
+    }
+  },
+  "definitions": {
+    "source": {
+      "type": "object",
+      "required": ["node", "handle"],
+      "additionalProperties": false,
+      "properties": {"node": {"type": "string"}, "handle": {"type": "string"}}
+    },
+    "node": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string"},
+        "label": {"type": "string"},
+        "description": {"type": "string"},
+        "source": {"$ref": "#/definitions/source"}
+      }
+    },
+    "chart": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string"},
+        "label": {"type": "string"},
+        "source": {"$ref": "#/definitions/source"},
+        "config": {
+          "type": "object",
+          "required": ["kind", "x", "series"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"enum": ["line", "area", "bar"]},
+            "x": {"type": "string"},
+            "series": {"type": "array", "items": {"type": "string"}},
+            "stacked": {"type": "boolean"}
+          }
+        },
+        "size": {
+          "type": "object",
+          "required": ["width", "height"],
+          "additionalProperties": false,
+          "properties": {"width": {"type": "number"}, "height": {"type": "number"}}
+        }
+      }
+    }
+  }
+}
