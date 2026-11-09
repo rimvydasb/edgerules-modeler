@@ -3,3 +3,4 @@ export {buildSearchIndex, featuredExamples, newestExamples, searchExamples, work
 export type {SearchIndex} from './libraryQuery';
 export {ExamplePanel} from './ExamplePanel';
 export {useLibraryIndex} from './useLibraryIndex';
+export {satisfiesEngine} from './semver';

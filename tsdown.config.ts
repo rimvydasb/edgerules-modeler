@@ -79,6 +79,7 @@ export default defineConfig({
         'components/shell/index': 'src/components/shell/index.ts',
         'components/example-library/index': 'src/components/example-library/index.ts',
         'components/local-workspace/index': 'src/components/local-workspace/index.ts',
+        'components/modeler-home/index': 'src/components/modeler-home/index.ts',
     },
     format: ['esm', 'cjs'],
     platform: 'neutral',

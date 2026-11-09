@@ -72,6 +72,16 @@
         "default": "./dist/components/local-workspace/index.cjs"
       }
     },
+    "./modeler-home": {
+      "import": {
+        "types": "./dist/components/modeler-home/index.d.ts",
+        "default": "./dist/components/modeler-home/index.js"
+      },
+      "require": {
+        "types": "./dist/components/modeler-home/index.d.cts",
+        "default": "./dist/components/modeler-home/index.cjs"
+      }
+    },
     "./markdown-view": {
       "import": {
         "types": "./dist/components/markdown-view/index.d.ts",

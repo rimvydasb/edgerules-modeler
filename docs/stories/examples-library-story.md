@@ -702,23 +702,23 @@ Acceptance criteria:
 
 **Phase 5: Modeler Home and page composition**
 
-- [ ] Add a `Modeler` Storybook group, first in `storySort`, with the Home, Examples, Example details, Workspace and
+- [x] Add a `Modeler` Storybook group, first in `storySort`, with the Home, Examples, Example details, Workspace and
       Project pages
-- [ ] Implement `ModelerHome`: hero search with suggestions, Continue or Get started, industries, featured, new and
+- [x] Implement `ModelerHome`: hero search with suggestions, Continue or Get started, industries, featured, new and
       updated
-- [ ] Compose the pages as the host does, with `EXAMPLES_SOURCE` and an in-memory route state
-- [ ] Add tests for the code of this phase
+- [x] Compose the pages as the host does, with `EXAMPLES_SOURCE` and an in-memory route state
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `ModelerHome.test.tsx`: suggestions, empty workspace, index failure
-- [ ] In Storybook, "Copy and open" on an example panel shows the copy in the Shell
-- [ ] In Storybook, the Workspace page lists the copy with its origin and its last save time
-- [ ] In Storybook, the project menu of the copy opens its example details, and the Workspace crumb opens the Workspace
+- [x] `npm test` passes, including `ModelerHome.test.tsx`: suggestions, empty workspace, index failure
+- [x] In Storybook, "Copy and open" on an example panel shows the copy in the Shell
+- [x] In Storybook, the Workspace page lists the copy with its origin and its last save time
+- [x] In Storybook, the project menu of the copy opens its example details, and the Workspace crumb opens the Workspace
 
 **Phase E2E:**
 
-- [ ] Add E2E tests for the user flows of this story
+- [x] Add E2E tests for the user flows of this story
 
 Acceptance criteria:
 
@@ -728,13 +728,13 @@ Acceptance criteria:
 
 **Phase X:**
 
-- [ ] Update `docs/architecture.md` with the changes from `## Architecture Changes`
-- [ ] Add an ADR entry to `docs/architecture-adr.md`: the manifest keeps the library `origin`
-- [ ] Update `global-project-management.md` §5.3 and §11 to reference this story
-- [ ] Update `README.md` with the new components
-- [ ] Review the implementation against this story and the project conventions
+- [x] Update `docs/architecture.md` with the changes from `## Architecture Changes`
+- [x] Add an ADR entry to `docs/architecture-adr.md`: the manifest keeps the library `origin`
+- [x] Update `global-project-management.md` §5.3 and §11 to reference this story
+- [x] Update `README.md` with the new components
+- [x] Review the implementation against this story and the project conventions
 
 Acceptance criteria:
 
 - [ ] Every command in `## Verification` passes
-- [ ] Storybook starts with `npm run storybook` and shows the `Modeler` group first
+- [x] Storybook starts with `npm run storybook` and shows the `Modeler` group first

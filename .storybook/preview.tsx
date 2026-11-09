@@ -9,6 +9,8 @@ const preview: Preview = {
                 // Sort the stories of a component by `order` too, not only the groups and the components.
                 includeNames: true,
                 order: [
+                    'Modeler',
+                    ['Home', 'Home With Projects', 'Examples', 'Example details', 'Workspace', 'Project'],
                     'Models',
                     ['Loan Repayment', 'Loan Origination', 'Client Outreach'],
                     'Components',

@@ -54,6 +54,13 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
       ([story](docs/stories/model-readme-story.md)) shows the project README in the Preview view (`MarkdownView`) and
       its Markdown source in the Code view; the Flow view of the model shows a README panel above the workbooks.
 
+- [x] [Examples Library and Local Workspace](docs/stories/examples-library-story.md): `edgerules-react/example-library`
+      (`ExampleGallery`, `ExampleDetails`, `IndustryGrid`, `createLibraryClient`) browses the published
+      `edgerules-examples` repository read-only; `edgerules-react/local-workspace` (`LocalWorkspace`, `RecentProjects`)
+      keeps the projects of the user in IndexedDB and a copy keeps its `origin`; `edgerules-react/modeler-home`
+      (`ModelerHome`) is the Home page. The host owns the routes: the components report navigation through callbacks.
+      The Shell gets an optional `navigation` prop (Workspace crumb, project menu, origin chip).
+
 ## Preview
 
 **Flow Editor:** ![img_1.png](docs/screenshots/img_1.png)
@@ -62,7 +69,10 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
 
 ## Storybook layout
 
-The sidebar has three groups:
+The sidebar has four groups. `Modeler` is first: the Home, Examples, Example details, Workspace and Project pages,
+composed as the host Modeler does, over the published examples index and an in-memory route.
+
+The other three:
 
 | Group      | Holds                                                                                                     | Files                                          |
 | ---------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
@@ -137,7 +147,10 @@ they actually import — a project that only uses the Code Editor never has to i
 │   │   ├── documentation-service/ # Persistence for path-keyed free-text descriptions (no engine, no GUI) — see
 │   │   │                          #   documentation-service-story.md; shared by boxed-editor, decision-table, etc.
 │   │   ├── flow-editor/           # Flow Editor (ReactFlow-based)
+│   │   ├── example-library/       # Read-only examples Library: client, gallery, details, industries
+│   │   ├── local-workspace/       # Local Workspace over IndexedDB, recent projects
 │   │   ├── markdown-view/         # Read-only GitHub Flavored Markdown (the project README)
+│   │   ├── modeler-home/          # The Home page of the Modeler
 │   │   ├── project-explorer/      # Project Explorer
 │   │   ├── project-session/       # Project bundle, repositories, ProjectSession and its React provider (no GUI) —
 │   │   │                          #   see project-session-story.md

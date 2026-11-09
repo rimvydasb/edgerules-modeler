@@ -126,6 +126,11 @@ module.exports = {
       'Package placement of the page components',
     ),
     componentAllowlist(
+      'modeler-home',
+      ['project-session', 'example-library', 'local-workspace'],
+      'Package placement of the page components',
+    ),
+    componentAllowlist(
       'shell',
       [
         'code-editor',
