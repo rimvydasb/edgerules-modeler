@@ -309,6 +309,7 @@ function FlowCanvas({
                 (field) => service.getFunctionNode(field),
                 (field) => service.getReturnNode(field),
                 (field) => service.getExpressionNode(field),
+                (field) => service.getParameterNode(field),
             ),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [service, refs, version],

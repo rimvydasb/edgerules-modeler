@@ -61,6 +61,35 @@ describe('modelWires', () => {
         ]);
     });
 
+    it('wires a return field that reads a derived member or a computed value from the parameter', () => {
+        const service = createFlowEditorService(
+            MutableDecisionService.fromCode(`{
+                type Order: { qty: <number> }
+                facts OrderFacts(order: Order): { double: order.qty * 2 }
+                service price(order: Order): {
+                    return: {
+                        double: order.double
+                        doubles: for x in [order] return x.double
+                        qty: order.qty
+                    }
+                }
+            }`),
+            {root: 'price'},
+        );
+        const wires = modelWires(
+            service.listNodes(),
+            (field) => service.getFunctionNode(field),
+            (field) => service.getReturnNode(field),
+            (field) => service.getExpressionNode(field),
+            (field) => service.getParameterNode(field),
+        );
+        const into = (name: string) =>
+            wires.filter((wire) => wire.targetHandle === `in:${name}`).map((wire) => [wire.source, wire.sourceHandle]);
+        expect(into('double')).toEqual([['price.order', 'out:*']]);
+        expect(into('qty')).toEqual([['price.order', 'out:qty']]);
+        expect(into('doubles')).toEqual([['price.order', 'out:*']]);
+    });
+
     it('wires every variable of an expression into its one input pin, from the nearest pin of its path', () => {
         const service = createFlowEditorService(
             MutableDecisionService.fromCode(`{

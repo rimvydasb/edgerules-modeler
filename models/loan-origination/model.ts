@@ -158,26 +158,29 @@ export const LOAN_ORIGINATION_DSL = `{
 
     // Service layer: the external contract
     service loanOriginationDecision(application: Application): {
-        applicants: for applicant in application.applicants return {
-            name: applicant.name
-            age: applicant.age
-            disposableIncome: applicant.disposableIncome
-            scorecard: applicant.ApplicantScore
-            policy: applicant.ApplicantPolicy.check
-        }
-        ltv: application.ltv
-        householdScore: application.HouseholdRisk.score
-        grade: application.HouseholdRisk.grade
-        knockouts: application.LoanDecision.knockouts
-        rate: application.LoanPricing.rate
-        affordability: application.LoanDecision.affordability
-        decision: application.LoanDecision.verdict
-        offer: {
-            amount: application.LoanOffer.amount
-            rate: application.LoanOffer.rate
-            monthlyPayment: application.LoanOffer.monthlyPayment
-            maxAmount: application.LoanOffer.maxAmount
-            counterOfferAmount: application.LoanOffer.counterOfferAmount
+        @ReturnNode(name: "Origination decision")
+        return: {
+            applicants: for applicant in application.applicants return {
+                name: applicant.name
+                age: applicant.age
+                disposableIncome: applicant.disposableIncome
+                scorecard: applicant.ApplicantScore
+                policy: applicant.ApplicantPolicy.check
+            }
+            ltv: application.ltv
+            householdScore: application.HouseholdRisk.score
+            grade: application.HouseholdRisk.grade
+            knockouts: application.LoanDecision.knockouts
+            rate: application.LoanPricing.rate
+            affordability: application.LoanDecision.affordability
+            decision: application.LoanDecision.verdict
+            offer: {
+                amount: application.LoanOffer.amount
+                rate: application.LoanOffer.rate
+                monthlyPayment: application.LoanOffer.monthlyPayment
+                maxAmount: application.LoanOffer.maxAmount
+                counterOfferAmount: application.LoanOffer.counterOfferAmount
+            }
         }
     }
 
