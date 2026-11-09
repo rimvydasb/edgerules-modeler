@@ -1,13 +1,18 @@
-import {Alert, Button, Checkbox, Group, Loader, MultiSelect, Select, Stack, Tabs, Text, TextInput} from '@mantine/core';
+import {Alert, Button, Checkbox, Loader, MultiSelect, Select, Stack, Tabs, Text, TextInput} from '@mantine/core';
+import {IconBooks, IconSearch} from '@tabler/icons-react';
 import {useEffect, useMemo, useRef, useState, type ReactElement} from 'react';
+import {KIND_COLORS} from '#ui/kindColors';
+import {SheetEmpty, SheetPageHeader, SheetToolbar, sheetClasses} from '#ui/sheet';
 import type {ExampleLevel, ProjectOrigin} from '../project-session';
 import {ExamplePanel} from './ExamplePanel';
+import {LEVEL_LABELS} from './levels';
 import {VirtualGrid} from './VirtualGrid';
 import {
     allFeatures,
     countByIndustry,
     featuredExamples,
     searchExamples,
+    workspaceCopies,
     workspaceStatus,
     type ExampleSort,
 } from './libraryQuery';
@@ -26,16 +31,16 @@ export interface ExampleGalleryProps {
     engineVersion?: string; // version of the loaded engine, for the compatibility facet
     workspaceOrigins?: ProjectOrigin[]; // origins of the workspace projects, for the badges
     onCopy: (example: LoadedExample, open: boolean) => void; // the host adds the copy; `open` for "Copy and open"
+    onOpenCopy?: (exampleId: string) => void; // "Open copy" of an example in the workspace; the host opens its newest copy
     onShowDetails: (coordinates: ExampleCoordinates) => void; // the host navigates to the details page
 }
 
-const ROW_HEIGHT = 340;
+const ROW_HEIGHT = 232; // one panel and the grid gap
+const THUMBNAIL_HEIGHT = 91;
 const ALL = 'all';
-const LEVELS: {value: ExampleLevel; label: string}[] = [
-    {value: 'beginner', label: 'Beginner'},
-    {value: 'intermediate', label: 'Intermediate'},
-    {value: 'advanced', label: 'Advanced'},
-];
+const LEVELS: {value: ExampleLevel; label: string}[] = (['beginner', 'intermediate', 'advanced'] as const).map(
+    (value) => ({value, label: LEVEL_LABELS[value]}),
+);
 const SORTS: {value: ExampleSort; label: string}[] = [
     {value: 'relevance', label: 'Relevance'},
     {value: 'name', label: 'Name'},
@@ -66,6 +71,7 @@ export function ExampleGallery({
     engineVersion,
     workspaceOrigins,
     onCopy,
+    onOpenCopy,
     onShowDetails,
 }: ExampleGalleryProps): ReactElement {
     const {search, error, retry} = useLibraryIndex(client);
@@ -108,9 +114,13 @@ export function ExampleGallery({
     }, [search, featured, query, industry, level, features, compatible, engineVersion, sort, limit]);
 
     const industries = search?.index.industries ?? [];
-    const titles = useMemo(() => new Map(industries.map((item) => [item.id, item.title])), [industries]);
+    const byId = useMemo(() => new Map(industries.map((item) => [item.id, item])), [industries]);
     const counts = useMemo(() => (search ? countByIndustry(search.index) : new Map<string, number>()), [search]);
     const featureOptions = useMemo(() => (search ? allFeatures(search.index) : []), [search]);
+    const inWorkspace = useMemo(
+        () => new Set((workspaceOrigins ?? []).map((origin) => origin.id)).size,
+        [workspaceOrigins],
+    );
 
     if (error) {
         return (
@@ -135,40 +145,64 @@ export function ExampleGallery({
             setBusyId(undefined);
         }
     };
+    const total = search.index.examples.length;
+    const rowHeight = ROW_HEIGHT + (entries.some((entry) => entry.thumbnail) ? THUMBNAIL_HEIGHT : 0);
 
     return (
-        <Stack gap="sm" data-testid="example-gallery">
+        <Stack gap="md" data-testid="example-gallery">
             {!featured && (
-                <>
-                    <Group align="flex-end" wrap="wrap">
+                <SheetPageHeader
+                    icon={<IconBooks size={22} />}
+                    iconColor={KIND_COLORS.model}
+                    title="Examples"
+                    subtitle={`Read-only library of ${total} ${total === 1 ? 'example' : 'examples'} · copy one into your workspace to edit it`}
+                    aside={
+                        inWorkspace > 0 && (
+                            <Text size="xs" c="dimmed">
+                                {inWorkspace} in your workspace
+                            </Text>
+                        )
+                    }
+                >
+                    <SheetToolbar>
                         <TextInput
                             ref={searchInput}
-                            placeholder="Search examples"
+                            className={sheetClasses.toolbarGrow}
+                            size="xs"
+                            leftSection={<IconSearch size={14} />}
+                            placeholder="Search examples  ( / )"
                             aria-label="Search examples"
                             value={query}
-                            style={{flex: 1, minWidth: 220}}
                             onChange={(event) => {
                                 setOwnQuery(event.currentTarget.value);
                                 onQueryChange?.(event.currentTarget.value);
                             }}
                         />
                         <Select
+                            size="xs"
+                            w={140}
                             aria-label="Level"
-                            placeholder="Level"
+                            placeholder="Any level"
                             data={LEVELS}
                             value={level ?? null}
                             clearable
                             onChange={(value) => setLevel((value as ExampleLevel | null) ?? undefined)}
                         />
                         <MultiSelect
+                            size="xs"
+                            miw={160}
+                            maw={360}
                             aria-label="Features"
-                            placeholder="Features"
+                            placeholder={features.length ? undefined : 'Features'}
                             data={featureOptions}
                             value={features}
                             searchable
+                            clearable
                             onChange={setFeatures}
                         />
                         <Select
+                            size="xs"
+                            w={140}
                             aria-label="Sort"
                             data={SORTS}
                             value={sort ?? (query.trim() ? 'relevance' : 'name')}
@@ -177,12 +211,13 @@ export function ExampleGallery({
                         />
                         {engineVersion && (
                             <Checkbox
+                                size="xs"
                                 label="Works with my engine"
                                 checked={compatible}
                                 onChange={(event) => setCompatible(event.currentTarget.checked)}
                             />
                         )}
-                    </Group>
+                    </SheetToolbar>
                     <Tabs
                         value={industry ?? ALL}
                         onChange={(value) => {
@@ -190,9 +225,10 @@ export function ExampleGallery({
                             setOwnIndustry(next);
                             onIndustryChange?.(next);
                         }}
+                        styles={{list: {borderTop: '1px solid var(--mantine-color-default-border)'}}}
                     >
                         <Tabs.List>
-                            <Tabs.Tab value={ALL}>All ({search.index.examples.length})</Tabs.Tab>
+                            <Tabs.Tab value={ALL}>All ({total})</Tabs.Tab>
                             {industries.map((item) => (
                                 <Tabs.Tab key={item.id} value={item.id}>
                                     {item.title} ({counts.get(item.id) ?? 0})
@@ -200,27 +236,31 @@ export function ExampleGallery({
                             ))}
                         </Tabs.List>
                     </Tabs>
-                    <Text size="sm" c="dimmed" role="status">
-                        {entries.length} {entries.length === 1 ? 'example' : 'examples'}
-                    </Text>
-                </>
+                </SheetPageHeader>
+            )}
+            {!featured && (
+                <Text size="xs" c="dimmed" role="status" mb={-6}>
+                    {entries.length} {entries.length === 1 ? 'example' : 'examples'}
+                </Text>
             )}
             {copyError && (
                 <Alert color="red" role="alert" withCloseButton onClose={() => setCopyError(undefined)}>
                     {copyError}
                 </Alert>
             )}
-            {entries.length === 0 && <Text c="dimmed">No example matches.</Text>}
+            {entries.length === 0 && <SheetEmpty>No example matches.</SheetEmpty>}
             <VirtualGrid
                 label="Examples"
                 items={entries}
                 itemKey={(entry) => entry.id}
-                rowHeight={ROW_HEIGHT}
+                rowHeight={rowHeight}
                 renderItem={(entry, _index, tabIndex) => (
                     <ExamplePanel
                         entry={entry}
-                        industryTitle={titles.get(entry.industry) ?? entry.industry}
+                        industryTitle={byId.get(entry.industry)?.title ?? entry.industry}
+                        industryIcon={byId.get(entry.industry)?.icon}
                         status={workspaceStatus(entry, workspaceOrigins)}
+                        copies={workspaceCopies(entry, workspaceOrigins)}
                         incompatible={engineVersion !== undefined && !satisfiesEngine(engineVersion, entry.engine)}
                         thumbnailUrl={
                             entry.thumbnail
@@ -230,6 +270,7 @@ export function ExampleGallery({
                         busy={busyId === entry.id}
                         tabIndex={tabIndex}
                         onCopyAndOpen={() => void copyAndOpen(entry)}
+                        onOpenCopy={onOpenCopy && (() => onOpenCopy(entry.id))}
                         onDetails={() => onShowDetails({id: entry.id, version: entry.versions[0].version})}
                     />
                 )}

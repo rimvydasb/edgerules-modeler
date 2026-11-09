@@ -15,13 +15,35 @@ function setup(props: Partial<React.ComponentProps<typeof ExampleDetails>> = {})
 }
 
 describe('ExampleDetails', () => {
+    it('offers "Open copy" for an example in the workspace, and leads back to the gallery by its crumbs', async () => {
+        const user = userEvent.setup();
+        const onOpenCopy = vi.fn();
+        const onShowIndustry = vi.fn();
+        setup({
+            onOpenCopy,
+            onShowIndustry,
+            workspaceOrigins: [{library: FIXTURE_SOURCE.indexUrl, id: 'loan-repayment', version: '1.3.0'}],
+        });
+        await screen.findByRole('heading', {name: 'Loan repayment'});
+        expect(screen.getAllByText('✓ In workspace').length).toBeGreaterThan(0);
+        await user.click(screen.getAllByRole('button', {name: 'Open copy'})[0]);
+        expect(onOpenCopy).toHaveBeenCalledWith('loan-repayment');
+
+        const crumbs = screen.getByRole('navigation', {name: 'Library path'});
+        await user.click(within(crumbs).getByRole('button', {name: 'Financial'}));
+        expect(onShowIndustry).toHaveBeenLastCalledWith('financial');
+        await user.click(within(crumbs).getByRole('button', {name: 'Examples'}));
+        expect(onShowIndustry).toHaveBeenLastCalledWith(undefined);
+    });
+
     it('shows the rendered README, the metadata and related examples of the same industry', async () => {
         setup({repositoryUrl: (entry, ref) => `https://github.test/${entry.path}?ref=${ref}`});
         expect(await screen.findByRole('heading', {name: 'Loan repayment'})).toBeTruthy();
         await waitFor(() => expect(screen.getAllByRole('heading').length).toBeGreaterThan(1));
         const meta = screen.getByRole('complementary', {name: 'Example metadata'});
-        expect(meta.textContent).toContain('Level: beginner');
-        expect(meta.textContent).toContain('Released: 2026-11-10');
+        const value = (label: string) => within(meta).getByText(label).nextElementSibling?.textContent;
+        expect(value('Level')).toBe('Beginner');
+        expect(value('Released')).toBe('2026-11-10');
         expect(
             within(meta)
                 .getByRole('link', {name: /View on GitHub/})
@@ -47,7 +69,7 @@ describe('ExampleDetails', () => {
         );
         await user.click(screen.getByRole('combobox', {name: 'Version'}));
         const options = await screen.findAllByRole('option');
-        expect(options.map((option) => option.textContent)).toEqual(['1.3.0', '1.2.0']);
+        expect(options.map((option) => option.textContent)).toEqual(['1.3.0 (latest)', '1.2.0']);
         await user.click(options[0]);
         expect(onVersionChange).toHaveBeenCalledWith({id: 'loan-repayment', version: '1.3.0'});
     });

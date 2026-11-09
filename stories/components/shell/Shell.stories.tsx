@@ -190,7 +190,7 @@ const ORIGIN = {
 };
 
 /**
- * With `navigation`, the breadcrumb starts with the Workspace crumb and the project name opens the project menu. This
+ * With `navigation`, the project name opens the project menu; the Shell has no way back to the Workspace. This
  * project is a copy of `loan-repayment@1.2.0` and the index has a newer version: the origin chip shows "Update
  * available".
  */

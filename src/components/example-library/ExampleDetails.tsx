@@ -1,12 +1,36 @@
-import {Alert, Anchor, Badge, Button, Group, Loader, Select, SimpleGrid, Stack, Text, Title} from '@mantine/core';
+import {Alert, Anchor, Button, Loader, Select, Stack, Text} from '@mantine/core';
+import {
+    IconBrandGithub,
+    IconChevronRight,
+    IconCopy,
+    IconExternalLink,
+    IconFileText,
+    IconLink,
+    IconPlayerPlay,
+} from '@tabler/icons-react';
 import {useEffect, useMemo, useState, type ReactElement} from 'react';
+import {
+    SheetAction,
+    SheetGrid,
+    SheetKeyValues,
+    SheetLinkButton,
+    SheetPageActions,
+    SheetPageHeader,
+    SheetPanel,
+    SheetPanelHeader,
+    SheetSection,
+    SheetTokens,
+} from '#ui/sheet';
 import {MarkdownView} from '../markdown-view';
 import type {ProjectOrigin} from '../project-session';
-import {ExamplePanel} from './ExamplePanel';
-import {relatedExamples, workspaceStatus} from './libraryQuery';
+import {ExamplePanel, WorkspaceChip} from './ExamplePanel';
+import {IndustryIcon} from './industryIcon';
+import {LEVEL_COLORS, LEVEL_LABELS} from './levels';
+import {relatedExamples, workspaceCopies, workspaceStatus} from './libraryQuery';
 import {satisfiesEngine} from './semver';
 import type {ExampleCoordinates, LibraryClient, LibraryEntry, LoadedExample} from './types';
 import {useLibraryIndex} from './useLibraryIndex';
+import * as classes from './exampleDetails.module.css';
 
 export interface ExampleDetailsProps {
     client: LibraryClient; // from createLibraryClient(source)
@@ -15,7 +39,9 @@ export interface ExampleDetailsProps {
     engineVersion?: string; // version of the loaded engine, for the compatibility warning
     workspaceOrigins?: ProjectOrigin[]; // origins of the workspace projects, for the badge
     onCopy: (example: LoadedExample, open: boolean) => void; // "Copy and open" and "Copy to workspace"
+    onOpenCopy?: (exampleId: string) => void; // "Open copy" of an example in the workspace; the host opens its newest copy
     onShowDetails: (coordinates: ExampleCoordinates) => void; // a related example
+    onShowIndustry?: (industry: string | undefined) => void; // the "Examples / <industry>" crumbs; plain text without it
     shareUrl?: (coordinates: ExampleCoordinates) => string; // the URL that "Share link" copies; no button without it
     repositoryUrl?: (entry: LibraryEntry, ref: string) => string; // the "View on GitHub" link; no link without it
 }
@@ -32,7 +58,9 @@ export function ExampleDetails({
     engineVersion,
     workspaceOrigins,
     onCopy,
+    onOpenCopy,
     onShowDetails,
+    onShowIndustry,
     shareUrl,
     repositoryUrl,
 }: ExampleDetailsProps): ReactElement {
@@ -86,9 +114,11 @@ export function ExampleDetails({
 
     const industry = search.index.industries.find((item) => item.id === entry.industry);
     const status = workspaceStatus(entry, workspaceOrigins);
+    const copies = workspaceCopies(entry, workspaceOrigins);
     const incompatible = engineVersion !== undefined && !satisfiesEngine(engineVersion, entry.engine);
     const related = relatedExamples(search.index, entry);
     const currentReadme = readme?.key === key ? readme : undefined;
+    const isNewest = entry.versions[0]?.version === version.version;
 
     const copy = async (open: boolean) => {
         setBusy(open ? 'open' : 'copy');
@@ -112,50 +142,78 @@ export function ExampleDetails({
         }
     };
 
+    const crumb = (label: string, target: string | undefined) =>
+        onShowIndustry ? (
+            <SheetLinkButton onClick={() => onShowIndustry(target)}>{label}</SheetLinkButton>
+        ) : (
+            <span>{label}</span>
+        );
+
     return (
-        <Stack gap="md" data-testid="example-details">
-            <Text size="sm" c="dimmed">
-                Examples / {industry?.title ?? entry.industry} / {entry.name}
-            </Text>
-            <Group justify="space-between" align="flex-start">
-                <div>
-                    <Title order={2}>{entry.name}</Title>
-                    <Text c="dimmed">{entry.description}</Text>
-                    <Group gap={4} mt={4}>
-                        {status === 'in-workspace' && (
-                            <Badge color="green" variant="light">
-                                ✓ In workspace
-                            </Badge>
-                        )}
-                        {status === 'update-available' && (
-                            <Badge color="yellow" variant="light">
-                                Update available
-                            </Badge>
-                        )}
-                    </Group>
-                </div>
-                <Select
-                    label="Version"
-                    data={entry.versions.map((item) => item.version)}
-                    value={version.version}
-                    allowDeselect={false}
-                    w={140}
-                    onChange={(next) => next && onVersionChange?.({id: entry.id, version: next})}
-                />
-            </Group>
-            <Group>
-                <Button loading={busy === 'open'} onClick={() => void copy(true)}>
-                    Copy and open
-                </Button>
-                <Button variant="default" loading={busy === 'copy'} onClick={() => void copy(false)}>
-                    Copy to workspace
-                </Button>
-                {shareUrl && (
-                    <Button variant="default" onClick={() => void share()}>
-                        {copied ? 'Link copied' : 'Share link'}
-                    </Button>
-                )}
-            </Group>
+        <Stack gap="lg" data-testid="example-details">
+            <nav aria-label="Library path" className={classes.crumbs}>
+                {crumb('Examples', undefined)}
+                <IconChevronRight size={12} aria-hidden="true" />
+                {crumb(industry?.title ?? entry.industry, entry.industry)}
+                <IconChevronRight size={12} aria-hidden="true" />
+                <span className={classes.crumbCurrent} aria-current="page">
+                    {entry.name}
+                </span>
+            </nav>
+
+            <SheetPageHeader
+                icon={<IndustryIcon name={industry?.icon ?? entry.industry} size={24} />}
+                iconColor={LEVEL_COLORS[entry.level]}
+                title={entry.name}
+                subtitle={entry.description}
+                aside={
+                    <>
+                        <WorkspaceChip status={status} copies={copies} />
+                        <Select
+                            size="xs"
+                            w={130}
+                            aria-label="Version"
+                            data={entry.versions.map((item, index) => ({
+                                value: item.version,
+                                label: index === 0 ? `${item.version} (latest)` : item.version,
+                            }))}
+                            value={version.version}
+                            allowDeselect={false}
+                            onChange={(next) => next && onVersionChange?.({id: entry.id, version: next})}
+                        />
+                    </>
+                }
+            >
+                <SheetPageActions>
+                    {status !== 'none' && onOpenCopy && (
+                        <SheetAction primary icon={<IconExternalLink size={14} />} onClick={() => onOpenCopy(entry.id)}>
+                            Open copy
+                        </SheetAction>
+                    )}
+                    <SheetAction
+                        primary={status === 'none' || !onOpenCopy}
+                        busy={busy === 'open'}
+                        icon={<IconPlayerPlay size={14} />}
+                        onClick={() => void copy(true)}
+                    >
+                        Copy and open
+                    </SheetAction>
+                    <SheetAction busy={busy === 'copy'} icon={<IconCopy size={14} />} onClick={() => void copy(false)}>
+                        Copy to workspace
+                    </SheetAction>
+                    {shareUrl && (
+                        <SheetAction icon={<IconLink size={14} />} onClick={() => void share()}>
+                            {copied ? 'Link copied' : 'Share link'}
+                        </SheetAction>
+                    )}
+                </SheetPageActions>
+            </SheetPageHeader>
+
+            {!isNewest && (
+                <Alert color="gray" role="status" py={6}>
+                    You view version {version.version}; the newest version is {entry.versions[0].version}.
+                </Alert>
+            )}
             {incompatible && (
                 <Alert color="yellow" title="Engine version" role="status">
                     This example needs the engine {entry.engine}; the loaded engine is {engineVersion}. You can still
@@ -167,56 +225,79 @@ export function ExampleDetails({
                     {actionError}
                 </Alert>
             )}
-            <SimpleGrid cols={{base: 1, md: 3}}>
-                <div style={{gridColumn: 'span 2'}}>
-                    {!currentReadme && <Loader size="sm" aria-label="Loading README" />}
-                    {currentReadme?.error && (
-                        <Alert color="red" role="alert">
-                            README.md: {currentReadme.error}
-                        </Alert>
-                    )}
-                    {currentReadme?.text !== undefined && (
-                        <MarkdownView markdown={currentReadme.text} resolveUrl={resolveUrl} />
-                    )}
-                </div>
-                <Stack gap={4} component="aside" aria-label="Example metadata">
-                    <Text size="sm">Level: {entry.level}</Text>
-                    <Text size="sm">Features: {entry.features.join(', ')}</Text>
-                    {entry.stats && (
-                        <Text size="sm">
-                            {entry.stats.tests ?? 0} tests · {entry.stats.lines ?? 0} lines
-                        </Text>
-                    )}
-                    <Text size="sm">Engine: {entry.engine}</Text>
-                    <Text size="sm">Released: {version.released}</Text>
+
+            <div className={classes.columns}>
+                <SheetPanel className={classes.readme}>
+                    <SheetPanelHeader icon={<IconFileText size={18} />} title="README.md" />
+                    <div className={classes.readmeBody}>
+                        {!currentReadme && <Loader size="sm" aria-label="Loading README" />}
+                        {currentReadme?.error && (
+                            <Alert color="red" role="alert">
+                                README.md: {currentReadme.error}
+                            </Alert>
+                        )}
+                        {currentReadme?.text !== undefined && (
+                            <MarkdownView markdown={currentReadme.text} resolveUrl={resolveUrl} />
+                        )}
+                    </div>
+                </SheetPanel>
+                <Stack gap="xs" component="aside" aria-label="Example metadata">
+                    <SheetKeyValues
+                        rows={[
+                            ['Industry', industry?.title ?? entry.industry],
+                            ['Level', LEVEL_LABELS[entry.level]],
+                            ['Version', version.version],
+                            ['Released', version.released],
+                            ['Engine', <code key="engine">{entry.engine}</code>],
+                            ...(entry.stats
+                                ? [
+                                      [
+                                          'Size',
+                                          `${entry.stats.tests ?? 0} tests · ${entry.stats.lines ?? 0} lines`,
+                                      ] as const,
+                                  ]
+                                : []),
+                            ['Features', <SheetTokens key="features" items={entry.features} />],
+                            ['Id', <code key="id">{entry.id}</code>],
+                        ]}
+                    />
                     {repositoryUrl && (
-                        <Anchor href={repositoryUrl(entry, version.ref)} target="_blank" rel="noreferrer" size="sm">
-                            View on GitHub →
+                        <Anchor
+                            href={repositoryUrl(entry, version.ref)}
+                            target="_blank"
+                            rel="noreferrer"
+                            size="sm"
+                            className={classes.github}
+                        >
+                            <IconBrandGithub size={14} aria-hidden="true" /> View on GitHub →
                         </Anchor>
                     )}
                 </Stack>
-            </SimpleGrid>
+            </div>
+
             {related.length > 0 && (
-                <Stack gap="xs">
-                    <Text fw={600}>Related examples</Text>
-                    <SimpleGrid cols={{base: 1, sm: 3}}>
+                <SheetSection label="Related examples" count={related.length}>
+                    <SheetGrid>
                         {related.map((other) => (
                             <ExamplePanel
                                 key={other.id}
                                 entry={other}
                                 industryTitle={industry?.title ?? other.industry}
+                                industryIcon={industry?.icon}
                                 status={workspaceStatus(other, workspaceOrigins)}
+                                copies={workspaceCopies(other, workspaceOrigins)}
                                 onCopyAndOpen={() =>
                                     void client.loadExample(other, other.versions[0].version).then(
                                         (loaded) => onCopy(loaded, true),
                                         (failure: unknown) => setActionError(message(failure)),
                                     )
                                 }
+                                onOpenCopy={onOpenCopy && (() => onOpenCopy(other.id))}
                                 onDetails={() => onShowDetails({id: other.id, version: other.versions[0].version})}
                             />
                         ))}
-                    </SimpleGrid>
-                </Stack>
+                    </SheetGrid>
+                </SheetSection>
             )}
         </Stack>
     );

@@ -1,8 +1,12 @@
 import type {ReactElement} from 'react';
-import {Anchor, Button, Card, Group, SimpleGrid, Text} from '@mantine/core';
+import {Text} from '@mantine/core';
+import {IconSitemap} from '@tabler/icons-react';
+import {KIND_COLORS} from '#ui/kindColors';
+import {SheetGrid, SheetLinkButton, SheetPanelButton, SheetPanelHeader, SheetSection} from '#ui/sheet';
 import type {LocalProjectRepository, ProjectLocator} from '../project-session';
 import {DEFAULT_PROJECTS_LIMIT, recentProjects, savedAgo} from './workspaceModel';
 import {useWorkspaceProjects} from './useWorkspaceProjects';
+import * as classes from './localWorkspace.module.css';
 
 export interface RecentProjectsProps {
     repository: LocalProjectRepository; // the IndexedDB repository of the workspace
@@ -12,7 +16,7 @@ export interface RecentProjectsProps {
     onShowAll?: () => void; // shows the "All" link to the Workspace page
 }
 
-/** The newest saved projects as compact panels, for the Home page. */
+/** The newest saved projects as compact one-row panels, for the Home page. */
 export function RecentProjects({
     repository,
     limit = DEFAULT_PROJECTS_LIMIT,
@@ -24,22 +28,17 @@ export function RecentProjects({
     const recent = projects ? recentProjects(projects, limit) : [];
 
     return (
-        <section aria-label="Recent projects">
-            <Group justify="space-between" mb="xs">
-                <Text fw={600}>Continue</Text>
-                <Group gap="sm">
-                    {onNewProject && (
-                        <Button size="compact-sm" variant="light" onClick={onNewProject}>
-                            + New project
-                        </Button>
-                    )}
-                    {onShowAll && (
-                        <Anchor component="button" type="button" size="sm" onClick={onShowAll}>
-                            All →
-                        </Anchor>
-                    )}
-                </Group>
-            </Group>
+        <SheetSection
+            label="Continue"
+            aria-label="Recent projects"
+            count={projects?.length}
+            actions={
+                <>
+                    {onNewProject && <SheetLinkButton onClick={onNewProject}>+ New project</SheetLinkButton>}
+                    {onShowAll && <SheetLinkButton onClick={onShowAll}>All projects →</SheetLinkButton>}
+                </>
+            }
+        >
             {error && (
                 <Text c="red" size="sm" role="alert">
                     {error}
@@ -50,27 +49,23 @@ export function RecentProjects({
                     No projects yet.
                 </Text>
             )}
-            <SimpleGrid cols={{base: 1, sm: 2, lg: 3}}>
+            <SheetGrid compact>
                 {recent.map((project) => (
-                    <Card
+                    <SheetPanelButton
                         key={project.locator.projectPath}
-                        component="button"
-                        type="button"
-                        withBorder
-                        padding="sm"
-                        style={{textAlign: 'left', cursor: 'pointer'}}
                         aria-label={`Open ${project.name}`}
                         onClick={() => onOpen(project.locator)}
                     >
-                        <Text fw={500} truncate>
-                            {project.name}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                            {savedAgo(project.savedAt)}
-                        </Text>
-                    </Card>
+                        <SheetPanelHeader
+                            only
+                            icon={<IconSitemap size={18} />}
+                            iconColor={KIND_COLORS.model}
+                            title={project.name}
+                            aside={<span className={classes.recentMeta}>{savedAgo(project.savedAt)}</span>}
+                        />
+                    </SheetPanelButton>
                 ))}
-            </SimpleGrid>
-        </section>
+            </SheetGrid>
+        </SheetSection>
     );
 }

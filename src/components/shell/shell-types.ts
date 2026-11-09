@@ -8,9 +8,8 @@ import type {ProjectDescriptor, ProjectLocator, ProjectOrigin} from '../project-
 // rendered Markdown of a document root (`doc:README.md`); only a document root has it.
 export type ShellView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview';
 
-// The links of the open project to the Workspace, the Library and its source example. The host owns the routes.
+// The links of the open project to other projects, the Library and its source example. The host owns the routes.
 export interface ShellNavigation {
-    onShowWorkspace: () => void; // the Workspace crumb and "Back to workspace"
     onBrowseExamples: () => void; // "Browse examples"
     onOpenProject: (locator: ProjectLocator) => void; // a recent project
     recentProjects?: ProjectDescriptor[]; // newest first; the Shell shows up to 5 and omits the open project

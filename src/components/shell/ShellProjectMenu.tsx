@@ -17,7 +17,11 @@ export interface ShellProjectMenuProps {
     onOpenReadme: () => void;
 }
 
-/** The project name in the middle of the Shell bar: a menu to the Workspace, the Library and the source example. */
+/**
+ * The project name in the middle of the Shell bar: a menu to the recent projects, the Library and the source example.
+ * It has no way back to the Workspace: the host navigation owns that, so a click in the Shell never leaves the project
+ * by accident.
+ */
 export function ShellProjectMenu({
     name,
     projectId,
@@ -26,8 +30,7 @@ export function ShellProjectMenu({
     navigation,
     onOpenReadme,
 }: ShellProjectMenuProps): ReactElement {
-    const {onShowWorkspace, onBrowseExamples, onOpenProject, recentProjects, onShowOrigin, originStatus, onDuplicate} =
-        navigation;
+    const {onBrowseExamples, onOpenProject, recentProjects, onShowOrigin, originStatus, onDuplicate} = navigation;
     const recent = (recentProjects ?? []).filter((project) => project.projectId !== projectId).slice(0, RECENT_LIMIT);
 
     return (
@@ -59,7 +62,6 @@ export function ShellProjectMenu({
                     )}
                 </div>
                 <Menu.Divider />
-                <Menu.Item onClick={onShowWorkspace}>← Back to workspace</Menu.Item>
                 {recent.length > 0 && <Menu.Label>Recent projects</Menu.Label>}
                 {recent.map((project) => (
                     <Menu.Item key={project.projectId} onClick={() => onOpenProject(project.locator)}>

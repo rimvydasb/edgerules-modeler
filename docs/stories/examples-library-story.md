@@ -22,7 +22,8 @@ Goals:
   an example.
 - **Read-only Library:** a copy in the Local Workspace is the only way to change an example.
 - **Provenance:** a workspace copy keeps the coordinates `<id>@<version>` of its example.
-- **No router:** the components report navigation through callbacks; the host owns the routes.
+- **No router in the package:** the components report navigation through callbacks; the host owns the routes and the
+  URL.
 
 Prerequisites:
 
@@ -76,9 +77,9 @@ composition of components of this package.
 | --------------- | ------------------------------------- | ------------------------------------------------------------------------ | ---------------- |
 | Home            | `/`                                   | Search box, recent projects, industry tiles, featured examples           | `ModelerHome`    |
 | Examples        | `/examples`, `/examples/<industry>`   | Industry tabs, search, facets, gallery of example panels                 | `ExampleGallery` |
-| Example details | `/examples/<industry>/<id>@<version>` | Actions, metadata, version selector, README, related examples            | `ExampleDetails` |
+| Example details | `/examples/<industry>/<id>@<version>` | Crumbs, actions, metadata, version selector, README, related examples    | `ExampleDetails` |
 | Workspace       | `/workspace`                          | Grid of project panels, "New project" panel, search, filters, panel menu | `LocalWorkspace` |
-| Project         | `/project/<projectPath>`              | The Shell of one workspace project                                       | `Shell`          |
+| Project         | `/project/<projectPath>[/<rootPath>]` | The Shell of one workspace project, at a root path and a view            | `Shell`          |
 
 Navigation between the pages:
 
@@ -216,23 +217,23 @@ The Library compares the `origin` of the workspace projects with the index:
 `ExampleGallery` is the Examples page and the featured row of the Home page. `ExampleDetails` is the Example details
 page.
 
-| Feature          | Behavior                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------- |
-| Industry tabs    | "All" and one tab per industry of the index, with example counts; the tab is the `industry` prop        |
-| Search           | Client-side, as the user types; matches `name`, `description`, `tags`, `features`, `id`, industry title |
-| Facets           | Level, features (multi-select, AND), engine compatibility                                               |
-| Sort             | Relevance, name, last release                                                                           |
-| Example panel    | Thumbnail, industry, level, name, description, up to 3 features and "+N", workspace badge               |
-| Panel actions    | "Copy and open" (primary) and "Details"                                                                 |
-| Featured mode    | `featured` prop: the examples of `index.featured` in their order, no tabs, no facets                    |
-| Details actions  | "Copy and open", "Copy to workspace", "Share link" (copies the page URL), "View on GitHub"              |
-| Details content  | Version selector, rendered `README.md`, metadata side panel, related examples                           |
-| Related examples | Up to 3 examples of the same industry, ordered by the number of shared features                         |
-| Read-only        | No edit action; a copy is the only way to change an example                                             |
-| Compatibility    | A version whose `engine` range excludes the loaded engine shows a warning; copy stays available         |
-| Workspace badges | `workspaceOrigins` prop: see "Origin of a workspace copy"                                               |
-| Errors           | Index failure: retry panel. File failure: error on the details page with the file name                  |
-| Keyboard         | Arrow keys move between panels, Enter opens the details, `/` focuses search                             |
+| Feature          | Behavior                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| Industry tabs    | "All" and one tab per industry of the index, with example counts; the tab is the `industry` prop          |
+| Search           | Client-side, as the user types; matches `name`, `description`, `tags`, `features`, `id`, industry title   |
+| Facets           | Level, features (multi-select, AND), engine compatibility                                                 |
+| Sort             | Relevance, name, last release                                                                             |
+| Example panel    | Thumbnail, industry, level, name, description, up to 3 features and "+N", workspace badge                 |
+| Panel actions    | "Copy and open" (primary) and "Details"; a copied example: "Open copy" (primary), "Copy again", "Details" |
+| Featured mode    | `featured` prop: the examples of `index.featured` in their order, no tabs, no facets                      |
+| Details actions  | "Open copy" (copied example), "Copy and open", "Copy to workspace", "Share link", "View on GitHub"        |
+| Details content  | Version selector, rendered `README.md`, metadata side panel, related examples                             |
+| Related examples | Up to 3 examples of the same industry, ordered by the number of shared features                           |
+| Read-only        | No edit action; a copy is the only way to change an example                                               |
+| Compatibility    | A version whose `engine` range excludes the loaded engine shows a warning; copy stays available           |
+| Workspace badges | `workspaceOrigins` prop: see "Origin of a workspace copy"                                                 |
+| Errors           | Index failure: retry panel. File failure: error on the details page with the file name                    |
+| Keyboard         | Arrow keys move between panels, Enter opens the details, `/` focuses search                               |
 
 - Search MUST respond within 50 ms for 5 000 entries. A lowercase token index built once after `loadIndex` meets this
   target, so the gallery needs no search library.
@@ -285,8 +286,11 @@ Rules for a page-level component:
 - It reports navigation through callbacks. It MUST NOT import a router, read `window.location`, or own a URL.
 - It has no hard-coded library URL. The host creates the `LibraryClient` from its `LibrarySource`.
 
-`edgerules-react` has no index page of its own: it is a library, and the host Modeler (`edgerules-modeler`) owns `/`.
-Storybook is the only page that the repository runs.
+`edgerules-react` publishes no index page: it is a library, and the host Modeler (`edgerules-modeler`) owns `/`. The
+repository runs the pages in two hosts:
+
+- **Storybook:** the `Modeler` stories keep the route in React state.
+- **Local Modeler:** `npm run dev` serves `app/`, a single-page app with TanStack Router. See "Local Modeler routes".
 
 - The `Modeler` Storybook group is first in `storySort`. Its first story, `Modeler/Home`, renders `ModelerHome` with the
   published `edgerules-examples` index and an in-memory workspace.
@@ -349,23 +353,21 @@ sequenceDiagram
 
 ### Shell navigation
 
-The Shell bar links the open project to the Workspace, the Library and its source example. It has three parts:
+The Shell bar links the open project to other projects, the Library and its source example. It has two parts:
 
-- **Workspace crumb:** the breadcrumb starts with "Workspace /". A click calls `onShowWorkspace`.
 - **Project menu:** the project name in the middle of the Shell bar, with `▾`. A click opens the menu below.
 - **Origin chip:** a copy of an example shows `from <id>@<version>` in the menu header. With a newer version in the
   index, the chip shows "Update available".
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│ Workspace / Loan Repayment Planner / mortgageBook    Loan repayment ▾    ⚙  Boxed|Flow|… │
+│ Loan Repayment Planner / mortgageBook                Loan repayment ▾    ⚙  Boxed|Flow|… │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
                                        ┌──────────────────────────────────────┐
                                        │ Loan repayment                       │
                                        │ saved 2 min ago                      │
                                        │ [from loan-repayment@1.2.0 ↗]        │
                                        │──────────────────────────────────────│
-                                       │ ← Back to workspace                  │
                                        │ Recent projects                      │
                                        │   Claims triage                      │
                                        │   My pricing                         │
@@ -380,7 +382,6 @@ The Shell bar links the open project to the Workspace, the Library and its sourc
 | Menu item             | Shown                              | Action                                                     |
 | --------------------- | ---------------------------------- | ---------------------------------------------------------- |
 | Origin chip           | The manifest has an `origin`       | `onShowOrigin(origin)`: the host shows the example details |
-| Back to workspace     | Always                             | `onShowWorkspace()`                                        |
 | Recent projects       | Up to 5, the open project excluded | `onOpenProject(locator)`                                   |
 | Browse examples       | Always                             | `onBrowseExamples()`                                       |
 | View original example | The manifest has an `origin`       | `onShowOrigin(origin)`                                     |
@@ -391,8 +392,47 @@ The Shell bar links the open project to the Workspace, the Library and its sourc
   the origin status. The Shell reads neither the repository nor the library.
 - An unsaved change does not block navigation in the Shell. The host decides to save, ask, or discard before it leaves
   the Project page.
-- Without the `navigation` prop the Shell bar has no Workspace crumb and no project menu. Storybook stories and embedded
-  hosts use this form.
+- The Shell has no link to the Workspace. A click in the Shell never leaves the project; the host top bar leads to the
+  Workspace.
+- Without the `navigation` prop the Shell bar has no project menu. Storybook stories and embedded hosts use this form.
+
+### Local Modeler routes
+
+`app/router.tsx` maps each URL to a page. `routePath` in `stories/support/modeler/routes.ts` builds the URL of a route.
+
+| URL                                          | Page            | Parameters                                                  |
+| -------------------------------------------- | --------------- | ----------------------------------------------------------- |
+| `/`                                          | Home            | None                                                        |
+| `/examples?q=<query>`                        | Examples        | `q`: search text; typing replaces the history entry         |
+| `/examples/<industry>?q=<query>`             | Examples        | `industry`: the industry tab                                |
+| `/examples/<industry>/<id>@<version>`        | Example details | `all` as `industry` when the industry is not known          |
+| `/workspace`                                 | Workspace       | None                                                        |
+| `/project/<projectPath>/<rootPath>?view=<v>` | Project         | `rootPath`: Shell root path, `*` when absent; `view`: Shell |
+| Any other URL                                | Not found       | A link to Home                                              |
+
+- The Project page gives the Shell a controlled `path` and `view`. Back and Forward move between the visited elements.
+- A path or view change within 1.5 s of a user input adds a history entry. A Shell fallback replaces the entry.
+- The Shell reports the path and the view of one click separately. The host merges them into one navigation.
+- An unknown `projectPath` shows "The project did not open" with a link to the Workspace.
+
+### Page design
+
+The page-level components use the visual language of the Shell and the Boxed Editor. `src/ui/sheet` holds the shared
+primitives.
+
+| Primitive         | Use                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `SheetPageHeader` | Page title row: 48px kind icon square, title, subtitle; toolbar, tabs or action cells below it |
+| `SheetPanel`      | Example, project and industry panel: 40px header row on the muted fill, body, action cells     |
+| `SheetAction`     | One action cell; `primary` in the primary color; `iconOnly` is a 40px square                   |
+| `SheetSection`    | Uppercase section label with a count, like the Project Explorer sections                       |
+| `SheetKeyValues`  | Label and value rows on 1px lines: the example metadata                                        |
+| `SheetChip`       | Status: "✓ In workspace · N", "Update available", "Needs engine", "Own project"                |
+| `SheetTokens`     | Monospace tokens: example features, `id@version` coordinates                                   |
+
+- The icon square of an example has the kind color of its level: beginner teal, intermediate blue, advanced purple.
+- The host top bar is a 41px Shell-style row: a model icon square and one cell per page.
+- On the Project page the Shell header line lies on the top bar line: one line, not two.
 
 ### Structural Diagram
 
@@ -481,7 +521,8 @@ interface ExampleGalleryProps {
   engineVersion?: string; // version of the loaded engine, for the compatibility facet
   workspaceOrigins?: ProjectOrigin[]; // origins of the workspace projects, for the badges
   onCopy: (example: LoadedExample, open: boolean) => void; // the host adds the copy; `open` for "Copy and open"
-  onShowDetails: (coordinates: ExampleCoordinates) => void; // the host navigates to the details page
+  onOpenCopy?: (exampleId: string) => void; // "Open copy" of a copied example; the host opens its newest copy
+  onShowDetails: (coordinates: ExampleCoordinates) => void; // the host navigates to the details page; also the panel name
 }
 
 interface ExampleDetailsProps {
@@ -491,7 +532,9 @@ interface ExampleDetailsProps {
   engineVersion?: string; // version of the loaded engine, for the compatibility warning
   workspaceOrigins?: ProjectOrigin[]; // origins of the workspace projects, for the badge
   onCopy: (example: LoadedExample, open: boolean) => void; // "Copy and open" and "Copy to workspace"
+  onOpenCopy?: (exampleId: string) => void; // "Open copy" of a copied example; the host opens its newest copy
   onShowDetails: (coordinates: ExampleCoordinates) => void; // a related example
+  onShowIndustry?: (industry: string | undefined) => void; // the "Examples / <industry>" crumbs; text without it
   shareUrl?: (coordinates: ExampleCoordinates) => string; // the URL that "Share link" copies; no button without it
   repositoryUrl?: (entry: LibraryEntry, ref: string) => string; // the "View on GitHub" link; no link without it
 }
@@ -572,7 +615,6 @@ interface ProjectDescriptor {
 
 ```typescript
 interface ShellNavigation {
-  onShowWorkspace: () => void; // the Workspace crumb and "Back to workspace"
   onBrowseExamples: () => void; // "Browse examples"
   onOpenProject: (locator: ProjectLocator) => void; // a recent project
   recentProjects?: ProjectDescriptor[]; // newest first; the Shell shows up to 5 and omits the open project
@@ -583,7 +625,7 @@ interface ShellNavigation {
 
 interface ShellProps {
   // ...existing members
-  navigation?: ShellNavigation; // shows the Workspace crumb and the project menu
+  navigation?: ShellNavigation; // shows the project menu
 }
 ```
 
@@ -601,7 +643,10 @@ interface ShellProps {
   `global-project-management.md` §5.3 that fork provenance is not in the manifest (ADR entry).
 - `project-session`: `LocalProjectRepository.remove`, and `origin` and `savedAt` in `ProjectDescriptor`.
 - `project-session` exports `ProjectOrigin`.
-- `shell`: optional `navigation` prop: Workspace crumb, project menu in the middle of the Shell bar, origin chip.
+- `shell`: optional `navigation` prop: project menu in the middle of the Shell bar, origin chip. No Workspace link.
+- `src/ui/sheet`: the shared sheet primitives of the page-level components (see "Page design").
+- `app/`: the local Modeler host with TanStack Router, a dev dependency. A dependency-cruiser rule keeps the router out
+  of `src/`.
 - No page-level component depends on `shell`, and `shell` depends on none of them.
 
 ## Out of Scope
@@ -669,14 +714,14 @@ Acceptance criteria:
 **Phase 3: Shell navigation**
 
 - [x] Add `ShellNavigation` and the `navigation` prop to the Shell
-- [x] Add the Workspace crumb to `ShellBreadcrumbs`
+- [x] Keep `ShellBreadcrumbs` without a Workspace crumb
 - [x] Add the project menu in the middle of the Shell bar, with the origin chip in its header
 - [x] Add a Storybook story of the Shell with navigation, for a copy with "Update available" and for an own project
 - [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [x] `npm test` passes, including a Shell test: the Workspace crumb calls `onShowWorkspace`
+- [x] `npm test` passes, including a Shell test: neither a crumb nor a menu item leads to the Workspace
 - [x] `npm test` passes, including a Shell test: the menu of a copy shows the origin chip and "View original example"
 - [x] `npm test` passes, including a Shell test: the menu of an own project has no origin chip
 - [x] `npm test` passes, including a Shell test: without `navigation` the Shell bar is unchanged
@@ -714,7 +759,7 @@ Acceptance criteria:
 - [x] `npm test` passes, including `ModelerHome.test.tsx`: suggestions, empty workspace, index failure
 - [x] In Storybook, "Copy and open" on an example panel shows the copy in the Shell
 - [x] In Storybook, the Workspace page lists the copy with its origin and its last save time
-- [x] In Storybook, the project menu of the copy opens its example details, and the Workspace crumb opens the Workspace
+- [x] In Storybook, the project menu of the copy opens its example details, and the top bar opens the Workspace
 
 **Phase E2E:**
 
@@ -725,6 +770,23 @@ Acceptance criteria:
 - [ ] `npm run e2e` passes, including `example-library.spec.ts`: search, preview, copy, open in the Shell, against the
       published repository
 - [ ] `npm run e2e` passes, including `local-workspace.spec.ts`: copy, rename, duplicate, delete, reload
+
+**Phase 6: page design and URL routes**
+
+- [x] Add the sheet primitives in `src/ui/sheet` and apply them to the Home, Examples, Example details and Workspace
+      pages
+- [x] Add "Open copy" and "Copy again" for a copied example, the copy count, and the name link to the details
+- [x] Add the "Examples / <industry>" crumbs to `ExampleDetails`
+- [x] Remove the Workspace crumb and "Back to workspace" from the Shell
+- [x] Add the local Modeler routes in `app/` with TanStack Router; the Project URL holds the root path and the view
+- [x] Add a dependency-cruiser rule: `src/` does not import `@tanstack/react-router`
+- [x] Add tests for the code of this phase
+
+Acceptance criteria:
+
+- [x] `npm test` passes, including `app/__tests__/router.test.ts`: every URL maps to its route, and back to the same URL
+- [x] `npm test` passes, including a gallery test: a copied example offers "Open copy" first
+- [x] `npm run e2e` passes `example-library.spec.ts` and `local-workspace.spec.ts`
 
 **Phase X:**
 

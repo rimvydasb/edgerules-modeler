@@ -1,6 +1,10 @@
-import {Loader, Paper, Stack, Text, TextInput} from '@mantine/core';
+import {Loader, Text, TextInput} from '@mantine/core';
+import {IconBooks, IconSearch, IconSitemap} from '@tabler/icons-react';
+import {cx} from '#ui/cx';
+import {KIND_COLORS} from '#ui/kindColors';
 import {useEffect, useId, useRef, useState, type KeyboardEvent, type ReactElement} from 'react';
 import type {Suggestion} from './homeModel';
+import * as classes from './modelerHome.module.css';
 
 export interface HeroSearchProps {
     suggestions: (query: string) => Suggestion[];
@@ -53,10 +57,11 @@ export function HeroSearch({suggestions, placeholder, loading, onSearch, onPick}
     };
 
     return (
-        <div style={{position: 'relative', width: '100%', maxWidth: 640}}>
+        <div className={classes.search}>
             <TextInput
                 ref={input}
                 size="md"
+                leftSection={<IconSearch size={16} />}
                 placeholder={placeholder}
                 aria-label="Search examples and projects"
                 role="combobox"
@@ -76,61 +81,58 @@ export function HeroSearch({suggestions, placeholder, loading, onSearch, onPick}
                 onKeyDown={onKeyDown}
             />
             {items.length > 0 && (
-                <Paper
-                    id={listId}
-                    role="listbox"
-                    withBorder
-                    shadow="md"
-                    p="xs"
-                    style={{position: 'absolute', zIndex: 10, left: 0, right: 0, top: '100%', marginTop: 4}}
-                >
-                    <Stack gap={2}>
-                        {groups.map(({title, kind}) => {
-                            const group = items.filter((item) => item.kind === kind);
-                            if (group.length === 0) return null;
-                            return (
-                                <div key={kind} role="group" aria-label={title}>
-                                    <Text size="xs" c="dimmed" px="xs">
-                                        {title}
-                                    </Text>
-                                    {group.map((item) => {
-                                        const index = items.indexOf(item);
-                                        return (
-                                            <div
-                                                key={item.key}
-                                                id={`${listId}-${index}`}
-                                                role="option"
-                                                aria-selected={index === active}
-                                                // mousedown fires before the input blur closes the list
-                                                onMouseDown={(event) => {
-                                                    event.preventDefault();
-                                                    onPick(item);
-                                                    setOpen(false);
-                                                }}
+                <div id={listId} role="listbox" className={classes.suggestions}>
+                    {groups.map(({title, kind}) => {
+                        const group = items.filter((item) => item.kind === kind);
+                        if (group.length === 0) return null;
+                        return (
+                            <div key={kind} role="group" aria-label={title} className={classes.group}>
+                                <div className={classes.groupLabel}>{title}</div>
+                                {group.map((item) => {
+                                    const index = items.indexOf(item);
+                                    return (
+                                        <div
+                                            key={item.key}
+                                            id={`${listId}-${index}`}
+                                            role="option"
+                                            aria-selected={index === active}
+                                            className={cx(classes.option, index === active && classes.optionActive)}
+                                            // mousedown fires before the input blur closes the list
+                                            onMouseDown={(event) => {
+                                                event.preventDefault();
+                                                onPick(item);
+                                                setOpen(false);
+                                            }}
+                                        >
+                                            <span
+                                                className={classes.optionIcon}
                                                 style={{
-                                                    cursor: 'pointer',
-                                                    padding: '4px 8px',
-                                                    borderRadius: 4,
-                                                    background:
-                                                        index === active
-                                                            ? 'var(--mantine-color-default-hover)'
-                                                            : undefined,
+                                                    backgroundColor:
+                                                        kind === 'example' ? KIND_COLORS.function : KIND_COLORS.model,
                                                 }}
+                                                aria-hidden="true"
                                             >
+                                                {kind === 'example' ? (
+                                                    <IconBooks size={15} />
+                                                ) : (
+                                                    <IconSitemap size={15} />
+                                                )}
+                                            </span>
+                                            <span className={classes.optionText}>
                                                 <Text size="sm" fw={500} truncate>
                                                     {item.label}
                                                 </Text>
                                                 <Text size="xs" c="dimmed" truncate>
                                                     {item.detail}
                                                 </Text>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })}
-                    </Stack>
-                </Paper>
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })}
+                </div>
             )}
         </div>
     );

@@ -1,0 +1,161 @@
+/*
+ * The frame of the hosted Modeler: a top bar in the style of the Shell header row — 41px, the muted fill, 1px lines,
+ * the model icon square and one cell per section, the active cell open and underlined in the primary color.
+ */
+.app {
+  --mh-border: var(--mantine-color-default-border);
+  --mh-muted: var(--mantine-color-default-hover);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--mantine-color-body);
+}
+
+.app *,
+.app *::before,
+.app *::after {
+  box-sizing: border-box;
+}
+
+.bar {
+  position: sticky;
+  z-index: 100;
+  top: 0;
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  height: 41px;
+  border-bottom: 1px solid var(--mh-border);
+  background-color: var(--mh-muted);
+  font-size: var(--mantine-font-size-sm);
+  backdrop-filter: blur(6px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 0;
+  border: 0;
+  border-right: 1px solid var(--mh-border);
+  background: transparent;
+  color: var(--mantine-color-text);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.brandIcon {
+  display: flex;
+  width: 40px;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--mh-border);
+  background-color: #17191c;
+  color: #fff;
+}
+
+.brandName {
+  font-weight: 700;
+}
+
+.brandProduct {
+  color: var(--mantine-color-dimmed);
+}
+
+.nav {
+  display: flex;
+  align-items: stretch;
+}
+
+.navItem {
+  display: flex;
+  width: 132px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--mh-border);
+  background-color: transparent;
+  color: var(--mantine-color-dimmed);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.navItem:hover,
+.brand:hover {
+  background-color: var(--mh-border);
+  color: var(--mantine-color-text);
+}
+
+.navItem[aria-current='page'] {
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--mantine-primary-color-filled);
+}
+
+.navItem:focus-visible,
+.brand:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.route {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-inline: 12px;
+  overflow: hidden;
+  color: var(--mantine-color-dimmed);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A page of the Library or the Workspace: a centered column. */
+.main {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+}
+
+/* A project: the Shell fills the window under the bar; its header frame line lies on the bar line, one line not two. */
+.projectMain {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.project {
+  height: calc(100vh - 41px);
+  margin-top: -1px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+@media (max-width: 640px) {
+  .brandProduct,
+  .route {
+    display: none;
+  }
+
+  .navItem {
+    width: auto;
+    padding-inline: 12px;
+  }
+
+  .main {
+    padding: 16px;
+  }
+}

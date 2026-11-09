@@ -1,5 +1,7 @@
-import {Alert, Button, Loader, SimpleGrid, Text, UnstyledButton} from '@mantine/core';
+import {Alert, Button, Loader} from '@mantine/core';
 import type {ReactElement} from 'react';
+import {KIND_COLORS} from '#ui/kindColors';
+import {SheetBody, SheetDescription, SheetGrid, SheetPanelButton, SheetPanelHeader} from '#ui/sheet';
 import {IndustryIcon} from './industryIcon';
 import {countByIndustry} from './libraryQuery';
 import type {LibraryClient} from './types';
@@ -10,7 +12,7 @@ export interface IndustryGridProps {
     onSelectIndustry: (industry: string) => void; // the host navigates to /examples/<industry>
 }
 
-/** One tile per industry of the index: icon, title, description and example count. */
+/** One tile per industry of the index: icon square, title, example count and description. */
 export function IndustryGrid({client, onSelectIndustry}: IndustryGridProps): ReactElement {
     const {search, error, retry} = useLibraryIndex(client);
     if (error) {
@@ -26,26 +28,30 @@ export function IndustryGrid({client, onSelectIndustry}: IndustryGridProps): Rea
     if (!search) return <Loader size="sm" aria-label="Loading industries" />;
     const counts = countByIndustry(search.index);
     return (
-        <SimpleGrid cols={{base: 1, sm: 2, md: 3, lg: 4}} data-testid="industry-grid">
-            {search.index.industries.map((industry) => (
-                <UnstyledButton
-                    key={industry.id}
-                    onClick={() => onSelectIndustry(industry.id)}
-                    aria-label={`${industry.title}, ${counts.get(industry.id) ?? 0} examples`}
-                    style={{border: '1px solid var(--mantine-color-default-border)', borderRadius: 8, padding: 12}}
-                >
-                    <IndustryIcon name={industry.icon ?? industry.id} />
-                    <Text fw={600}>{industry.title}</Text>
-                    {industry.description && (
-                        <Text size="xs" c="dimmed" lineClamp={2}>
-                            {industry.description}
-                        </Text>
-                    )}
-                    <Text size="sm" mt={4}>
-                        {counts.get(industry.id) ?? 0}
-                    </Text>
-                </UnstyledButton>
-            ))}
-        </SimpleGrid>
+        <SheetGrid compact data-testid="industry-grid">
+            {search.index.industries.map((industry) => {
+                const count = counts.get(industry.id) ?? 0;
+                return (
+                    <SheetPanelButton
+                        key={industry.id}
+                        onClick={() => onSelectIndustry(industry.id)}
+                        aria-label={`${industry.title}, ${count} examples`}
+                    >
+                        <SheetPanelHeader
+                            icon={<IndustryIcon name={industry.icon ?? industry.id} size={19} />}
+                            iconColor={KIND_COLORS.model}
+                            title={industry.title}
+                            aside={<span>{count}</span>}
+                            only={!industry.description}
+                        />
+                        {industry.description && (
+                            <SheetBody>
+                                <SheetDescription>{industry.description}</SheetDescription>
+                            </SheetBody>
+                        )}
+                    </SheetPanelButton>
+                );
+            })}
+        </SheetGrid>
     );
 }

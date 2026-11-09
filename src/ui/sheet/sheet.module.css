@@ -1,0 +1,497 @@
+/*
+ * The ruled sheet of the page-level components (Library, Workspace, Home), in the visual language of the Shell and the
+ * Boxed Editor: 1px border lines, a 40px step for header rows, a muted header fill, a colored 40px icon square per
+ * kind, and small uppercase section labels with counts like the Project Explorer.
+ */
+.panel,
+.pageHeader,
+.section,
+.keyValues {
+  --sheet-border: var(--mantine-color-default-border);
+  --sheet-muted: var(--mantine-color-default-hover);
+  --sheet-strong: color-mix(in srgb, var(--mantine-color-text) 35%, transparent);
+}
+
+.panel *,
+.panel *::before,
+.panel *::after,
+.pageHeader *,
+.pageHeader *::before,
+.pageHeader *::after {
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------- panel: header row, body, action cells */
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--sheet-border);
+  border-radius: 4px;
+  background-color: var(--mantine-color-body);
+  font-size: var(--mantine-font-size-sm);
+  transition: border-color 120ms ease;
+}
+
+.panel:hover,
+.panel:focus-within {
+  border-color: var(--sheet-strong);
+}
+
+.panel:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 1px;
+}
+
+/* A panel that is a button as a whole: a compact row such as a recent project or an industry tile. */
+.panelButton {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panelButton:hover .panelHeader {
+  background-color: var(--sheet-border);
+}
+
+.panelHeader {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  height: 40px;
+  min-width: 0;
+  border-bottom: 1px solid var(--sheet-border);
+  background-color: var(--sheet-muted);
+}
+
+/* A panel that is one header row only. */
+.panelHeaderOnly {
+  border-bottom: 0;
+}
+
+.icon {
+  display: flex;
+  flex: none;
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--sheet-border);
+  color: #fff;
+}
+
+/* An icon square without a kind color: the muted context square of the Boxed Editor. */
+.iconMuted {
+  color: var(--mantine-color-dimmed);
+}
+
+.title {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  padding-inline: 10px;
+  font-weight: 600;
+}
+
+.titleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titleLink {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.titleLink:hover {
+  text-decoration: underline;
+}
+
+.aside {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.thumbnail {
+  display: block;
+  width: 100%;
+  height: 90px;
+  flex: none;
+  border-bottom: 1px solid var(--sheet-border);
+  object-fit: cover;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--mantine-color-dimmed);
+  line-height: 1.45;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: auto;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* ---------------------------------------------------------------- tokens: features, coordinates */
+.tokens {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.token {
+  padding: 0 5px;
+  border: 1px solid var(--sheet-border);
+  border-radius: 3px;
+  background-color: var(--sheet-muted);
+  color: var(--mantine-color-text);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.tokenMore {
+  color: var(--mantine-color-dimmed);
+}
+
+/* ---------------------------------------------------------------- status chips */
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  padding: 0 7px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.chipGreen {
+  background-color: var(--mantine-color-green-light);
+  color: var(--mantine-color-green-light-color);
+}
+
+.chipYellow {
+  background-color: var(--mantine-color-yellow-light);
+  color: var(--mantine-color-yellow-light-color);
+}
+
+.chipRed {
+  background-color: var(--mantine-color-red-light);
+  color: var(--mantine-color-red-light-color);
+}
+
+.chipGray {
+  background-color: var(--sheet-muted);
+  color: var(--mantine-color-dimmed);
+}
+
+/* ---------------------------------------------------------------- action cells: one cell per action */
+.actions {
+  display: flex;
+  flex: none;
+  min-height: 36px;
+  border-top: 1px solid var(--sheet-border);
+}
+
+.action {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-left: 1px solid var(--sheet-border);
+  background-color: transparent;
+  color: var(--mantine-color-text);
+  font: inherit;
+  font-size: var(--mantine-font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.action:first-child {
+  border-left: 0;
+}
+
+.action:hover:not(:disabled) {
+  background-color: var(--sheet-muted);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.action:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* The main action of a panel: the primary color, like the active view cell of the Shell. */
+.actionPrimary {
+  color: var(--mantine-primary-color-filled);
+  font-weight: 600;
+}
+
+.actionPrimary:hover:not(:disabled) {
+  background-color: var(--mantine-primary-color-light);
+}
+
+/* An icon-only action cell: one 40px square, like the icon square of a header row. */
+.actionIconOnly {
+  flex: 0 0 40px;
+  padding: 0;
+}
+
+.actionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------- page header: title row and toolbar */
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--sheet-border);
+  border-radius: 4px;
+  background-color: var(--mantine-color-body);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.pageHeaderRow {
+  display: flex;
+  align-items: stretch;
+  min-height: 48px;
+  background-color: var(--sheet-muted);
+}
+
+.pageHeaderRow .icon {
+  width: 48px;
+  border-top-left-radius: 3px;
+}
+
+.pageTitle {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 12px;
+}
+
+.pageTitleText {
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--mantine-font-size-lg);
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pageSubtitle {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.pageAside {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 12px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--sheet-border);
+}
+
+.toolbarGrow {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+/* The page actions under the title row: a row of action cells. */
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--sheet-border);
+}
+
+.pageActions .action {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding-inline: 16px;
+}
+
+.pageActions .action:last-child {
+  border-right: 1px solid var(--sheet-border);
+}
+
+/* ---------------------------------------------------------------- section: uppercase label with a count */
+.section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  border-bottom: 1px solid var(--sheet-border);
+  padding-bottom: 4px;
+}
+
+.sectionLabel {
+  margin: 0;
+  color: var(--mantine-color-dimmed);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sectionCount {
+  color: var(--mantine-color-dimmed);
+  font-size: 11px;
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* A quiet text button of a section header: "All projects →", "See all examples →". */
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+  font: inherit;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  background-color: var(--mantine-color-default-hover);
+  color: var(--mantine-color-text);
+}
+
+.linkButton:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------- key-value sheet: label and value per row */
+.keyValues {
+  display: grid;
+  grid-template-columns: minmax(90px, max-content) 1fr;
+  overflow: hidden;
+  border: 1px solid var(--sheet-border);
+  border-radius: 4px;
+  font-size: var(--mantine-font-size-sm);
+}
+
+.keyValues > dt,
+.keyValues > dd {
+  margin: 0;
+  padding: 7px 10px;
+  border-top: 1px solid var(--sheet-border);
+}
+
+.keyValues > dt:first-of-type,
+.keyValues > dt:first-of-type + dd {
+  border-top: 0;
+}
+
+.keyValues > dt {
+  border-right: 1px solid var(--sheet-border);
+  background-color: var(--sheet-muted);
+  color: var(--mantine-color-dimmed);
+}
+
+.keyValues > dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- grid of panels */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.gridCompact {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  border: 1px dashed var(--mantine-color-default-border);
+  border-radius: 4px;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  text-align: center;
+}

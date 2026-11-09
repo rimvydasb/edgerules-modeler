@@ -17,7 +17,8 @@ const meta: Meta<ModelerArgs> = {
             description: {
                 component:
                     'The pages of the hosted Modeler composed as `edgerules-modeler` does, over the published ' +
-                    '`rimvydasb/edgerules-examples` index and an in-memory route. The stories need network access.',
+                    '`rimvydasb/edgerules-examples` index and an in-memory route (`npm run dev` runs the same pages under a ' +
+                    'URL router). The stories need network access.',
             },
         },
     },
@@ -52,13 +53,13 @@ export const ExampleDetailsPage: Story = {
 /** Workspace page: the project grid with the origin and the last save time of each copy. */
 export const Workspace: Story = {args: {route: {page: 'workspace'}, seeded: true}};
 
-/** Project page: the Shell of a copy, with the project menu and the Workspace crumb. */
+/** Project page: the Shell of a copy, with the project menu; the top bar, not the Shell, leads back to the Workspace. */
 export const Project: Story = {
     args: {route: {page: 'workspace'}, seeded: true},
     play: async ({canvasElement}) => {
         const canvas = within(canvasElement);
         await userEvent.click(await canvas.findByRole('link', {name: /Loan repayment/}));
-        await expect(await canvas.findByText('Workspace /', {exact: false})).toBeTruthy();
+        await expect(await canvas.findByRole('button', {name: 'Project menu: Loan repayment'})).toBeTruthy();
     },
 };
 

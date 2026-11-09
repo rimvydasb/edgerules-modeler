@@ -340,7 +340,6 @@ export function Shell({
                     primaryView={primaryView}
                     onOpenPrimary={() => navigate({view: primaryView})}
                     tests={view === 'tests'}
-                    onShowWorkspace={navigation?.onShowWorkspace}
                 />
                 {navigation && (
                     <ShellProjectMenu

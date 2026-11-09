@@ -181,6 +181,7 @@
     "#ui/kindColors": "./src/ui/kindColors.ts",
     "#ui/ErrorPopover": "./src/ui/ErrorPopover.tsx",
     "#ui/RowActionsMenu": "./src/ui/RowActionsMenu.tsx",
+    "#ui/sheet": "./src/ui/sheet/index.tsx",
     "#ui/Toast": "./src/ui/Toast.tsx"
   },
   "scripts": {
@@ -193,6 +194,7 @@
     "check": "npm run typecheck && npm run lint && npm run depcruise && npm test",
     "test": "vitest run",
     "test:watch": "vitest",
+    "dev": "vite --config app/vite.config.ts",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "e2e": "playwright test",
@@ -281,6 +283,7 @@
     "@tabler/icons-react": "^3.49.0",
     "@tanstack/charts": "^1.1.0",
     "@tanstack/markdown": "^1.2.0",
+    "@tanstack/react-router": "^1.170.46",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",

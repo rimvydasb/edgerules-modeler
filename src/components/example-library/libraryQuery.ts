@@ -116,6 +116,11 @@ export function workspaceStatus(entry: LibraryEntry, origins: readonly ProjectOr
     return copies.some((origin) => origin.version === newest) ? 'in-workspace' : 'update-available';
 }
 
+/** The number of workspace copies of an example, of any version. */
+export function workspaceCopies(entry: LibraryEntry, origins: readonly ProjectOrigin[] | undefined): number {
+    return (origins ?? []).filter((origin) => origin.id === entry.id).length;
+}
+
 export function countByIndustry(index: LibraryIndex): Map<string, number> {
     const counts = new Map<string, number>();
     for (const entry of index.examples) counts.set(entry.industry, (counts.get(entry.industry) ?? 0) + 1);

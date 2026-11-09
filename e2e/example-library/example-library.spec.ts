@@ -29,7 +29,7 @@ test('previews an example on its details page, with README and metadata', async 
     const panel = page.getByTestId('example-panel').filter({hasText: 'Loan repayment'}).first();
     await panel.getByRole('button', {name: 'Details'}).click(SLOW);
 
-    await expect(page.getByTestId('modeler-route')).toHaveText(/^\/examples\/loan-repayment@/);
+    await expect(page.getByTestId('modeler-route')).toHaveText(/^\/examples\/[^/]+\/loan-repayment@/);
     // The related example panels have their own buttons: the page actions come first.
     await expect(page.getByRole('button', {name: 'Copy and open'}).first()).toBeVisible(SLOW);
     await expect(page.getByRole('button', {name: 'Copy to workspace'})).toBeVisible();
@@ -37,17 +37,26 @@ test('previews an example on its details page, with README and metadata', async 
     await expect(page.getByRole('button', {name: /edit/i})).toHaveCount(0);
 });
 
-test('Copy and open shows the copy in the Shell, with a way back to the Workspace', async ({page}) => {
+test('Copy and open shows the copy in the Shell; the top bar, not the Shell, leads back to the Workspace', async ({
+    page,
+}) => {
     await openStory(page, 'modeler--examples');
     await page.getByLabel('Search examples').fill('loan repayment', SLOW);
     const panel = page.getByTestId('example-panel').filter({hasText: 'Loan repayment'}).first();
     await panel.getByRole('button', {name: 'Copy and open'}).click(SLOW);
 
     await expect(page.getByTestId('modeler-route')).toHaveText(/^\/project\//, SLOW);
-    const crumb = page.getByTestId('shell').getByRole('button', {name: 'Workspace', exact: true});
-    await expect(crumb).toBeVisible(SLOW);
+    await expect(page.getByRole('button', {name: 'Project menu: Loan repayment'})).toBeVisible(SLOW);
+    await expect(page.getByTestId('shell').getByRole('button', {name: 'Workspace', exact: true})).toHaveCount(0);
 
-    await crumb.click();
+    await page.getByTestId('modeler-app').getByRole('button', {name: 'Workspace', exact: true}).click();
     await expect(page.getByTestId('modeler-route')).toHaveText('/workspace');
     await expect(page.getByTestId('project-panel')).toContainText('from loan-repayment@');
+
+    // The Library now marks the example as copied and opens the copy instead of copying it again.
+    await page.getByTestId('modeler-app').getByRole('button', {name: 'Examples', exact: true}).click();
+    const copied = page.getByTestId('example-panel').filter({hasText: 'Loan repayment'}).first();
+    await expect(copied.getByText(/In workspace|Update available/)).toBeVisible(SLOW);
+    await copied.getByRole('button', {name: 'Open copy'}).click();
+    await expect(page.getByTestId('modeler-route')).toHaveText(/^\/project\//, SLOW);
 });

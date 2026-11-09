@@ -1,0 +1,69 @@
+.storage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  white-space: nowrap;
+}
+
+.saved {
+  margin-left: auto;
+}
+
+/* The "New project" panel: one row per way to start, on the ruled lines of the sheet. */
+.newPanel {
+  border-style: dashed;
+}
+
+.newOptions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.newOption {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--mantine-color-default-border);
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.newOption:first-child {
+  border-top: 0;
+}
+
+.newOption:hover {
+  background-color: var(--mantine-color-default-hover);
+  color: var(--mantine-primary-color-filled);
+}
+
+.newOption:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+.newOptionTitle {
+  display: block;
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+}
+
+.newOptionHint {
+  display: block;
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* A row of a recent project: the icon square, the name and the save time on one 40px line. */
+.recentMeta {
+  white-space: nowrap;
+}

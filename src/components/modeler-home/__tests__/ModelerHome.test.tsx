@@ -47,7 +47,7 @@ describe('ModelerHome', () => {
         const user = userEvent.setup();
         await user.click(screen.getByRole('button', {name: /See all examples/}));
         await user.click(screen.getByRole('button', {name: '+ New project'}));
-        await user.click(screen.getByRole('button', {name: /All →/}));
+        await user.click(screen.getByRole('button', {name: 'All projects →'}));
         await user.click(screen.getByRole('button', {name: 'Open My pricing'}));
         expect(callbacks.onShowAllExamples).toHaveBeenCalled();
         expect(callbacks.onNewProject).toHaveBeenCalled();

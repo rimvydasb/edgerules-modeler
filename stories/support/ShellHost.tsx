@@ -53,7 +53,6 @@ export function ShellHost({
     const [forwarded, setForwarded] = useState<string>();
     const [navigated, setNavigated] = useState<string>();
     const shellNavigation: ShellNavigation | undefined = navigation && {
-        onShowWorkspace: () => setNavigated('workspace'),
         onBrowseExamples: () => setNavigated('examples'),
         onOpenProject: (locator) => setNavigated(`project ${locator.projectPath}`),
         onShowOrigin: (origin) => setNavigated(`example ${origin.id}@${origin.version}`),

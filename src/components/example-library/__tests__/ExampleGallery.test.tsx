@@ -129,6 +129,38 @@ describe('ExampleGallery', () => {
         expect(within(await byId('client-outreach')).queryByText(/workspace|Update/)).toBeNull();
     });
 
+    it('offers "Open copy" first for an example in the workspace, so a second copy is deliberate', async () => {
+        const user = userEvent.setup();
+        const origin = {library: FIXTURE_SOURCE.indexUrl, id: 'loan-origination', version: '2.0.0'};
+        const handlers = {...callbacks(), onOpenCopy: vi.fn()};
+        render(<ExampleGallery client={createFixtureClient()} {...handlers} workspaceOrigins={[origin, origin]} />);
+        const panel = (await screen.findAllByTestId('example-panel')).find(
+            (p) => p.dataset.exampleId === 'loan-origination',
+        )!;
+
+        expect(within(panel).getByText('✓ In workspace · 2')).toBeTruthy();
+        expect(within(panel).queryByRole('button', {name: 'Copy and open'})).toBeNull();
+        await user.click(within(panel).getByRole('button', {name: 'Open copy'}));
+        expect(handlers.onOpenCopy).toHaveBeenCalledWith('loan-origination');
+        expect(within(panel).getByRole('button', {name: 'Copy again'})).toBeTruthy();
+        expect(within(panel).getByRole('button', {name: 'Details'})).toBeTruthy();
+
+        // An example that the workspace does not hold keeps "Copy and open".
+        const other = (await screen.findAllByTestId('example-panel')).find(
+            (p) => p.dataset.exampleId === 'client-outreach',
+        )!;
+        expect(within(other).getByRole('button', {name: 'Copy and open'})).toBeTruthy();
+        expect(within(other).queryByRole('button', {name: 'Open copy'})).toBeNull();
+    });
+
+    it('opens the details from the example name', async () => {
+        const user = userEvent.setup();
+        const handlers = callbacks();
+        render(<ExampleGallery client={createFixtureClient()} {...handlers} />);
+        await user.click(await screen.findByRole('link', {name: 'Client outreach'}));
+        expect(handlers.onShowDetails).toHaveBeenCalledWith({id: 'client-outreach', version: expect.any(String)});
+    });
+
     it('marks an example whose engine range excludes the loaded engine', async () => {
         render(<ExampleGallery client={createFixtureClient()} {...callbacks()} engineVersion="0.2.6-alpha.1" />);
         expect((await screen.findAllByText(/Needs engine/)).length).toBe(3);

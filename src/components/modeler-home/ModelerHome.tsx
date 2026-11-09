@@ -1,4 +1,6 @@
-import {Alert, Anchor, Button, Group, Skeleton, Stack, Text, Title} from '@mantine/core';
+import {Alert, Button, Skeleton, Stack, Text, Title} from '@mantine/core';
+import {IconSitemap} from '@tabler/icons-react';
+import {SheetLinkButton, SheetSection} from '#ui/sheet';
 import {useCallback, type ReactElement} from 'react';
 import type {LocalProjectRepository, ProjectLocator} from '../project-session';
 import {ExampleGallery, IndustryGrid} from '../example-library';
@@ -8,6 +10,7 @@ import {RecentProjects} from '../local-workspace';
 import {useWorkspaceProjects} from '../local-workspace/internal';
 import {ExampleRow} from './ExampleRow';
 import {HeroSearch} from './HeroSearch';
+import * as classes from './modelerHome.module.css';
 import {beginnerExamples, NEW_AND_UPDATED, suggestionsFor, type Suggestion} from './homeModel';
 
 export interface ModelerHomeProps {
@@ -27,7 +30,7 @@ export interface ModelerHomeProps {
 }
 
 function SectionSkeleton({label}: {label: string}): ReactElement {
-    return <Skeleton height={120} radius="md" aria-label={`Loading ${label}`} data-testid="home-skeleton" />;
+    return <Skeleton height={96} radius="sm" aria-label={`Loading ${label}`} data-testid="home-skeleton" />;
 }
 
 /** The Home page: hero search, Continue or Get started, industries, featured and new examples. */
@@ -58,43 +61,49 @@ export function ModelerHome({
         else onOpenProject(suggestion.project.locator);
     };
 
+    // "Open copy" of an example: the newest saved copy in the workspace.
+    const openCopy = (exampleId: string) => {
+        const copy = projects
+            ?.filter((project) => project.origin?.id === exampleId)
+            .sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0];
+        if (copy) onOpenProject(copy.locator);
+    };
+    const rowProps = {client, engineVersion, workspaceOrigins: origins, onCopy, onOpenCopy: openCopy, onShowDetails};
+
     return (
-        <Stack gap="xl" data-testid="modeler-home">
-            <Stack align="center" gap="xs" py="lg">
-                <Title order={1}>{title}</Title>
-                {tagline && <Text c="dimmed">{tagline}</Text>}
+        <Stack gap={32} data-testid="modeler-home">
+            <header className={classes.hero}>
+                <div className={classes.heroTitle}>
+                    <span className={classes.heroIcon} aria-hidden="true">
+                        <IconSitemap size={26} />
+                    </span>
+                    <div>
+                        <Title order={1} className={classes.heroHeading}>
+                            {title}
+                        </Title>
+                        {tagline && <Text c="dimmed">{tagline}</Text>}
+                    </div>
+                </div>
                 <HeroSearch
                     suggestions={suggestions}
                     placeholder={
-                        total === undefined ? 'Search examples' : `Search ${total} examples: loan, scorecard ...`
+                        total === undefined ? 'Search examples' : `Search ${total} examples and your projects  ( / )`
                     }
                     loading={!search && !error}
                     onSearch={onSearch}
                     onPick={pick}
                 />
-            </Stack>
+            </header>
 
             {emptyWorkspace ? (
-                <section aria-label="Get started" data-testid="home-get-started">
-                    <Group justify="space-between" mb="xs">
-                        <Text fw={600}>Get started</Text>
-                        <Button size="compact-sm" variant="light" onClick={onNewProject}>
-                            Blank project
-                        </Button>
-                    </Group>
-                    {search && (
-                        <ExampleRow
-                            client={client}
-                            search={search}
-                            entries={beginnerExamples(search)}
-                            engineVersion={engineVersion}
-                            workspaceOrigins={origins}
-                            onCopy={onCopy}
-                            onShowDetails={onShowDetails}
-                        />
-                    )}
+                <SheetSection
+                    label="Get started"
+                    data-testid="home-get-started"
+                    actions={<SheetLinkButton onClick={onNewProject}>Blank project</SheetLinkButton>}
+                >
+                    {search && <ExampleRow {...rowProps} search={search} entries={beginnerExamples(search)} />}
                     {!search && !error && <SectionSkeleton label="examples" />}
-                </section>
+                </SheetSection>
             ) : projects === undefined ? (
                 <SectionSkeleton label="projects" />
             ) : (
@@ -120,42 +129,30 @@ export function ModelerHome({
                 </>
             ) : (
                 <>
-                    <section aria-label="Industries">
-                        <Text fw={600} mb="xs">
-                            Industries
-                        </Text>
+                    <SheetSection label="Industries" count={search.index.industries.length}>
                         <IndustryGrid client={client} onSelectIndustry={onSelectIndustry} />
-                    </section>
-                    <section aria-label="Featured examples">
-                        <Group justify="space-between" mb="xs">
-                            <Text fw={600}>Featured examples</Text>
-                            <Anchor component="button" type="button" size="sm" onClick={onShowAllExamples}>
-                                See all examples →
-                            </Anchor>
-                        </Group>
+                    </SheetSection>
+                    <SheetSection
+                        label="Featured examples"
+                        actions={<SheetLinkButton onClick={onShowAllExamples}>See all examples →</SheetLinkButton>}
+                    >
                         <ExampleGallery
                             client={client}
                             featured
                             engineVersion={engineVersion}
                             workspaceOrigins={origins}
                             onCopy={onCopy}
+                            onOpenCopy={openCopy}
                             onShowDetails={onShowDetails}
                         />
-                    </section>
-                    <section aria-label="New and updated">
-                        <Text fw={600} mb="xs">
-                            New and updated
-                        </Text>
+                    </SheetSection>
+                    <SheetSection label="New and updated">
                         <ExampleRow
-                            client={client}
+                            {...rowProps}
                             search={search}
                             entries={newestExamples(search.index, NEW_AND_UPDATED)}
-                            engineVersion={engineVersion}
-                            workspaceOrigins={origins}
-                            onCopy={onCopy}
-                            onShowDetails={onShowDetails}
                         />
-                    </section>
+                    </SheetSection>
                 </>
             )}
         </Stack>

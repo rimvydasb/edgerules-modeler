@@ -21,7 +21,9 @@ test('copies an example, renames, duplicates and deletes it, and keeps the proje
         .first()
         .getByRole('button', {name: 'Copy and open'})
         .click(SLOW);
-    await page.getByTestId('shell').getByRole('button', {name: 'Workspace', exact: true}).click(SLOW);
+    // The copy opens in the Shell first; only then go to the Workspace from the top bar.
+    await expect(page.getByRole('button', {name: 'Project menu: Loan repayment'})).toBeVisible(SLOW);
+    await page.getByTestId('modeler-app').getByRole('button', {name: 'Workspace', exact: true}).click(SLOW);
     await expect(panelTitles(page)).toHaveText(['Loan repayment']);
     await expect(page.getByTestId('project-panel')).toContainText('from loan-repayment@');
 

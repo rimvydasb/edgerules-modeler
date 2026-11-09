@@ -24,7 +24,6 @@ function recent(name: string, projectId: string): ProjectDescriptor {
 async function renderNavigated(options: {origin?: ProjectOrigin} = {}, navigation: Partial<ShellNavigation> = {}) {
     const opened = await openFixtureProject({name: 'Loan repayment', origin: options.origin});
     const handlers = {
-        onShowWorkspace: vi.fn(),
         onBrowseExamples: vi.fn(),
         onOpenProject: vi.fn(),
         onShowOrigin: vi.fn(),
@@ -41,12 +40,14 @@ async function renderNavigated(options: {origin?: ProjectOrigin} = {}, navigatio
 }
 
 describe('Shell navigation', () => {
-    it('calls onShowWorkspace from the Workspace crumb', async () => {
+    it('has no way back to the Workspace: neither a crumb nor a menu item leaves the project', async () => {
         const user = userEvent.setup();
-        const {handlers} = await renderNavigated();
+        await renderNavigated();
         const nav = screen.getByRole('navigation', {name: 'Model path'});
-        await user.click(within(nav).getByRole('button', {name: 'Workspace'}));
-        expect(handlers.onShowWorkspace).toHaveBeenCalledTimes(1);
+        expect(within(nav).queryByRole('button', {name: 'Workspace'})).toBeNull();
+        await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
+        await screen.findByRole('menuitem', {name: 'Browse examples'});
+        expect(screen.queryByRole('menuitem', {name: /workspace/i})).toBeNull();
     });
 
     it('shows the origin chip and "View original example" for a copy', async () => {
@@ -73,7 +74,7 @@ describe('Shell navigation', () => {
         const user = userEvent.setup();
         await renderNavigated();
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-        await screen.findByRole('menuitem', {name: '← Back to workspace'});
+        await screen.findByRole('menuitem', {name: 'Browse examples'});
         expect(screen.queryByTestId('shell-origin-chip')).toBeNull();
         expect(screen.queryByRole('menuitem', {name: 'View original example'})).toBeNull();
         expect(screen.queryByRole('menuitem', {name: 'Duplicate'})).toBeNull();
@@ -84,7 +85,6 @@ describe('Shell navigation', () => {
         const opened = await openFixtureProject({name: 'Loan repayment'});
         const others = Array.from({length: 6}, (_, i) => recent(`Other ${i}`, `id-${i}`));
         const handlers = {
-            onShowWorkspace: vi.fn(),
             onBrowseExamples: vi.fn(),
             onOpenProject: vi.fn(),
             onDuplicate: vi.fn(),
