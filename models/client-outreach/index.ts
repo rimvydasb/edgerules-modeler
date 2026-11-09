@@ -4,9 +4,17 @@ import {CLIENT_OUTREACH_DOCUMENTATION} from './documentation';
 import {CLIENT_OUTREACH_FLOW} from './flow';
 import {CLIENT_OUTREACH_DSL} from './model';
 import {CLIENT_OUTREACH_TESTS} from './tests';
+import CLIENT_OUTREACH_README from './README.md?raw';
 
 export type {Client} from './clients';
-export {CLIENTS, CLIENT_OUTREACH_DOCUMENTATION, CLIENT_OUTREACH_DSL, CLIENT_OUTREACH_FLOW, CLIENT_OUTREACH_TESTS};
+export {
+    CLIENTS,
+    CLIENT_OUTREACH_DOCUMENTATION,
+    CLIENT_OUTREACH_DSL,
+    CLIENT_OUTREACH_FLOW,
+    CLIENT_OUTREACH_README,
+    CLIENT_OUTREACH_TESTS,
+};
 
 /** The client outreach project: pass it to `ProjectFactory.createBundle`. The model needs an optimisation solver. */
 export const CLIENT_OUTREACH_PROJECT: ProjectBundleInput = {
@@ -17,4 +25,5 @@ export const CLIENT_OUTREACH_PROJECT: ProjectBundleInput = {
     documentation: CLIENT_OUTREACH_DOCUMENTATION,
     tests: CLIENT_OUTREACH_TESTS,
     flow: CLIENT_OUTREACH_FLOW,
+    readme: CLIENT_OUTREACH_README,
 };

@@ -1,0 +1,23 @@
+{
+  "kind": "EdgeRulesProject",
+  "formatVersion": 3,
+  "name": "Mini example",
+  "description": "Grades the risk of an applicant by age",
+  "tags": ["risk", "function"],
+  "model": {
+    "format": "dsl",
+    "source": "model/main.edge",
+    "name": "Mini Risk",
+    "version": "1.0.0"
+  },
+  "documentation": "docs/descriptions.json",
+  "tests": ["tests/risk.tests.json"],
+  "flow": "flow/layout.json",
+  "example": {
+    "industry": "cross-industry",
+    "level": "beginner",
+    "features": ["function", "workbook"],
+    "engine": ">=0.2.7-alpha",
+    "authors": ["edgerules"]
+  }
+}

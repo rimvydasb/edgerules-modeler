@@ -370,32 +370,37 @@ function exampleToFiles(project: ProjectBundleInput, example: ExampleMetadata): 
 
 **Phase 1: example file format in `edgerules-react`**
 
-- [ ] Add `ExampleMetadata` and the library manifest type to `project-session/bundle`
-- [ ] Implement `exampleFromFiles` and `exampleToFiles` with fixed key order and rounded flow positions
+- [x] Add `ExampleMetadata` to `project-session/example`. The manifest type of the library (`ExampleManifest`) is not
+      added: `exampleFromFiles` reads the manifest as plain JSON
+- [x] Implement `exampleFromFiles` and `exampleToFiles` with fixed key order and rounded flow positions. The JSON writer
+      prints the layout of Prettier, so `prettier --check` accepts the files
 - [ ] Write JSON Schemas for the manifest, `descriptions.json`, a test suite and `layout.json`; publish them in the
       package
-- [ ] Add a small example directory as a test fixture in `project-session/__tests__/fixtures/`
-- [ ] Write `scripts/export-examples.ts`: it exports the 3 examples of "First examples" to `../edgerules-examples`
+- [x] Add a small example directory as a test fixture in `project-session/__tests__/fixtures/`
+- [x] Write `scripts/export-examples.ts`: it exports the 3 examples of "First examples" to `../edgerules-examples`. It
+      runs with `node scripts/export-examples.ts` and loads `models/` with Vite, so `README.md?raw` resolves
 - [ ] Add a `prepare` script that builds `dist/`, so that a Git dependency on `edgerules-react` installs a build
-- [ ] Add tests for the code of this phase
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `exampleFiles.test.ts`: the round trip of the fixture gives identical files
-- [ ] The fixture opens with `ProjectFactory.createBundle`, and its test suites pass with `@edgerules/node`
-- [ ] `npx tsx scripts/export-examples.ts` writes the 3 example directories, and a second run changes no file
+- [x] `npm test` passes, including `exampleFiles.test.ts`: the round trip of the fixture gives identical files
+- [x] The fixture opens with `ProjectFactory.createBundle`, and its test suites pass with `@edgerules/node`
+- [x] `node scripts/export-examples.ts` writes the 3 example directories, and a second run changes no file
 
 **Phase 2: `edgerules-examples` repository on GitHub**
 
 This phase runs in `../edgerules-examples`. The Examples Library story reads the published repository, not a fixture.
 
-- [ ] Initialize `../edgerules-examples` with the layout of this story and the MIT `LICENSE`
-- [ ] Export the 3 examples of "First examples" with `scripts/export-examples.ts` of `edgerules-react`
+- [x] Initialize `../edgerules-examples` with the layout of this story and the MIT `LICENSE`: `examples/`,
+      `industries.json`, `featured.json` and `.prettierrc.json`. The tooling, workflows, `package.json`,
+      `CONTRIBUTING.md` and `CODEOWNERS` follow with their own tasks
+- [x] Export the 3 examples of "First examples" with `scripts/export-examples.ts` of `edgerules-react`
 - [ ] Add `edgerules-react` as a Git devDependency (`github:rimvydasb/edgerules-react#<tag>`) until its first npm
       release
-- [ ] Write the `README.md` of each of the 3 examples
+- [x] Write the `README.md` of each of the 3 examples
 - [ ] Register highs-js in `validate.mjs` for an example that requires `milp-solver`
-- [ ] Write `tooling/build-index.sh` with `--check` and `--out`
+- [x] Write `tooling/build-index.sh` with `--check` and `--out`
 - [ ] Write `tooling/validate.sh` and `tooling/validate.mjs`
 - [ ] Add the pull request and `main` workflows
 - [ ] Add `CONTRIBUTING.md` with the README sections, the feature vocabulary, the version rule and the local commands

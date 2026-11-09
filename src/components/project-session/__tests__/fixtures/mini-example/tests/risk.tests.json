@@ -1,0 +1,42 @@
+{
+  "rows": [
+    {
+      "path": "age",
+      "section": "inputs",
+      "order": 0,
+      "type": "number",
+      "present": true
+    },
+    {
+      "path": "level",
+      "section": "assertions",
+      "order": 0,
+      "type": "string",
+      "present": true
+    }
+  ],
+  "cases": [
+    {
+      "id": "risk-1",
+      "name": "Young",
+      "order": 0,
+      "inputs": {
+        "age": "20"
+      },
+      "assertions": {
+        "level": "high"
+      }
+    },
+    {
+      "id": "risk-2",
+      "name": "Older",
+      "order": 1,
+      "inputs": {
+        "age": "40"
+      },
+      "assertions": {
+        "level": "low"
+      }
+    }
+  ]
+}

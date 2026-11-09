@@ -14,6 +14,8 @@ export type {
     TestSuitesDocument,
 } from './bundle/types';
 export type {EngineService, ProjectEngine, ProjectEngineClass} from './engine/types';
+export {exampleFromFiles, exampleMetadataOf, exampleToFiles} from './example/exampleFiles';
+export type {ExampleFiles, ExampleLevel, ExampleMetadata} from './example/exampleFiles';
 export {ProjectError, isProjectError} from './errors';
 export type {ProjectErrorCode} from './errors';
 export {createProjectFactory} from './factory/createProjectFactory';
