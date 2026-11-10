@@ -50,42 +50,30 @@ describe('Shell navigation', () => {
         expect(screen.queryByRole('menuitem', {name: /workspace/i})).toBeNull();
     });
 
-    it('shows the origin chip and "View original example" for a copy', async () => {
+    it('shows "View original example" for a copy', async () => {
         const user = userEvent.setup();
-        const {handlers} = await renderNavigated(
-            {origin: ORIGIN},
-            {originStatus: 'update-available', onDuplicate: vi.fn()},
-        );
-        await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-
-        const chip = await screen.findByTestId('shell-origin-chip');
-        expect(chip.textContent).toContain('from loan-repayment@1.2.0');
-        expect(chip.textContent).toContain('Update available');
-        expect(screen.getByTestId('shell-project-menu-header').textContent).toContain('saved');
-        await user.click(chip);
-        expect(handlers.onShowOrigin).toHaveBeenCalledWith(ORIGIN);
-
+        const {handlers} = await renderNavigated({origin: ORIGIN});
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
         await user.click(await screen.findByRole('menuitem', {name: 'View original example'}));
-        expect(handlers.onShowOrigin).toHaveBeenCalledTimes(2);
+        expect(handlers.onShowOrigin).toHaveBeenCalledWith(ORIGIN);
+        expect(screen.queryByTestId('shell-origin-chip')).toBeNull();
     });
 
-    it('has no origin chip for an own project', async () => {
+    it('has no original example item for an own project', async () => {
         const user = userEvent.setup();
         await renderNavigated();
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
         await screen.findByRole('menuitem', {name: 'Overview'});
-        expect(screen.queryByTestId('shell-origin-chip')).toBeNull();
         expect(screen.queryByRole('menuitem', {name: 'View original example'})).toBeNull();
-        expect(screen.queryByRole('menuitem', {name: 'Duplicate'})).toBeNull();
     });
 
-    it('keeps the menu to the overview, README and project actions, without the Shell links', async () => {
+    it('keeps the menu to the overview, README and original example, without the Shell links', async () => {
         const user = userEvent.setup();
-        const opened = await openFixtureProject({name: 'Loan repayment'});
+        const opened = await openFixtureProject({name: 'Loan repayment', origin: ORIGIN});
         const handlers = {
             onBrowseExamples: vi.fn(),
             onOpenProject: vi.fn(),
+            onShowOrigin: vi.fn(),
             onDuplicate: vi.fn(),
             recentProjects: [recent('Other', 'id-1')],
         };
@@ -96,13 +84,8 @@ describe('Shell navigation', () => {
         );
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
         const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent);
-        expect(items).not.toContain('Other');
-        expect(items).not.toContain('Browse examples');
-        expect(screen.queryByText('Recent projects')).toBeNull();
-        expect(screen.getByTestId('shell-project-menu-header').textContent).not.toContain('Loan repayment');
-
-        await user.click(await screen.findByRole('menuitem', {name: 'Duplicate'}));
-        expect(handlers.onDuplicate).toHaveBeenCalled();
+        expect(items).toEqual(['Overview', 'README.md', 'View original example']);
+        expect(screen.queryByText(/saved/i)).toBeNull();
     });
 
     it('opens the README preview from the menu', async () => {

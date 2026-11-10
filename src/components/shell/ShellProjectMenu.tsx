@@ -1,7 +1,6 @@
 import {Menu} from '@mantine/core';
 import {IconChevronDown} from '@tabler/icons-react';
 import type {ReactElement} from 'react';
-import {savedAgo} from '#lib/savedAgo';
 import {cx} from '#ui/cx';
 import {SheetProjectMark} from '#ui/sheet';
 import type {ProjectOrigin} from '../project-session';
@@ -11,7 +10,6 @@ import type {ShellNavigation} from './shell-types';
 export interface ShellProjectMenuProps {
     name: string; // the project name
     origin?: ProjectOrigin; // the library example that the project is a copy of
-    savedAt?: string; // ISO time of the last save
     navigation: ShellNavigation;
     current?: boolean; // the root path is the model: the name reads as the current item
     onOpenOverview?: () => void; // "Overview": the model root in its main view
@@ -27,13 +25,12 @@ export interface ShellProjectMenuProps {
 export function ShellProjectMenu({
     name,
     origin,
-    savedAt,
     navigation,
     current,
     onOpenOverview,
     onOpenReadme,
 }: ShellProjectMenuProps): ReactElement {
-    const {onShowOrigin, originStatus, onDuplicate} = navigation;
+    const {onShowOrigin} = navigation;
 
     return (
         <Menu position="bottom" withinPortal>
@@ -49,30 +46,14 @@ export function ShellProjectMenu({
                 </button>
             </Menu.Target>
             <Menu.Dropdown>
-                <div className={classes.projectMenuHeader} data-testid="shell-project-menu-header">
-                    {savedAt && <div className={classes.projectMenuMeta}>{savedAgo(savedAt)}</div>}
-                    {origin && (
-                        <Menu.Item
-                            component="button"
-                            type="button"
-                            className={classes.originChip}
-                            data-testid="shell-origin-chip"
-                            disabled={!onShowOrigin}
-                            onClick={() => onShowOrigin?.(origin)}
-                        >
-                            from {origin.id}@{origin.version} ↗
-                            {originStatus === 'update-available' && (
-                                <span className={classes.originStatus}> Update available</span>
-                            )}
-                        </Menu.Item>
-                    )}
-                </div>
                 {onOpenOverview && <Menu.Item onClick={onOpenOverview}>Overview</Menu.Item>}
-                {origin && onShowOrigin && (
-                    <Menu.Item onClick={() => onShowOrigin(origin)}>View original example</Menu.Item>
-                )}
                 {onOpenReadme && <Menu.Item onClick={onOpenReadme}>README.md</Menu.Item>}
-                {onDuplicate && <Menu.Item onClick={onDuplicate}>Duplicate</Menu.Item>}
+                {origin && onShowOrigin && (
+                    <>
+                        <Menu.Divider />
+                        <Menu.Item onClick={() => onShowOrigin(origin)}>View original example</Menu.Item>
+                    </>
+                )}
             </Menu.Dropdown>
         </Menu>
     );

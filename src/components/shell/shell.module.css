@@ -1078,33 +1078,3 @@ span.overviewOrigin {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.projectMenuHeader {
-  padding: 6px 12px;
-}
-
-.projectMenuMeta {
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
-}
-
-.originChip {
-  margin-top: 4px;
-  padding: 1px 8px;
-  border: 1px solid var(--sh-border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--mantine-color-text);
-  font: inherit;
-  font-size: var(--mantine-font-size-xs);
-  cursor: pointer;
-}
-
-.originChip:disabled {
-  cursor: default;
-}
-
-.originStatus {
-  color: var(--mantine-color-yellow-7);
-  font-weight: 600;
-}

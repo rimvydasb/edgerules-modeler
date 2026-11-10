@@ -350,7 +350,6 @@ export function Shell({
         <ShellProjectMenu
             name={projectName}
             origin={projectOrigin}
-            savedAt={savedAt}
             navigation={navigation}
             current={root === '*'}
             onOpenOverview={() => navigate({path: '*', view: modelView})}
