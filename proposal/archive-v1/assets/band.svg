@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 24" width="48" height="24" fill="none" stroke="#b8892b" stroke-width="1.2">
+  <!-- one repeat of the straw band: a diamond with a pendant, linked by a hanging thread -->
+  <path d="M0 4 H48"/>
+  <path d="M24 4 V7 M24 7 L30 13 L24 19 L18 13 Z"/>
+  <path d="M24 19 V23 M22 21.5 H26"/>
+  <path d="M6 4 V9 M4.5 7.5 H7.5 M42 4 V9 M40.5 7.5 H43.5"/>
+</svg>

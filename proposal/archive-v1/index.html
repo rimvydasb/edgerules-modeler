@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EdgeRules Design Proposal</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .cover {
+        text-align: center;
+        padding: 64px 16px 48px;
+        border-bottom: 1px solid var(--rule);
+    }
+    .cover img {
+        width: 120px;
+    }
+    .cover h1 {
+        font: 500 46px/1.1 var(--serif);
+        margin: 16px 0 8px;
+    }
+    .cover p {
+        font: italic 18px/1.55 var(--serif);
+        color: var(--ink-2);
+        max-width: 680px;
+        margin: 0 auto;
+    }
+    .crit {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+    }
+    .crit div {
+        background: var(--paper);
+        border: 1px solid var(--rule);
+        padding: 14px 16px;
+    }
+    .crit h3 {
+        font: 500 17px var(--serif);
+        margin: 0 0 6px;
+    }
+    .crit ul {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 13px;
+        color: var(--ink-2);
+        line-height: 1.6;
+    }
+    .choose td {
+        height: 56px;
+    }
+    .choose td b {
+        font: 500 16px var(--serif);
+    }
+    .choose td .v {
+        font: italic 14px var(--serif);
+        color: var(--ink-3);
+    }
+    .choose a.btn {
+        margin-right: 6px;
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="index.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <span class="cell on">Design proposal</span>
+    <a class="cell" href="design-system.html">Design system</a>
+    <a class="cell" href="toolbar.html">Toolbar</a>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+
+<section class="cover squared">
+    <img class="ink-img" src="assets/sodas.svg" alt="" />
+    <h1>A mathbook with a sodas</h1>
+    <p>Library, examples, workspace, top bar and project home — redrawn in the language of the Boxed and Flow editors, with the structure of a school textbook and the straw thread of Lithuanian <i>sodai</i>.</p>
+</section>
+
+<main class="page">
+    <div class="sec"><span class="no">§1</span><h2>What I saw on the current pages</h2><span class="line"></span></div>
+    <div class="crit">
+        <div><h3>Home <code>/</code></h3><ul><li>A 700px strip in a wide window; the bottom half is empty</li><li>No identity: no mark, no name, no sentence about what this is</li><li>Projects are cards with identical black icons and “(2)”, “(3)”</li><li>No industries section (spec has one)</li></ul></div>
+        <div><h3>Examples</h3><ul><li>Header block repeats the black icon square of the Shell</li><li>11px descriptions, 10px meta: hard to read</li><li>Three action cells per card (+ an icon-only ⓘ)</li><li>Level colour on the icon is a hidden code</li></ul></div>
+        <div><h3>Workspace</h3><ul><li>Loud yellow banner + orange “not persistent” chip for the same fact</li><li>“New project” card is split in two different-looking halves</li><li>A full-width “Open” row on each card, while the card itself is not clickable</li></ul></div>
+        <div><h3>Top bar &amp; project home</h3><ul><li>Two bars, the mark twice; a browser-style ✕ tab</li><li>Project home is generic cards on the dot canvas — the README is the only text that tells a story</li><li>“Service methods” and “Workbooks” look like the same thing</li></ul></div>
+    </div>
+
+    <div class="sec"><span class="no">§2</span><h2>Choose</h2><span class="line"></span><span class="count">two variants per page</span></div>
+    <table class="ledger choose">
+        <thead><tr><th>Page</th><th>Variant A</th><th>Variant B</th></tr></thead>
+        <tbody>
+            <tr><td><b>Design system</b></td><td colspan="2"><a class="btn sm primary" href="design-system.html">Open</a><span class="v">principles, mark, colour, type, components, ornament, mapping to src/ui/sheet</span></td></tr>
+            <tr><td><b>Top toolbar</b></td><td colspan="2"><a class="btn sm primary" href="toolbar.html">Open</a><span class="v">A one line · B two tiers · C rail · D masthead</span></td></tr>
+            <tr><td><b>Home</b></td><td><a class="btn sm" href="home-a.html">Title page</a><span class="v">hero, §-sections, chapters</span></td><td><a class="btn sm" href="home-b.html">Workbench</a><span class="v">desk left, library right</span></td></tr>
+            <tr><td><b>Examples</b></td><td><a class="btn sm" href="examples-a.html">Exercise book</a><span class="v">list + facets, scales</span></td><td><a class="btn sm" href="examples-b.html">Chapter gallery</a><span class="v">figures, chapter opener</span></td></tr>
+            <tr><td><b>Workspace</b></td><td><a class="btn sm" href="workspace-a.html">Ledger</a><span class="v">table, footnote storage</span></td><td><a class="btn sm" href="workspace-b.html">Notebooks</a><span class="v">sąsiuvinis covers</span></td></tr>
+            <tr><td><b>Project home</b></td><td><a class="btn sm" href="project-a.html">Title page + Contents</a><span class="v">one-line bar</span></td><td><a class="btn sm" href="project-b.html">Overview sheet</a><span class="v">rail navigation</span></td></tr>
+        </tbody>
+    </table>
+
+    <div class="sec"><span class="no">§3</span><h2>My recommendation</h2><span class="line"></span></div>
+    <ul class="toc" style="max-width: 760px">
+        <li><span class="n">3.1</span><span class="ti">Toolbar A — one line</span><span class="lead"></span><span class="pg">small change, +41px</span></li>
+        <li><span class="n">3.2</span><span class="ti">Home A — title page</span><span class="lead"></span><span class="pg">first impression</span></li>
+        <li><span class="n">3.3</span><span class="ti">Examples A list + B's figures and chapter opener</span><span class="lead"></span><span class="pg">scales to 5 000</span></li>
+        <li><span class="n">3.4</span><span class="ti">Workspace A — ledger</span><span class="lead"></span><span class="pg">B as an optional view</span></li>
+        <li><span class="n">3.5</span><span class="ti">Project A — contents</span><span class="lead"></span><span class="pg">with B's tests grid</span></li>
+    </ul>
+    <p class="marg" style="margin-top: 20px; max-width: 760px">Figures are the most expensive idea: each example needs a small drawing. They could be generated from <code>layout.json</code> of the example (the Flow Editor already knows node positions and kind colours) — a static SVG at release time in <code>edgerules-examples</code>.</p>
+
+    <div class="orn"><i></i><i class="f"></i><i></i></div>
+    <p class="muted serif" style="text-align: center; font-style: italic">All pages are static HTML. They share <code>assets/ds.css</code> and <code>assets/ds.js</code>; the moon button switches dark mode.</p>
+</main>
+<script src="assets/ds.js"></script>
+</body>
+</html>

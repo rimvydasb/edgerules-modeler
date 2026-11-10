@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Top Toolbar Variants</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .v {
+        margin: 0 0 56px;
+    }
+    .v h2 {
+        font: 500 22px var(--serif);
+        margin: 0 0 4px;
+    }
+    .v h2 .no {
+        font-style: italic;
+        color: var(--straw);
+        margin-right: 8px;
+    }
+    .v p {
+        font: italic 15px/1.5 var(--serif);
+        color: var(--ink-2);
+        margin: 0 0 14px;
+        max-width: 760px;
+    }
+    .frame {
+        border: 1px solid var(--rule);
+        background: var(--paper);
+        margin-bottom: 10px;
+    }
+    .frame .topbar {
+        position: static;
+    }
+    .frame .cap {
+        font-size: 11px;
+        color: var(--ink-3);
+        padding: 4px 10px;
+        background: var(--canvas);
+        border-bottom: 1px solid var(--rule-soft);
+        font-family: var(--mono);
+    }
+    .frame .below {
+        height: 46px;
+        display: grid;
+        grid-template-columns: 200px 1fr;
+    }
+    .frame .below .ex {
+        border-right: 1px solid var(--rule);
+        background: var(--paper);
+    }
+    .pc {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        font-size: 13px;
+    }
+    .pc ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--ink-2);
+    }
+    .pc .label {
+        display: block;
+        margin-bottom: 4px;
+    }
+    .rec {
+        border: 1px solid var(--ink);
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        vertical-align: middle;
+        margin-left: 8px;
+        font-family: var(--sans);
+        font-style: normal;
+    }
+    .masthead {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 20px;
+        background: var(--paper);
+        border-bottom: 1px solid var(--rule);
+        position: relative;
+    }
+    .masthead img {
+        width: 40px;
+    }
+    .masthead b {
+        font: 500 24px var(--serif);
+    }
+    .masthead i.s {
+        font: italic 14px var(--serif);
+        color: var(--ink-3);
+    }
+    .masthead nav {
+        margin-left: auto;
+        display: flex;
+        gap: 22px;
+        font: 16px var(--serif);
+    }
+    .masthead nav a {
+        color: var(--ink-2);
+    }
+    .masthead nav a.on {
+        color: var(--ink);
+        border-bottom: 1.5px solid var(--straw);
+    }
+    .masthead + .band {
+        border-bottom: 1px solid var(--rule);
+        background-color: var(--paper);
+    }
+    .railbox {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        height: 220px;
+    }
+    .railbox .rail {
+        background: var(--ink);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6px 0;
+        gap: 2px;
+    }
+    .railbox .rail a {
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        color: #adb5bd;
+    }
+    .railbox .rail a.on {
+        color: #fff;
+        box-shadow: inset 2px 0 0 var(--straw);
+    }
+    .railbox .rail img {
+        width: 30px;
+    }
+    .railbox .rail .sep {
+        width: 24px;
+        border-top: 1px solid #3a3d43;
+        margin: 6px 0;
+    }
+    .railbox .rail .p {
+        width: 30px;
+        height: 30px;
+        margin: 5px;
+        border: 1px solid #495057;
+        color: #fff;
+        font: 600 12px var(--sans);
+    }
+    .railbox .rail .p.on {
+        border-color: var(--straw);
+        color: var(--straw);
+        box-shadow: none;
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="index.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <span class="cell on">Toolbar variants</span>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle><i data-i="moon"></i></button>
+</header>
+<main class="page">
+    <div class="sec"><span class="no">§</span><h2>Top toolbar</h2><span class="line"></span><a class="more" href="index.html">← all proposals</a></div>
+    <p class="serif" style="font-size: 16px; color: var(--ink-2); max-width: 780px; margin: 0 0 40px">
+        Today the Project page stacks two bars (host bar + Shell bar), shows the mark twice, and keeps an open project as a browser-like tab with ✕. The spec already asks for “one line, not two”. Four ways to fix it:
+    </p>
+
+    <section class="v">
+        <h2><span class="no">A</span>One line<span class="rec">Recommended</span></h2>
+        <p>Library pages: mark + name, Examples, Workspace, last project. On a project the name collapses to the mark, nav cells become icons, and the Shell row moves up into the same 41px line. The project name ▾ is the project menu (recent projects, origin, duplicate).</p>
+        <div class="frame">
+            <div class="cap">library pages</div>
+            <header class="topbar">
+                <a class="brand" href="#"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+                <a class="cell on" href="#"><i data-i="library"></i>Examples</a>
+                <a class="cell" href="#"><i data-i="grid"></i>Workspace</a>
+                <a class="cell" href="#"><i data-i="clock"></i>Loan origination</a>
+                <span class="grow"></span>
+                <span class="cell r" style="gap: 10px; color: var(--ink-3)"><i data-i="search"></i>Search<span class="kbd">/</span></span>
+                <span class="cell r"><i data-i="moon"></i></span>
+            </header>
+        </div>
+        <div class="frame">
+            <div class="cap">project page</div>
+            <header class="topbar">
+                <a class="brand" href="#" style="padding: 0"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span></a>
+                <a class="cell" href="#"><i data-i="library"></i></a>
+                <a class="cell" href="#"><i data-i="grid"></i></a>
+                <div class="crumbs"><b style="display: flex; gap: 4px; align-items: center; font-weight: 600">Loan origination <i data-i="chev"></i></b><span class="sep">/</span>originationBook<span class="sep">/</span><b>mainApplicant</b></div>
+                <span class="grow"></span>
+                <nav class="seg"><a href="#"><i data-i="doc"></i>Contents</a><a class="on" href="#"><i data-i="flow"></i>Flow</a><a href="#"><i data-i="boxed"></i>Boxed</a><a href="#"><i data-i="code"></i>Code</a><a href="#"><i data-i="tests"></i>Tests</a></nav>
+                <span class="cell r"><i data-i="gear"></i></span>
+                <span class="cell r"><i data-i="sidebar"></i></span>
+            </header>
+            <div class="below graph"><div class="ex"></div><div></div></div>
+        </div>
+        <div class="pc">
+            <div><span class="label">Pro</span><ul><li>+41px for the editors; one mark, one line</li><li>Path reads left → right: where am I, then what view</li><li>Close to today: small change in Shell + host</li></ul></div>
+            <div><span class="label">Con</span><ul><li>Long paths need truncation in the middle</li><li>Nav labels hidden on project pages (tooltips)</li></ul></div>
+        </div>
+    </section>
+
+    <section class="v">
+        <h2><span class="no">B</span>Two tiers, clear owners</h2>
+        <p>Keep two rows but give each one job. The host row (32px, quieter) is the site; the Shell row is the project. No second mark, no ✕ tab: the project is a crumb.</p>
+        <div class="frame">
+            <header class="topbar" style="height: 32px; background: var(--canvas)">
+                <a class="brand" href="#" style="padding-right: 12px"><span class="mark" style="width: 32px; height: 31px"><img src="assets/sodas-solid-white.svg" alt="" style="width: 22px; height: 22px" /></span><b style="font-size: 14px">EdgeRules</b></a>
+                <a class="cell" href="#" style="font-size: 12px">Examples</a>
+                <a class="cell on" href="#" style="font-size: 12px">Workspace</a>
+                <span class="grow"></span>
+                <span class="cell r" style="font-size: 12px; color: var(--ink-3)">saved 8 h ago</span>
+            </header>
+            <header class="topbar">
+                <div class="crumbs" style="padding-left: 14px"><span class="kind sm"><i data-i="book"></i></span><b style="display: flex; gap: 4px; align-items: center; font-weight: 600; font-family: var(--serif); font-size: 16px">Mortgage Origination <i data-i="chev"></i></b><span class="sep">/</span>originationBook</div>
+                <span class="grow"></span>
+                <nav class="seg"><a href="#">Contents</a><a class="on" href="#">Flow</a><a href="#">Boxed</a><a href="#">Code</a><a href="#">Tests</a></nav>
+                <span class="cell r"><i data-i="gear"></i></span>
+            </header>
+            <div class="below graph"><div class="ex"></div><div></div></div>
+        </div>
+        <div class="pc">
+            <div><span class="label">Pro</span><ul><li>Embedded Shell (npm users) looks the same with or without the host row</li><li>Room for a serif project title</li></ul></div>
+            <div><span class="label">Con</span><ul><li>Still 73px of chrome</li></ul></div>
+        </div>
+    </section>
+
+    <section class="v">
+        <h2><span class="no">C</span>Rail</h2>
+        <p>Site navigation moves to a 48px dark rail with the Sodas mark on top and open projects as monograms. The only horizontal bar is the Shell bar. See it in <a href="project-b.html">Project B</a>.</p>
+        <div class="frame">
+            <div class="railbox">
+                <nav class="rail">
+                    <a href="#"><img src="assets/sodas-solid-white.svg" alt="" /></a><span class="sep"></span>
+                    <a href="#"><i data-i="library"></i></a><a href="#"><i data-i="grid"></i></a><span class="sep"></span>
+                    <a class="p on" href="#">LO</a><a class="p" href="#">MP</a>
+                </nav>
+                <div>
+                    <header class="topbar">
+                        <div class="crumbs" style="padding-left: 14px"><b style="display: flex; gap: 4px; align-items: center; font-weight: 600">Loan origination <i data-i="chev"></i></b><span class="sep">/</span>originationBook</div>
+                        <span class="grow"></span>
+                        <nav class="seg"><a href="#">Overview</a><a class="on" href="#">Flow</a><a href="#">Boxed</a><a href="#">Code</a><a href="#">Tests</a></nav>
+                    </header>
+                    <div class="graph" style="height: 178px"></div>
+                </div>
+            </div>
+        </div>
+        <div class="pc">
+            <div><span class="label">Pro</span><ul><li>Most vertical room; wide screens have spare width</li><li>The mark gets a strong, constant home</li><li>Quick switch between open projects</li></ul></div>
+            <div><span class="label">Con</span><ul><li>Rail + explorer + editor = three columns on the left</li><li>Bigger change in the host layout</li></ul></div>
+        </div>
+    </section>
+
+    <section class="v">
+        <h2><span class="no">D</span>Masthead (library pages only)</h2>
+        <p>A taller 64px masthead with a serif wordmark and the straw band under it — the “cover” of the book. It is used on Home / Examples / Workspace only; a project switches to A.</p>
+        <div class="frame">
+            <div class="masthead">
+                <img class="ink-img" src="assets/sodas.svg" alt="" /><b>EdgeRules</b><i class="s">rules workbook</i>
+                <nav><a href="#">Home</a><a class="on" href="#">Examples</a><a href="#">Workspace</a></nav>
+            </div>
+            <div class="band"></div>
+        </div>
+        <div class="pc">
+            <div><span class="label">Pro</span><ul><li>Most character; the folk band is visible on every library page</li></ul></div>
+            <div><span class="label">Con</span><ul><li>Two different bars to keep in sync</li><li>The band can feel decorative if overused</li></ul></div>
+        </div>
+    </section>
+</main>
+<script src="assets/ds.js"></script>
+</body>
+</html>

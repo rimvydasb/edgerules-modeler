@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <!-- EdgeRules mark, solid (after app/public/EdgeRules.002.png): reads better below 32px -->
+  <g fill="#17191c">
+    <path d="M248 128 L330 210 L248 292 L166 210 Z"/>
+    <path d="M157 216 L239 298 L157 380 L75 298 Z"/>
+    <path d="M343 216 L425 298 L343 380 L261 298 Z"/>
+  </g>
+  <g fill="none" stroke="#17191c" stroke-width="14" stroke-linecap="square">
+    <path d="M248 48 V116 M214 82 H282 M224 58 L272 106 M272 58 L224 106"/>
+    <path d="M157 392 V442 M141 432 H173"/>
+    <path d="M248 312 V372 M232 366 H264"/>
+    <path d="M343 392 V442 M327 432 H359"/>
+  </g>
+</svg>

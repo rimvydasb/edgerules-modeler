@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Project B · Overview sheet</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    body {
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 48px 1fr;
+    }
+    .rail {
+        background: var(--ink);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6px 0;
+        gap: 2px;
+    }
+    .rail a,
+    .rail button {
+        width: 40px;
+        height: 40px;
+        display: grid;
+        place-items: center;
+        color: #adb5bd;
+        background: none;
+        border: 0;
+        cursor: pointer;
+    }
+    .rail a:hover,
+    .rail button:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .rail a.on {
+        color: #fff;
+        box-shadow: inset 2px 0 0 var(--straw);
+    }
+    .rail .mk img {
+        width: 30px;
+    }
+    .rail .sep {
+        width: 24px;
+        border-top: 1px solid #3a3d43;
+        margin: 6px 0;
+    }
+    .rail .proj {
+        font: 600 12px var(--sans);
+        color: #fff;
+        border: 1px solid #495057;
+        width: 30px;
+        height: 30px;
+        margin: 5px;
+    }
+    .rail .proj.on {
+        border-color: var(--straw);
+        color: var(--straw);
+    }
+    .rail .bottom {
+        margin-top: auto;
+    }
+    :root[data-theme='dark'] .rail {
+        background: #0d0e10;
+    }
+    .main {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    .main .topbar .crumbs {
+        padding-left: 16px;
+    }
+    .board {
+        flex: 1;
+        overflow: auto;
+    }
+    .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 32px 80px;
+    }
+    .title {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .title h1 {
+        font: 500 32px/1.1 var(--serif);
+        margin: 0;
+    }
+    .title .sub {
+        font-size: 12.5px;
+        color: var(--ink-3);
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 4px;
+    }
+    .cols2 {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 24px;
+    }
+    .wb .fig {
+        padding: 2px 0 6px;
+    }
+    .wb .ph .t {
+        font: 500 17px var(--serif);
+    }
+    .wb .ph .t small {
+        font: 11.5px var(--mono);
+        color: var(--ink-3);
+        margin-left: 6px;
+    }
+    .wb .pf a {
+        color: var(--ink);
+    }
+    .wb .pf a.p {
+        font-weight: 500;
+    }
+    .svc {
+        background: var(--paper);
+        border: 1px solid var(--rule);
+        display: grid;
+        grid-template-columns: 40px 1fr auto;
+    }
+    .svc .body {
+        padding: 10px 14px;
+    }
+    .svc pre {
+        margin: 0;
+        font: 13px/1.6 var(--mono);
+        white-space: pre-wrap;
+    }
+    .svc pre .k {
+        color: var(--k-type);
+    }
+    .svc pre .f {
+        color: var(--k-service);
+        font-weight: 500;
+    }
+    .svc .act {
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--rule);
+    }
+    .svc .act a {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 14px;
+        font-size: 12.5px;
+        color: var(--ink);
+        border-bottom: 1px solid var(--rule);
+    }
+    .svc .act a:last-child {
+        border-bottom: 0;
+    }
+    .add {
+        border: 1px dashed var(--rule);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: var(--ink-3);
+        min-height: 48px;
+        font-size: 13px;
+    }
+    .add:hover {
+        border-color: var(--ink);
+        color: var(--ink);
+        text-decoration: none;
+    }
+    .side .panel + .panel {
+        margin-top: 16px;
+    }
+    .side .readme {
+        font: 14.5px/1.55 var(--serif);
+        color: var(--ink-2);
+        padding: 12px 14px;
+    }
+    .tests {
+        display: grid;
+        grid-template-columns: repeat(19, 1fr);
+        gap: 2px;
+        margin-top: 8px;
+    }
+    .tests i {
+        aspect-ratio: 1;
+        background: var(--ok);
+    }
+    .tests i.x {
+        background: #e03131;
+    }
+    .struct {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+    .struct a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--rule-soft);
+        color: var(--ink);
+        font-size: 13px;
+    }
+    .struct a:nth-child(odd) {
+        border-right: 1px solid var(--rule-soft);
+    }
+    .struct a b {
+        margin-left: auto;
+        font: 500 15px var(--serif);
+    }
+    .struct a:hover {
+        background: var(--canvas);
+        text-decoration: none;
+    }
+    @media (max-width: 960px) {
+        .cols2 {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+<nav class="rail">
+    <a class="mk" href="home-a.html" title="Home"><img src="assets/sodas-solid-white.svg" alt="EdgeRules" /></a>
+    <span class="sep"></span>
+    <a href="examples-b.html" title="Examples"><i data-i="library"></i></a>
+    <a href="workspace-b.html" title="Workspace"><i data-i="grid"></i></a>
+    <span class="sep"></span>
+    <a class="proj on" href="#" title="Loan origination 3">LO</a>
+    <a class="proj" href="#" title="My pricing">MP</a>
+    <div class="bottom">
+        <button data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+        <a href="#" title="Settings"><i data-i="gear"></i></a>
+    </div>
+</nav>
+
+<div class="main">
+    <header class="topbar">
+        <div class="crumbs">
+            <a href="#" style="color: var(--ink); font-weight: 600; display: flex; gap: 4px; align-items: center">Loan origination <i data-i="chev"></i></a>
+            <span class="sep">/</span><b>Overview</b>
+        </div>
+        <span class="grow"></span>
+        <nav class="seg">
+            <a class="on" href="#"><i data-i="home"></i>Overview</a>
+            <a href="#"><i data-i="flow"></i>Flow</a>
+            <a href="#"><i data-i="boxed"></i>Boxed</a>
+            <a href="#"><i data-i="code"></i>Code</a>
+            <a href="#"><i data-i="tests"></i>Tests</a>
+        </nav>
+        <a class="cell r" href="#" title="Explorer"><i data-i="sidebar"></i></a>
+    </header>
+
+    <div class="board graph">
+        <div class="wrap">
+            <div class="title">
+                <span class="kind lg"><img src="assets/sodas-solid-white.svg" alt="" style="width: 32px" /></span>
+                <div>
+                    <h1>Mortgage Origination</h1>
+                    <div class="sub"><span class="tok" style="margin: 0">from loan-origination@2.0.0</span>saved 8 h ago<span class="chip ok"><i data-i="check"></i>36 / 38 tests</span></div>
+                </div>
+                <span style="flex: 1"></span>
+                <a class="btn" href="#"><i data-i="tests"></i>Run tests</a>
+                <a class="btn primary" href="#"><i data-i="flow"></i>Open flow</a>
+            </div>
+
+            <div class="cols2">
+                <div>
+                    <div class="sec" style="margin-top: 0"><span class="no">§1</span><h2>Workbooks</h2><span class="line"></span><span class="count">2</span></div>
+                    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
+                        <div class="panel wb hover">
+                            <div class="ph"><span class="kind"><i data-i="book"></i></span><span class="t">Joint mortgage application<small>originationBook</small></span></div>
+                            <div class="fig graph"><img src="assets/fig-origination.svg" alt="" /></div>
+                            <div class="desc" style="border-bottom: 0">From the loan terms and two applicants, through both scorecards, to the decision and the offer.</div>
+                            <div class="pf"><a class="p" href="#"><i data-i="flow"></i>Flow</a><a href="#"><i data-i="boxed"></i>Boxed</a><span class="muted" style="font-size: 12px">3 in · 4 ƒ</span></div>
+                        </div>
+                        <div class="panel wb hover">
+                            <div class="ph"><span class="kind"><i data-i="book"></i></span><span class="t">Borrowing capacity<small>capacityBook</small></span></div>
+                            <div class="fig graph"><img src="assets/fig-repayment.svg" alt="" /></div>
+                            <div class="desc" style="border-bottom: 0">How much a household can borrow for each term from 10 to 30 years.</div>
+                            <div class="pf"><a class="p" href="#"><i data-i="flow"></i>Flow</a><a href="#"><i data-i="boxed"></i>Boxed</a><span class="muted" style="font-size: 12px">1 in · 1 ƒ</span></div>
+                        </div>
+                    </div>
+                    <a class="add" href="#" style="margin-top: 12px"><i data-i="plus"></i>New workbook</a>
+
+                    <div class="sec"><span class="no">§2</span><h2>Services</h2><span class="line"></span><span class="count">1</span></div>
+                    <div class="svc">
+                        <span class="kind" style="background: var(--k-service); height: 100%"><i data-i="fx"></i></span>
+                        <div class="body">
+<pre><span class="f">loanOriginationDecision</span>(
+    application: <span class="k">Application</span>
+) → <span class="k">Decision</span></pre>
+                            <div class="muted" style="font: italic 13.5px var(--serif); margin-top: 4px">Scores and checks every applicant, prices the loan, tests affordability and makes an offer.</div>
+                        </div>
+                        <div class="act"><a href="#"><i data-i="flow"></i>Open</a><a href="#"><i data-i="tests"></i>22 tests</a></div>
+                    </div>
+                    <a class="add" href="#" style="margin-top: 12px"><i data-i="plus"></i>New service</a>
+                </div>
+
+                <aside class="side">
+                    <div class="panel">
+                        <div class="ph"><span class="kind" style="background: #adb5bd"><i data-i="doc"></i></span><span class="t">README</span><a href="#" style="padding: 0 12px; font-size: 12.5px">Open →</a></div>
+                        <div class="readme">Scores, checks, prices and decides a joint mortgage application. The household is graded by its weaker applicant; the bank <i>approves</i>, <i>refers</i> or <i>declines</i>…</div>
+                    </div>
+                    <div class="panel">
+                        <div class="ph"><span class="kind" style="background: var(--k-test)"><i data-i="tests"></i></span><span class="t">Tests</span><span style="padding: 0 12px; font-size: 12px; color: var(--ink-3)">2 failing</span></div>
+                        <div class="pb">
+                            <div class="tests"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                            <div style="font-size: 12px; margin-top: 8px"><a href="#">declines a thin-file co-applicant</a><br /><a href="#">counter-offer at LTV 0.95</a></div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="ph"><span class="t">Structure</span></div>
+                        <div class="struct">
+                            <a href="#"><span class="kind sm" style="background: var(--k-decision)"><i data-i="decision"></i></span>Decisions<b>6</b></a>
+                            <a href="#"><span class="kind sm" style="background: var(--k-function)"><i data-i="fx"></i></span>Methods<b>9</b></a>
+                            <a href="#"><span class="kind sm" style="background: var(--k-type)"><i data-i="type"></i></span>Types<b>3</b></a>
+                            <a href="#"><span class="kind sm" style="background: var(--k-facts)"><i data-i="facts"></i></span>Facts<b>2</b></a>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="proposal-note"><span class="x">✕</span><b>Project B — “Overview sheet”</b>A working dashboard on graph paper. Workbooks show a figure of their flow; services are written as signatures. Right column: README excerpt, tests as a grid of squares, structure counts. Navigation moves to a dark <i>rail</i> on the left with the mark on top — the editors get the full height. <a href="index.html">← all proposals</a></div>
+<script src="assets/ds.js"></script>
+</body>
+</html>

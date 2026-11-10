@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Examples A · Exercise book</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .lay {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 40px;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 36px 32px 96px;
+    }
+    .head h1 {
+        font: 500 34px/1.1 var(--serif);
+        margin: 0;
+    }
+    .head p {
+        font: italic 16px/1.5 var(--serif);
+        color: var(--ink-2);
+        margin: 6px 0 22px;
+        max-width: 640px;
+    }
+    .facets {
+        position: sticky;
+        top: calc(var(--bar) + 24px);
+        align-self: start;
+    }
+    .facets .grp {
+        margin-bottom: 26px;
+    }
+    .facets .label {
+        display: block;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--rule);
+        margin-bottom: 6px;
+    }
+    .facets a,
+    .facets label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 13.5px;
+        color: var(--ink-2);
+        cursor: pointer;
+    }
+    .facets a:hover {
+        text-decoration: none;
+        color: var(--ink);
+    }
+    .facets a .rn {
+        font: italic 12px var(--serif);
+        color: var(--straw);
+        width: 26px;
+    }
+    .facets a .c,
+    .facets label .c {
+        margin-left: auto;
+        font-size: 11.5px;
+        color: var(--ink-3);
+    }
+    .facets a.on {
+        color: var(--ink);
+        font-weight: 600;
+    }
+    .facets a.dim {
+        opacity: 0.45;
+    }
+    .facets input {
+        accent-color: var(--ink);
+        margin: 0;
+    }
+    .tools {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .tools .search {
+        flex: 1;
+    }
+    .result-hd {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--ink-3);
+        padding: 14px 0 8px;
+        border-bottom: 1px solid var(--ink);
+    }
+    .exr {
+        display: grid;
+        grid-template-columns: 64px 1fr auto;
+        gap: 0 18px;
+        padding: 18px 0;
+        border-bottom: 1px solid var(--rule);
+        position: relative;
+    }
+    .exr .no {
+        font: 500 15px var(--serif);
+        color: var(--ink-3);
+        padding-top: 3px;
+    }
+    .exr .no small {
+        display: block;
+        font: italic 11px var(--serif);
+        color: var(--straw);
+    }
+    .exr h3 {
+        margin: 0;
+        font: 500 21px/1.25 var(--serif);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .exr h3 a {
+        color: var(--ink);
+    }
+    .exr p {
+        margin: 4px 0 8px;
+        font: italic 15px/1.45 var(--serif);
+        color: var(--ink-2);
+        max-width: 640px;
+    }
+    .exr .act {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: stretch;
+        min-width: 150px;
+        padding-top: 2px;
+    }
+    .exr:hover {
+        background: linear-gradient(90deg, transparent, var(--paper) 10%, var(--paper) 90%, transparent);
+    }
+    .exr .hint {
+        position: absolute;
+        left: -16px;
+        top: 22px;
+        width: 7px;
+        height: 7px;
+        border: 1.3px solid var(--straw);
+        transform: rotate(45deg);
+        opacity: 0;
+    }
+    .exr:hover .hint {
+        opacity: 1;
+    }
+    .foot {
+        text-align: center;
+        font: italic 13px var(--serif);
+        color: var(--ink-3);
+        padding: 24px 0;
+    }
+    @media (max-width: 900px) {
+        .lay {
+            grid-template-columns: 1fr;
+        }
+        .facets {
+            position: static;
+        }
+        .exr {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="home-a.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <a class="cell on" href="examples-a.html"><i data-i="library"></i><span class="lbl">Examples</span></a>
+    <a class="cell" href="workspace-a.html"><i data-i="grid"></i><span class="lbl">Workspace</span></a>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+
+<div class="lay">
+    <aside class="facets">
+        <div class="grp">
+            <span class="label">Chapters</span>
+            <a class="on" href="#"><span class="rn">—</span>All industries<span class="c">3</span></a>
+            <a href="examples-b.html"><span class="rn">I</span>Financial<span class="c">3</span></a>
+            <a class="dim" href="#"><span class="rn">II</span>Insurance<span class="c">0</span></a>
+            <a class="dim" href="#"><span class="rn">III</span>Healthcare<span class="c">0</span></a>
+            <a class="dim" href="#"><span class="rn">IV</span>Logistics<span class="c">0</span></a>
+            <a class="dim" href="#"><span class="rn">V</span>Retail<span class="c">0</span></a>
+        </div>
+        <div class="grp">
+            <span class="label">Level</span>
+            <label><input type="checkbox" /><span class="diff"><i class="f"></i><i></i><i></i></span>Beginner<span class="c">1</span></label>
+            <label><input type="checkbox" /><span class="diff"><i class="f"></i><i class="f"></i><i></i></span>Intermediate<span class="c">1</span></label>
+            <label><input type="checkbox" /><span class="diff"><i class="f"></i><i class="f"></i><i class="f"></i></span>Advanced<span class="c">1</span></label>
+        </div>
+        <div class="grp">
+            <span class="label">Uses</span>
+            <label><input type="checkbox" checked /><code>decision-table</code><span class="c">3</span></label>
+            <label><input type="checkbox" /><code>service</code><span class="c">2</span></label>
+            <label><input type="checkbox" /><code>facts</code><span class="c">1</span></label>
+            <label><input type="checkbox" /><code>optimise</code><span class="c">1</span></label>
+            <label><input type="checkbox" /><code>loop</code><span class="c">1</span></label>
+            <a href="#" style="color: var(--link); font-size: 12.5px">+ 6 more</a>
+        </div>
+        <div class="grp">
+            <span class="label">Workspace</span>
+            <label><input type="checkbox" />Not copied yet<span class="c">2</span></label>
+            <label><input type="checkbox" />Update available<span class="c">0</span></label>
+        </div>
+    </aside>
+
+    <main>
+        <div class="head">
+            <div class="label" style="color: var(--straw)">Library · read-only</div>
+            <h1>Examples</h1>
+            <p>Worked models to read, run and copy. A copy goes to your workspace; the original stays as it is.</p>
+        </div>
+        <div class="tools">
+            <div class="search sm"><i data-i="search"></i><span class="ph">Search name, feature, tag…</span><span class="kbd">/</span></div>
+            <span class="select">Sort: Relevance</span>
+            <span class="select" title="View"><i data-i="list"></i></span>
+        </div>
+        <div class="result-hd"><span>3 examples · filtered by <code>decision-table</code> <a href="#">clear</a></span><span>Financial ▸ all levels</span></div>
+
+        <article class="exr">
+            <span class="hint"></span>
+            <div class="no">I.1<small>Financial</small></div>
+            <div>
+                <h3><a href="#">Loan repayment</a></h3>
+                <p>Prices a loan request and returns its monthly repayment schedule.</p>
+                <div><span class="tok">decision-table</span><span class="tok">function</span><span class="tok">service</span><span class="tok">workbook</span><span class="tok">list</span></div>
+                <div class="meta" style="margin-top: 4px"><span class="diff"><i class="f"></i><i></i><i></i></span><span>Beginner</span><span>v1.2.0 · 28 Oct 2026</span><span>13 tests</span><span>88 lines</span></div>
+            </div>
+            <div class="act"><a class="btn sm primary" href="project-a.html"><i data-i="copy"></i>Copy and open</a><a class="btn sm" href="#">Details</a></div>
+        </article>
+
+        <article class="exr">
+            <span class="hint"></span>
+            <div class="no">I.2<small>Financial</small></div>
+            <div>
+                <h3><a href="#">Loan origination</a><span class="chip ok"><i data-i="check"></i>In workspace · 3</span></h3>
+                <p>Scores, checks, prices and decides a joint mortgage application.</p>
+                <div><span class="tok">facts</span><span class="tok">decision-table</span><span class="tok">decision</span><span class="tok">service</span><span class="tok">type</span><span class="tok">+2</span></div>
+                <div class="meta" style="margin-top: 4px"><span class="diff"><i class="f"></i><i class="f"></i><i></i></span><span>Intermediate</span><span>v2.0.0 · 2 Nov 2026</span><span>38 tests</span><span>412 lines</span></div>
+            </div>
+            <div class="act"><a class="btn sm primary" href="project-a.html"><i data-i="open"></i>Open copy</a><a class="btn sm" href="#"><i data-i="copy"></i>Copy again</a><a class="btn sm ghost" href="#">Details</a></div>
+        </article>
+
+        <article class="exr">
+            <span class="hint"></span>
+            <div class="no">I.3<small>Financial</small></div>
+            <div>
+                <h3><a href="#">Client outreach</a></h3>
+                <p>Decides whom to call, email or text in one working day for the largest expected value.</p>
+                <div><span class="tok">optimise</span><span class="tok">decision-table</span><span class="tok">loop</span><span class="tok">+3</span></div>
+                <div class="meta" style="margin-top: 4px"><span class="diff"><i class="f"></i><i class="f"></i><i class="f"></i></span><span>Advanced</span><span>v1.0.0 · 20 Oct 2026</span><span>22 tests</span><span class="chip warn">needs engine ≥ 0.2.7</span></div>
+            </div>
+            <div class="act"><a class="btn sm primary" href="#"><i data-i="copy"></i>Copy and open</a><a class="btn sm" href="#">Details</a></div>
+        </article>
+
+        <div class="orn"><i></i><i class="f"></i><i></i></div>
+        <div class="foot">End of chapter · 3 of 3 shown</div>
+    </main>
+</div>
+
+<div class="proposal-note"><span class="x">✕</span><b>Examples A — “Exercise book”</b>A list, not a card grid: it reads like the exercises at the end of a textbook chapter and scales to 5 000 entries (virtual rows, sticky facets). Facets live on the left so the tabs row disappears. Each entry has a number <i>I.2</i> = chapter.exercise. <a href="index.html">← all proposals</a></div>
+<script src="assets/ds.js"></script>
+</body>
+</html>
