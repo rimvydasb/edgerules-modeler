@@ -8,6 +8,7 @@ import {RouterProvider} from '@tanstack/react-router';
 import {init, MutableDecisionService} from '@edgerules/web/mutable';
 import {createLocalProjectRepository, createProjectFactory} from '../src/components/project-session';
 import {createModelerRouter} from './router';
+import {modelerTheme} from './theme';
 
 /**
  * The local Modeler: a single-page app whose URL is the route (TanStack Router). The workspace is kept in the
@@ -34,7 +35,7 @@ function App(): ReactElement {
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        <MantineProvider>
+        <MantineProvider theme={modelerTheme}>
             <Notifications position="bottom-right" />
             <App />
         </MantineProvider>

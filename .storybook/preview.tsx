@@ -3,6 +3,7 @@ import '@mantine/notifications/styles.css';
 import type {Preview} from '@storybook/react-vite';
 import {MantineProvider} from '@mantine/core';
 import {Notifications} from '@mantine/notifications';
+import {modelerTheme} from '../app/theme';
 
 const preview: Preview = {
     parameters: {
@@ -35,7 +36,7 @@ const preview: Preview = {
     },
     decorators: [
         (Story) => (
-            <MantineProvider>
+            <MantineProvider theme={modelerTheme}>
                 <Notifications position="bottom-right" />
                 <Story />
             </MantineProvider>

@@ -31,8 +31,9 @@
   --er-warn-soft: #fdf3e5;
   --er-danger: #c92a2a;
   --er-danger-soft: #fdecec;
-  --er-sans: Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --er-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* The fonts come from the Mantine theme of the host, so the chrome and the editors share one sans and one mono. */
+  --er-sans: var(--mantine-font-family);
+  --er-mono: var(--mantine-font-family-monospace);
   --er-r: 8px;
   --er-r-sm: 6px;
   --er-shadow-pop: 0 8px 28px rgb(13 13 14 / 0.12), 0 1px 3px rgb(13 13 14 / 0.08);

@@ -114,8 +114,12 @@
   gap: 6px;
   min-height: 30px;
   padding: 3px 6px;
-  /* The tree level offset: a child's chevron sits below its parent's icon. */
-  padding-inline-start: calc(max(var(--label-offset) - 14px, 0px) + 8px);
+  /*
+   * The tree level offset. Every row has a chevron column (hidden on a leaf), so the entries of a section line up
+   * with the section label, and the nodes of a workbook sit one chevron column (20px) deeper than the workbook.
+   * Mantine sets `--label-offset` to `levelOffset` (20px) per level; the sections and their entries share column 0.
+   */
+  padding-inline-start: calc(max(var(--label-offset) - 20px, 0px) + 8px);
   border: 1px solid transparent;
   border-radius: 6px;
   cursor: pointer;
@@ -166,24 +170,21 @@
   white-space: nowrap;
 }
 
-/* Functions and decision tables read as code: `name()`. */
-.textCode {
-  font-family: var(--mantine-font-family-monospace);
-  font-size: 12px;
-}
-
-/* A section header reads as a palette group label, with its member count. */
+/* A section header reads as a group label of the editors (Tests grid, Boxed Editor, Flow palette), with its count. */
 .group {
   color: var(--er-text-3, var(--mantine-color-dimmed));
-  font: 500 10.5px var(--er-mono, inherit);
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .count {
   flex: 0 0 auto;
   color: var(--er-text-3, var(--mantine-color-dimmed));
-  font: 500 11px var(--er-mono, inherit);
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .tile {
@@ -213,7 +214,7 @@
 }
 
 .chevronHidden {
-  display: none;
+  visibility: hidden;
 }
 
 /* The add button of a section header: shown on hover and focus of the row, like a row menu of the Boxed Editor. */
