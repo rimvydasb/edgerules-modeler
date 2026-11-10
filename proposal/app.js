@@ -362,8 +362,7 @@ function pageExamples(industry, q) {
         appBar('examples') +
         `<main class="page wide">
         <div class="ph">
-            <div><div class="eyebrow">Library · read-only</div><h1>${industry ? ind(industry).title : 'Examples'}</h1>
-            <p>Worked models from <a class="lnk" href="https://github.com/rimvydasb/edgerules-examples" target="_blank" rel="noreferrer">edgerules-examples</a>. Copy one into your workspace to edit it — the original stays as it is.</p></div>
+            <div><div class="eyebrow">Library · read-only</div><h1>${industry ? ind(industry).title : 'Examples'}</h1></div>
         </div>
         <div class="exlay">
             <aside class="facets">
@@ -542,7 +541,7 @@ function pageWorkspace(q) {
     const chips = [
         ...(S.wsSource !== 'all'
             ? [
-                  `<span class="badge neutral">${S.wsSource === 'ex' ? 'From examples' : 'Own projects'}<button data-act="wssrc" data-k="all">${ic('x')}</button></span>`,
+                  `<span class="badge neutral">${S.wsSource === 'ex' ? 'Example Projects' : 'My Projects'}<button data-act="wssrc" data-k="all">${ic('x')}</button></span>`,
               ]
             : []),
         ...[...S.wsOrigins].map(
@@ -559,8 +558,7 @@ function pageWorkspace(q) {
         appBar('workspace') +
         `<main class="page wide">
         <div class="ph">
-            <div style="flex:1"><div class="eyebrow">Local workspace</div><h1>Workspace</h1>
-            <p>Projects you copied from <a class="lnk" href="#/examples">Examples</a> or started blank. They are stored in this browser.</p></div>
+            <div style="flex:1"><div class="eyebrow">Local workspace</div><h1>Workspace</h1></div>
             <button class="btn primary" data-act="new-project">${ic('plus')}New project</button>
         </div>
         <div class="exlay">
@@ -568,32 +566,12 @@ function pageWorkspace(q) {
                 <div class="fg"><div class="eyebrow">Source</div>
                     ${[
                         ['all', 'All projects', 'db'],
-                        ['ex', 'From examples', 'library'],
-                        ['own', 'Own projects', 'doc'],
+                        ['ex', 'Example Projects', 'library'],
+                        ['own', 'My Projects', 'doc'],
                     ]
                         .map(
                             ([k, l, i]) =>
                                 `<a class="${S.wsSource === k ? 'on' : ''}" href="#/workspace" data-act="wssrc" data-k="${k}">${ic(i)}${l}<span>${D.projects.filter((p) => bySource(p, k)).length}</span></a>`,
-                        )
-                        .join('')}
-                </div>
-                <div class="fg"><div class="eyebrow">Example</div>
-                    ${Object.entries(origins)
-                        .map(
-                            ([o, n]) =>
-                                `<label><input type="checkbox" data-act="wsorigin" data-o="${o}" ${S.wsOrigins.has(o) ? 'checked' : ''}/><code>${o}</code><span>${n}</span></label>`,
-                        )
-                        .join('')}
-                </div>
-                <div class="fg"><div class="eyebrow">Version</div>
-                    ${[
-                        ['all', 'Any'],
-                        ['update', `Update available`],
-                        ['current', 'Up to date'],
-                    ]
-                        .map(
-                            ([k, l]) =>
-                                `<label><input type="radio" name="wsst" data-act="wsstatus" data-k="${k}" ${S.wsStatus === k ? 'checked' : ''}/>${l}${k === 'update' ? `<span>${nUpdate}</span>` : ''}</label>`,
                         )
                         .join('')}
                 </div>
@@ -943,7 +921,7 @@ function pageDesign() {
             <tr><td><b>Home</b></td><td>700px column, cramped cards</td><td>Short hero with search and two actions, Continue, Featured, Industries, New and updated.</td></tr>
             <tr><td><b>Examples</b></td><td>Tabs + facets row, 3 action cells per card</td><td>Facet sidebar (industry, features, workspace), cards or list, one action on hover, the card opens details. No levels.</td></tr>
             <tr><td><b>Details</b></td><td>Action cells row, metadata table</td><td>Header with version + actions, copies notice, README + facts sidebar, related.</td></tr>
-            <tr><td><b>Workspace</b></td><td>Cards, yellow banner, “Open” row</td><td>The Examples page layout: facet sidebar (source, example, version, storage), cards or list, the card opens the project, ⋮ menu. Storage meter with a calm “Not persistent” badge that explains itself.</td></tr>
+            <tr><td><b>Workspace</b></td><td>Cards, yellow banner, “Open” row</td><td>The Examples page layout: filter sidebar (All / My Projects / Example Projects, storage), cards or list, the card opens the project, ⋮ menu. Storage meter with a calm “Not persistent” badge that explains itself.</td></tr>
             <tr><td><b>Project home</b></td><td>README card + cards on the canvas</td><td>Title, origin, README excerpt, Entry points (service signatures), Workbooks, side panel with Model counts, Tests, Origin. “Overview” label on the Flow tab at the root.</td></tr>
         </tbody></table>
     </main>`
@@ -971,7 +949,7 @@ const NOTES = {
     ],
     workspace: [
         'Same page as Examples: header, facet sidebar, search + sort + cards/list, result line with removable chips.',
-        'Facets: Source (all / from examples / own), Example (which example a copy comes from), Version (update available / up to date).',
+        'Filter: All projects / My Projects / Example Projects.',
         'Card = link to the project, same card as an example: industry eyebrow, update badge, name, description, the features of its example; footer has the source coordinate, workbooks, saved time and ⋮ (Open, Rename, Duplicate, View original, Delete).',
         'Storage sits at the bottom of the sidebar; it opens “Projects live only in this browser.” with one action.',
     ],
