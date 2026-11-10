@@ -84,53 +84,262 @@ flowchart TB
   Undo -->|"returns a regression report"| Report
 ```
 
-### Structural Diagram
+### Component architecture
+
+The `webmcp` component has five layers and one composition root. Each layer has one responsibility.
+
+No import cycle exists between the layers. A layer imports only the layers that its row of the import table names.
 
 ```mermaid
 flowchart TB
-  subgraph browser["Browser"]
-    Agent["Companion agent<br/>browser agent or extension"]
-    MC["document.modelContext"]
+  Browser["document.modelContext"]
+
+  subgraph webmcp["src/components/webmcp"]
+    Root["registerProjectTools<br/>composition root"]
+    subgraph platform["platform/"]
+      Registry["ToolRegistry<br/>register, unregister, ToolQueue"]
+    end
+    subgraph tools["tools/"]
+      Defs["14 ToolDefinition objects"]
+    end
+    subgraph protocol["protocol/"]
+      Proto["ToolDefinition type, JSON Schemas,<br/>output budget, metadata limits"]
+    end
+    subgraph project["project/"]
+      Changes["ProjectChangeService<br/>the only write path"]
+      Log["AgentActivityLog"]
+      Regression["RegressionMonitor"]
+      Inspector["ProjectInspector"]
+      Guide["LanguageGuide"]
+    end
+    subgraph core["core/"]
+      Result["ToolResult, ToolError,<br/>path validation, PortableError mapping"]
+    end
   end
 
-  subgraph host["Host page: ModelerHost"]
-    Reg["registerProjectTools<br/>once per open project"]
-    Nav["ProjectToolsNavigation<br/>focus and open, from host routes"]
-  end
+  Session["ProjectSession"]
+  TestsInternal["tests-manager/internal.ts"]
+  Shell["Shell<br/>ShellAgentActivity prop"]
 
-  subgraph webmcp["webmcp component"]
-    Tools["14 tool definitions"]
-    Queue["ToolQueue<br/>one tool call at a time"]
-    Guard["Input validation, result envelope,<br/>output budget"]
-    Reg2["RegressionMonitor<br/>runs every test case, keeps the baseline"]
-    Log["AgentActivityLog<br/>changes and inverse operations"]
-    Guide["Language guide topics"]
-  end
-
-  subgraph session["project-session"]
-    PS["ProjectSession<br/>transaction"]
-    Eng["ProjectEngine"]
-    Stores["documentation, tests, readme stores"]
-  end
-
-  Shell["Shell<br/>agent activity toast with Undo"]
-
-  Agent -->|"calls tools"| MC
-  MC -->|"execute"| Queue
-  Queue -->|"runs"| Tools
-  Reg -->|"registerTool"| MC
-  Reg -->|"creates"| Queue
-  Tools -->|"validate and wrap"| Guard
-  Tools -->|"commands, transaction"| PS
-  PS -->|"setCode, rename, remove, link"| Eng
-  PS -->|"slice writes"| Stores
-  Tools -->|"run after each write"| Reg2
-  Reg2 -->|"execute through TestRunner"| Eng
-  Tools -->|"records each write"| Log
-  Tools -->|"focus, open"| Nav
-  Tools -->|"reads topics"| Guide
-  Shell -->|"subscribes, undo"| Log
+  Root -->|"creates"| Registry
+  Root -->|"creates"| Changes
+  Root -->|"passes the tool list"| Registry
+  Registry -->|"registerTool, signal"| Browser
+  Registry -->|"run(input, context)"| Defs
+  Defs -->|"uses"| Proto
+  Defs -->|"calls one method"| Changes
+  Defs -->|"calls one method"| Inspector
+  Defs -->|"calls"| Guide
+  Changes -->|"records"| Log
+  Changes -->|"runAll after a change"| Regression
+  Changes -->|"transaction, writes"| Session
+  Inspector -->|"reads"| Session
+  Regression -->|"createTestRunner"| TestsInternal
+  Shell -.->|"undo, subscribe"| Log
+  Proto -->|"uses"| Result
+  Changes -->|"uses"| Result
 ```
+
+| Layer       | Folder      | Responsibility                                                                       | Knows WebMCP | Knows `ProjectSession` |
+| ----------- | ----------- | ------------------------------------------------------------------------------------ | ------------ | ---------------------- |
+| Core        | `core/`     | Transport-neutral result envelope, error codes, path validation, `PortableError` map | No           | No                     |
+| Project     | `project/`  | The project use cases: changes, undo, regression runs, inspection, language guide    | No           | Yes                    |
+| Protocol    | `protocol/` | The tool contract: `ToolDefinition`, JSON Schema fragments, output budget, limits    | Types only   | No                     |
+| Tools       | `tools/`    | One `ToolDefinition` for each tool: name, description, schemas, a call to `project/` | Types only   | No                     |
+| Platform    | `platform/` | The WebMCP adapter: feature detection, registration, abort, `ToolQueue`              | Yes          | No                     |
+| Composition | root files  | `registerProjectTools` builds the services and the tool list and registers them      | Yes          | Yes                    |
+
+Each layer imports only the layers in its row:
+
+| Layer       | May import                                                                                                            | MUST NOT import                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `core/`     | `@edgerules/portable` types, `#lib`                                                                                   | Every other `webmcp` folder, every other component    |
+| `project/`  | `core/`, `project-session`, `project-explorer/internal.ts`, `tests-manager/internal.ts`, `test-cases-service`, `#lib` | `protocol/`, `tools/`, `platform/`                    |
+| `protocol/` | `core/`                                                                                                               | `project/`, `tools/`, `platform/`, other components   |
+| `tools/`    | `core/`, `protocol/`, `project/` types and services                                                                   | `platform/`, `@edgerules/*`, `project-session` values |
+| `platform/` | `core/`, `protocol/`                                                                                                  | `project/`, `tools/`, other components                |
+
+These invariants hold:
+
+- `ProjectChangeService` is the only module that calls `session.transaction`, `session.execute` or an engine write.
+- `RegressionMonitor` is the only module that runs test cases. `ProjectChangeService` calls it after each change.
+- `platform/` is the only folder that touches `document.modelContext`.
+- A tool validates its input, calls one `project/` method and returns its `ToolResult`. A tool never calls another tool.
+- `project/` has no WebMCP type. Another agent front end, for example an in-app chat, MAY reuse it.
+- The Shell does not import `webmcp`. It declares the structural type `ShellAgentActivity`, and `AgentActivityLog`
+  satisfies it.
+
+The internal contracts between the layers:
+
+```typescript
+// protocol/toolDefinition.ts: one tool, without any WebMCP call.
+interface ToolDefinition<I extends object, O extends object> {
+  name: string;
+  title: string;
+  description: string;
+  inputSchema: object;
+  outputSchema: object;
+  annotations: {readOnlyHint?: boolean; untrustedContentHint?: boolean; consequentialHint?: boolean};
+  availability: 'always' | 'write' | 'navigation' | 'save'; // the registry registers it from the options
+  run(input: I, context: ProjectToolsContext, signal: AbortSignal): Promise<ToolResult<O>>; // never rejects
+}
+
+// project/projectToolsContext.ts: everything a tool can reach.
+interface ProjectToolsContext {
+  changes: ProjectChangeService;
+  inspector: ProjectInspector;
+  regression: RegressionMonitor;
+  guide: LanguageGuide;
+  host: ProjectHostActions; // navigation and save, from the options
+}
+
+// project/changes/projectChangeService.ts: apply, record the inverse operations, run the regression.
+interface ProjectChangeService {
+  editModel(input: EditModelInput, signal: AbortSignal): Promise<ToolResult<ChangeResult>>;
+  editTests(input: EditTestsInput, signal: AbortSignal): Promise<ToolResult<TestsChangeResult>>;
+  setDocumentation(input: SetDocumentationInput): ToolResult<DocumentationChangeResult>;
+  undo(changeId: string, signal: AbortSignal): Promise<ToolResult<UndoResult>>;
+  readonly activity: AgentActivityLog;
+}
+
+// project/changes/operations/*.ts: one applier for each operation family.
+interface OperationApplier<Op> {
+  apply(operation: Op): AppliedOperation; // runs inside the transaction of `ProjectChangeService`; throws to roll back
+}
+
+interface AppliedOperation {
+  target: SourcePath; // the undo target; a test case as `<subject>#<caseId>`
+  stateAfter: unknown; // the target state that a later undo compares with
+  inverse: () => AppliedOperation; // applies the inverse operation and returns its own record
+  changed: SourcePath[]; // the target, and the paths that a rename rewrote
+}
+
+// project/regression/regressionMonitor.ts
+interface RegressionMonitor {
+  runAll(signal: AbortSignal): Promise<RegressionReport>; // every subject with cases; replaces the baseline
+  runSubject(subject: TestSubject, signal: AbortSignal): Promise<RegressionReport>; // replaces its baseline entries
+  lastTotals(): {passed: number; failed: number; ranAt?: number}; // for `get-project-overview`
+}
+
+// project/inspection/projectInspector.ts: read-only use cases.
+interface ProjectInspector {
+  overview(): ProjectOverview;
+  outline(input: ListModelEntriesInput): ToolResult<ModelEntriesPage>;
+  source(input: ReadSourceInput): ToolResult<SourcePage>;
+  search(input: SearchModelInput): ToolResult<SearchResult>;
+  testSuite(input: ListTestsInput): ToolResult<TestSuiteView>;
+  evaluate(input: EvaluateModelInput, signal: AbortSignal): Promise<ToolResult<EvaluationResult>>;
+}
+
+// project/projectHostActions.ts: the host capabilities, absent when the host does not give them.
+interface ProjectHostActions {
+  navigation?: ProjectToolsNavigation;
+  save?: (baseVersion?: number) => Promise<ToolResult<SaveResultView>>; // only with `allowSave`
+}
+
+// src/components/shell/shell-types.ts: the Shell side of the activity log.
+interface ShellAgentActivity {
+  list(): readonly {changeId: string; summary: string; targets: string[]; regression?: {failed: number}}[];
+  canUndo(changeId: string): boolean;
+  undo(changeId: string): Promise<unknown>;
+  subscribe(listener: () => void): () => void;
+}
+```
+
+### Component folder layout
+
+```text
+src/components/webmcp/
+├── index.ts                         # npm API: registerProjectTools, getModelContext, public types
+├── internal.ts                      # package-internal API; empty until another component needs one
+├── registerProjectTools.ts          # composition root: services, tool list, registry, handle
+├── webmcp-types.ts                  # ProjectToolsOptions, ProjectToolsHandle, ProjectToolsNavigation
+├── core/
+│   ├── toolResult.ts                # ToolResult, ToolError, ToolErrorCode, ok(), fail()
+│   ├── paths.ts                     # ModelPath, SourcePath and TestSubject validation
+│   ├── portableErrors.ts            # PortableError to ToolError, ModelDiagnostic line, column, excerpt
+│   └── limits.ts                    # the validation limits table
+├── protocol/
+│   ├── toolDefinition.ts            # ToolDefinition, availability
+│   ├── schemas.ts                   # shared JSON Schema fragments: paths, operations, test values
+│   ├── outputBudget.ts              # fitOutput and the character budgets
+│   └── toolMetadata.ts              # name, description and parameter length checks
+├── project/
+│   ├── projectToolsContext.ts       # ProjectToolsContext and its factory
+│   ├── projectHostActions.ts        # navigation and save adapters
+│   ├── changes/
+│   │   ├── projectChangeService.ts  # version check, transaction, activity record, regression run
+│   │   ├── agentActivityLog.ts      # AgentChange list, canUndo, undo
+│   │   ├── changeSummary.ts         # the summary text of a change
+│   │   └── operations/
+│   │       ├── appliedOperation.ts  # AppliedOperation, OperationApplier
+│   │       ├── modelOperations.ts   # set, rename, remove and their inverses
+│   │       ├── testOperations.ts    # add, update, remove case and their inverses
+│   │       └── documentationOperations.ts
+│   ├── regression/
+│   │   ├── regressionMonitor.ts     # runAll, runSubject, baseline
+│   │   └── regressionReport.ts      # RegressionReport, CaseFailure, classification and trimming
+│   ├── inspection/
+│   │   ├── projectInspector.ts      # the ProjectInspector facade
+│   │   ├── projectOverview.ts
+│   │   ├── modelOutline.ts          # buildSections to OutlineEntry pages
+│   │   ├── sourceReader.ts          # getCode and README pages
+│   │   ├── modelSearch.ts
+│   │   ├── testSuiteView.ts
+│   │   └── modelEvaluator.ts
+│   └── guide/
+│       ├── languageGuide.ts         # topics, sections, pages
+│       ├── topics.ts                # GuideTopic to file map
+│       ├── guide-source.json        # engine commit and file list of the copy
+│       └── reference/               # copied *.md files of ../edgerules/docs/reference/
+├── tools/
+│   ├── toolCatalog.ts               # every ToolDefinition in catalog order
+│   ├── change/
+│   │   ├── editModel.ts
+│   │   ├── editTests.ts
+│   │   ├── setDocumentation.ts
+│   │   └── undoAgentChange.ts
+│   ├── feedback/
+│   │   └── runTests.ts
+│   ├── orient/
+│   │   ├── getProjectOverview.ts
+│   │   └── getLanguageGuide.ts
+│   ├── inspect/
+│   │   ├── listModelEntries.ts
+│   │   ├── readSource.ts
+│   │   ├── searchModel.ts
+│   │   ├── listTests.ts
+│   │   └── evaluateModel.ts
+│   └── host/
+│       ├── openInEditor.ts
+│       └── saveProject.ts
+├── platform/
+│   ├── modelContext.ts              # ModelContextLike, ModelContextToolLike, getModelContext
+│   ├── toolRegistry.ts              # AbortController, availability filter, re-registration
+│   └── toolQueue.ts                 # one tool call at a time
+├── testing/
+│   ├── recordingModelContext.ts     # a ModelContextLike that records tools and runs execute
+│   └── toolsFixture.ts              # a real @edgerules/node session with registered tools
+└── __tests__/
+    ├── core/                        # toolResult, paths, portableErrors
+    ├── project/                     # changes, undo, regression, inspection, guide
+    ├── tools/                       # one test file for each tool family, toolMetadata.test.ts
+    ├── platform/                    # registry, queue, dispose
+    └── scenarios/                   # change-and-react scenario fixtures and scenarios.test.ts
+
+stories/components/webmcp/
+└── ToolInspector.stories.tsx        # lists the tools and runs one with a JSON input
+
+e2e/webmcp/
+└── webmcp.spec.ts                   # Playwright page.webmcp flows
+
+scripts/
+└── sync-language-guide.mjs          # copies ../edgerules/docs/reference/ into project/guide/reference/
+```
+
+- [ ] Add the dependency-cruiser rules `webmcp-layer-core`, `webmcp-layer-project`, `webmcp-layer-protocol`,
+      `webmcp-layer-tools` and `webmcp-layer-platform` from the import table
+- [ ] Add `ShellAgentActivity` to `src/components/shell/shell-types.ts`
 
 ### Behavioral Diagram
 
@@ -175,10 +384,10 @@ sequenceDiagram
 - The host calls `registerProjectTools` after it opens a `ProjectSession`. It calls `dispose` before it closes the
   session.
 - `registerProjectTools` does nothing and returns an inactive handle when `modelContext` is `undefined`.
-- The handle registers every tool with one `AbortController`. `dispose` aborts it, so every tool unregisters.
+- `ToolRegistry` registers every tool with one `AbortController`. `dispose` aborts it, so every tool unregisters.
+- `ToolRegistry` selects the tools by `availability`: `write` needs not `readOnly`, `navigation` needs `navigation`, and
+  `save` needs `allowSave` and not `readOnly`.
 - `registerProjectTools` starts the first `RegressionMonitor.runAll()`. Its result is the first baseline.
-- With `readOnly: true`, only the tools with `readOnlyHint` and `open-in-editor` register.
-- `open-in-editor` registers only when `navigation` is set. `save-project` registers only when `allowSave` is `true`.
 - `setReadOnly` and `setAllowSave` re-register the affected tools. The browser fires `toolchange`.
 - The host MUST NOT register tools from editor components. One registration point exists per open project.
 - `ToolQueue` runs one tool call at a time, in arrival order. A write and its regression run end before the next call
@@ -258,7 +467,7 @@ Each tool follows these rules. The rules come from the Chrome WebMCP best practi
 
 ### Result envelope
 
-Every tool returns `ToolResult<T>`. The `outputSchema` of each tool describes it.
+Every tool returns `ToolResult<T>` from `core/toolResult.ts`. The `outputSchema` of each tool describes it.
 
 ```typescript
 type ToolResult<T> = ({ok: true} & T) | {ok: false; error: ToolError};
@@ -285,7 +494,8 @@ type ToolErrorCode =
   | 'SolverRequired' // the target calls an external function that has no resolver
   | 'UndoBlocked' // a target of the agent change changed later; `conflicts` names the targets
   | 'SaveConflict' // the repository has a newer revision
-  | 'Aborted'; // the agent aborted the call before its commit point
+  | 'Aborted' // the agent aborted the call before its commit point
+  | 'InternalError'; // an unexpected exception; `ToolRegistry` catches it, so `execute` never rejects
 
 interface ModelDiagnostic {
   source: 'parser' | 'linker';
@@ -889,7 +1099,7 @@ interface AgentActivityLog {
 }
 ```
 
-- The Shell gets the new prop `agentActivity?: AgentActivityLog`.
+- The Shell gets the new prop `agentActivity?: ShellAgentActivity`. The host passes `ProjectToolsHandle.activity`.
 - After each new agent change, the Shell shows a toast with `src/ui/Toast.tsx`. It shows the summary, the regression
   totals, "Undo" and "Show".
 - The toast shows "Undo" only while `canUndo` is true. "Show" opens the first target in its default view.
@@ -947,7 +1157,9 @@ stateDiagram-v2
 
 - New component `webmcp`, subpath export `edgerules-react/webmcp`. Allowlist: `project-session`, `project-explorer`,
   `test-cases-service`, `tests-manager`.
-- `shell` allowlist adds `webmcp` (the `AgentActivityLog` type).
+- `shell` keeps its allowlist. It declares `ShellAgentActivity`, and the host passes the activity log in.
+- `.dependency-cruiser.cjs` gets the five `webmcp-layer-*` rules of the import table in
+  [Component architecture](#component-architecture).
 - `project-explorer/internal.ts` already exports `buildSections`.
 - `tests-manager/internal.ts` (new) exports `deriveRows`, `listTestSubjects`, `createTestRunner`, `caseFailures`,
   `matches` and `formatValue`.
@@ -1009,8 +1221,10 @@ stateDiagram-v2
 
 - [ ] Ensure project compiles and existing tests are passing
 - [ ] Add the `webmcp` component, subpath export and dependency-cruiser allowlist
-- [ ] Implement `ModelContextLike`, `getModelContext`, `registerProjectTools`, the handle and `ToolQueue`
-- [ ] Implement `ToolResult`, the `PortableError` mapping, input validation and `fitOutput`
+- [ ] Create the folder layout of [Component folder layout](#component-folder-layout)
+- [ ] Add the five `webmcp-layer-*` dependency-cruiser rules
+- [ ] Implement `core/`, `protocol/` and `platform/`
+- [ ] Implement `registerProjectTools`, the handle and `ProjectToolsContext`
 - [ ] Add `tests-manager/internal.ts` and the `AssertionFailure` extraction
 - [ ] Implement `RegressionMonitor` and `run-tests`
 - [ ] Add tests for the code of this phase, with a real `@edgerules/node` session and a recording `ModelContextLike`
@@ -1022,7 +1236,9 @@ Acceptance criteria:
 - [ ] `regressionMonitor.test.ts` shows `newlyPassing` after the fix, and `stillFailing` for an unrelated failing case
 - [ ] `registerProjectTools.test.ts` shows that `dispose` aborts the signal of every tool
 - [ ] `toolQueue.test.ts` shows that a second call starts after the first call and its regression run end
-- [ ] `npm run depcruise` passes
+- [ ] `npm run depcruise` passes, and a test import from `platform/` to `project/` fails the `webmcp-layer-platform`
+      rule
+- [ ] `toolRegistry.test.ts` shows that a tool that throws returns `InternalError` and does not reject
 
 **Phase 2: change tools and undo**
 
@@ -1063,7 +1279,7 @@ Acceptance criteria:
 **Phase 4: host and Shell integration**
 
 - [ ] Implement `open-in-editor` and `save-project`
-- [ ] Add the `agentActivity` prop, the toast and the working indicator to the Shell
+- [ ] Add `ShellAgentActivity`, the `agentActivity` prop, the toast and the working indicator to the Shell
 - [ ] Add the Code view conflict state and bar
 - [ ] Register the tools in `ModelerHost` with a `ProjectToolsNavigation` from the routes
 - [ ] Add the Storybook story `WebMCP/Tool inspector`: it lists the tools and runs one with a JSON input
