@@ -1031,6 +1031,7 @@ span.overviewOrigin {
 /* The Preview view of a document: the rendered Markdown on a page, in a frame like the other views. */
 .document {
   height: 100%;
+  background: var(--mantine-color-body);
   overflow: auto;
   border: 1px solid var(--sh-border);
 }

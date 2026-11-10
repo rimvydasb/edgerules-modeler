@@ -5,6 +5,7 @@
  * Every command lives inside the grid itself — there is no toolbar above it.
  */
 .root {
+  background: var(--mantine-color-body);
   --tm-muted: var(--mantine-color-default-hover);
   min-width: 0;
 }

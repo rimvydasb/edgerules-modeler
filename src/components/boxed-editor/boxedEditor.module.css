@@ -16,6 +16,7 @@
  */
 .root {
   --bx-border: var(--mantine-color-default-border);
+  background: var(--mantine-color-body);
   --bx-muted: var(--mantine-color-default-hover);
   min-width: 0;
 }
