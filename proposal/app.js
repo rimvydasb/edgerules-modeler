@@ -108,9 +108,12 @@ const S = {
     exFeats: new Set(),
     exStatus: 'all',
     exSort: 'Relevance',
-    wsView: 'list',
+    wsView: 'grid',
     wsSource: 'all',
     wsQuery: '',
+    wsOrigins: new Set(),
+    wsStatus: 'all',
+    wsSort: 'Last saved',
     explorerOpen: true,
     openPid: null, // the project open as a tab in the app bar
     notes: false,
@@ -489,52 +492,135 @@ function pageDetails(industry, coord) {
     );
 }
 
+/* Workspace — the same page as Examples: header, facet sidebar, toolbar, result line, cards or list. */
+const originId = (p) => (p.origin ? p.origin.split('@')[0] : null);
+function wsCard(p) {
+    const os = originStatus(p);
+    const e = originId(p) && ex(originId(p));
+    const m = D.models[p.model];
+    const tags = e
+        ? e.feats
+              .slice(0, 3)
+              .map((f) => `<span class="tag">${f}</span>`)
+              .join('') + (e.feats.length > 3 ? `<span class="tag">+${e.feats.length - 3}</span>` : '')
+        : '<span class="tag">blank</span>';
+    return `<a class="card link excard" href="#/project/${p.pid}">
+        <div class="cb">
+            <div class="row1"><span class="eyebrow">${e ? ind(e.ind).title : 'Own project'}</span>${os && os.update ? `<span class="badge accent" title="A newer version of the example exists">${ic('up')}Update ${os.update}</span>` : ''}</div>
+            <h3>${esc(p.name)}</h3>
+            <p class="clamp">${esc(p.desc) || '<span class="muted">No description</span>'}</p>
+            <div class="tags" style="margin-top:auto;padding-top:6px">${tags}</div>
+        </div>
+        <div class="cf"><span class="saved">${ic('clock')}${esc(p.saved)}</span><span>·</span><span>${m.workbooks.length} workbook${m.workbooks.length === 1 ? '' : 's'}</span><span class="sp"></span><button class="iconbtn sm" data-act="rowmenu" data-pid="${p.pid}" title="More">${ic('dots')}</button></div>
+    </a>`;
+}
+function wsRow(p) {
+    const os = originStatus(p);
+    const e = originId(p) && ex(originId(p));
+    return `<tr data-href="#/project/${p.pid}">
+        <td><div style="font-weight:600">${esc(p.name)}</div><div class="muted ell" style="font-size:13px;max-width:420px">${esc(p.desc) || '—'}</div></td>
+        <td class="t2" style="font-size:13px">${e ? ind(e.ind).title : 'Own project'}</td>
+        <td>${p.origin ? `<span class="tag">${esc(p.origin)}</span>` : ''}</td>
+        <td>${os && os.update ? `<span class="badge accent">${ic('up')}${os.update}</span>` : ''}</td>
+        <td class="num">${esc(p.saved)}</td>
+        <td style="width:48px;text-align:right"><button class="iconbtn" data-act="rowmenu" data-pid="${p.pid}">${ic('dots')}</button></td>
+    </tr>`;
+}
 function pageWorkspace(q) {
     const query = (S.wsQuery || q.q || '').toLowerCase();
-    let list = D.projects.filter((p) => S.wsSource === 'all' || (S.wsSource === 'ex' ? p.origin : !p.origin));
+    const bySource = (p, k) => k === 'all' || (k === 'ex' ? !!p.origin : !p.origin);
+    let list = D.projects.filter((p) => bySource(p, S.wsSource));
     if (query) list = list.filter((p) => [p.name, p.desc, p.origin].join(' ').toLowerCase().includes(query));
-    const rows = list
-        .map((p) => {
-            const os = originStatus(p);
-            return `<tr data-href="#/project/${p.pid}">
-            <td style="width:44px;padding-right:0">${projMark(p)}</td>
-            <td><div style="font-weight:600">${esc(p.name)}</div><div class="muted ell" style="font-size:13px;max-width:420px">${esc(p.desc) || '—'}</div></td>
-            <td>${p.origin ? `<span class="tag">${esc(p.origin)}</span>` : `<span class="muted" style="font-size:13px">Own project</span>`} ${os && os.update ? `<span class="badge accent" title="A newer version of the example exists">${ic('up')}${os.update}</span>` : ''}</td>
-            <td class="num">${esc(p.saved)}</td>
-            <td style="width:48px;text-align:right"><button class="iconbtn" data-act="rowmenu" data-pid="${p.pid}">${ic('dots')}</button></td>
-        </tr>`;
-        })
-        .join('');
+    if (S.wsOrigins.size) list = list.filter((p) => S.wsOrigins.has(originId(p)));
+    if (S.wsStatus === 'update') list = list.filter((p) => originStatus(p)?.update);
+    if (S.wsStatus === 'current') list = list.filter((p) => p.origin && !originStatus(p).update);
+    if (S.wsSort === 'Name') list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+
+    const origins = {};
+    D.projects.filter((p) => p.origin).forEach((p) => (origins[originId(p)] = (origins[originId(p)] || 0) + 1));
+    const nUpdate = D.projects.filter((p) => originStatus(p)?.update).length;
+    const chips = [
+        ...(S.wsSource !== 'all'
+            ? [
+                  `<span class="badge neutral">${S.wsSource === 'ex' ? 'From examples' : 'Own projects'}<button data-act="wssrc" data-k="all">${ic('x')}</button></span>`,
+              ]
+            : []),
+        ...[...S.wsOrigins].map(
+            (o) =>
+                `<span class="badge neutral mono">${o}<button data-act="wsorigin" data-o="${o}">${ic('x')}</button></span>`,
+        ),
+        ...(S.wsStatus !== 'all'
+            ? [
+                  `<span class="badge neutral">${S.wsStatus === 'update' ? 'Update available' : 'Up to date'}<button data-act="wsstatus" data-k="all">${ic('x')}</button></span>`,
+              ]
+            : []),
+    ];
     return (
         appBar('workspace') +
         `<main class="page wide">
         <div class="ph">
-            <div style="flex:1"><div class="eyebrow">Local workspace</div><h1>Workspace</h1><p>${D.projects.length} projects stored in this browser.</p></div>
-            <button class="storage" data-act="storage">${ic('db')}<span class="mono">150 KB</span><span class="meter"><i style="width:4%"></i></span><span class="mono muted">10 GB</span><span class="badge warn"><span class="dot"></span>Not persistent</span></button>
+            <div style="flex:1"><div class="eyebrow">Local workspace</div><h1>Workspace</h1>
+            <p>Projects you copied from <a class="lnk" href="#/examples">Examples</a> or started blank. They are stored in this browser.</p></div>
             <button class="btn primary" data-act="new-project">${ic('plus')}New project</button>
         </div>
-        <div class="toolbar">
-            <label class="input" style="flex:1">${ic('search')}<input id="wsq" placeholder="Search projects" value="${esc(S.wsQuery || q.q || '')}"/></label>
-            <div class="toggle">${[
-                ['all', 'All'],
-                ['ex', 'From examples'],
-                ['own', 'Own'],
-            ]
-                .map(
-                    ([k, l]) =>
-                        `<button class="${S.wsSource === k ? 'on' : ''}" data-act="wssrc" data-k="${k}">${l}</button>`,
-                )
-                .join('')}</div>
-            <button class="select">Sort <b>Last saved</b>${ic('chev')}</button>
-            <div class="toggle"><button class="${S.wsView === 'list' ? 'on' : ''}" data-act="wsview" data-v="list">${ic('list')}</button><button class="${S.wsView === 'grid' ? 'on' : ''}" data-act="wsview" data-v="grid">${ic('grid')}</button></div>
+        <div class="exlay">
+            <aside class="facets">
+                <div class="fg"><div class="eyebrow">Source</div>
+                    ${[
+                        ['all', 'All projects', 'db'],
+                        ['ex', 'From examples', 'library'],
+                        ['own', 'Own projects', 'doc'],
+                    ]
+                        .map(
+                            ([k, l, i]) =>
+                                `<a class="${S.wsSource === k ? 'on' : ''}" href="#/workspace" data-act="wssrc" data-k="${k}">${ic(i)}${l}<span>${D.projects.filter((p) => bySource(p, k)).length}</span></a>`,
+                        )
+                        .join('')}
+                </div>
+                <div class="fg"><div class="eyebrow">Example</div>
+                    ${Object.entries(origins)
+                        .map(
+                            ([o, n]) =>
+                                `<label><input type="checkbox" data-act="wsorigin" data-o="${o}" ${S.wsOrigins.has(o) ? 'checked' : ''}/><code>${o}</code><span>${n}</span></label>`,
+                        )
+                        .join('')}
+                </div>
+                <div class="fg"><div class="eyebrow">Version</div>
+                    ${[
+                        ['all', 'Any'],
+                        ['update', `Update available`],
+                        ['current', 'Up to date'],
+                    ]
+                        .map(
+                            ([k, l]) =>
+                                `<label><input type="radio" name="wsst" data-act="wsstatus" data-k="${k}" ${S.wsStatus === k ? 'checked' : ''}/>${l}${k === 'update' ? `<span>${nUpdate}</span>` : ''}</label>`,
+                        )
+                        .join('')}
+                </div>
+                <div class="fg"><div class="eyebrow">Storage</div>
+                    <button class="storage-f" data-act="storage">
+                        <span class="sf-top">${ic('db')}<span class="mono">150 KB</span><span class="mono muted">of 10 GB</span></span>
+                        <span class="meter"><i style="width:4%"></i></span>
+                        <span class="badge warn"><span class="dot"></span>Not persistent</span>
+                    </button>
+                </div>
+            </aside>
+            <section>
+                <div class="toolbar">
+                    <label class="input" style="flex:1">${ic('search')}<input id="wsq" placeholder="Search name, description, example…" value="${esc(S.wsQuery || q.q || '')}"/><span class="kbd">/</span></label>
+                    <button class="select" data-act="wssort">Sort <b>${S.wsSort}</b>${ic('chev')}</button>
+                    <div class="toggle"><button class="${S.wsView === 'grid' ? 'on' : ''}" data-act="wsview" data-v="grid" title="Cards">${ic('grid')}</button><button class="${S.wsView === 'list' ? 'on' : ''}" data-act="wsview" data-v="list" title="List">${ic('list')}</button></div>
+                </div>
+                <div class="resline"><span>${list.length} project${list.length === 1 ? '' : 's'}</span>${chips.join('')}</div>
+                ${
+                    !list.length
+                        ? `<div class="empty"><img class="sway" src="assets/sodas.svg" alt=""/><h4>No projects match</h4><p style="margin:0 0 14px">Try fewer filters, or start a new one.</p><div style="display:flex;gap:8px;justify-content:center"><a class="btn" href="#/examples">Browse examples</a><button class="btn primary" data-act="new-project">New project</button></div></div>`
+                        : S.wsView === 'grid'
+                          ? `<div class="grid">${list.map(wsCard).join('')}</div>`
+                          : `<table class="table"><thead><tr><th>Project</th><th>Industry</th><th>Example</th><th>Version</th><th style="text-align:right">Last saved</th><th></th></tr></thead><tbody>${list.map(wsRow).join('')}</tbody></table>`
+                }
+            </section>
         </div>
-        ${
-            !list.length
-                ? `<div class="card"><div class="empty"><img class="sway" src="assets/sodas.svg" alt=""/><h4>No projects here</h4><p style="margin:0 0 14px">Start from an example or a blank page.</p><div style="display:flex;gap:8px;justify-content:center"><a class="btn" href="#/examples">Browse examples</a><button class="btn primary" data-act="new-project">New project</button></div></div></div>`
-                : S.wsView === 'list'
-                  ? `<table class="table"><thead><tr><th></th><th>Project</th><th>Source</th><th style="text-align:right">Last saved</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
-                  : `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">${list.map(projCard).join('')}</div>`
-        }
     </main>`
     );
 }
@@ -857,7 +943,7 @@ function pageDesign() {
             <tr><td><b>Home</b></td><td>700px column, cramped cards</td><td>Short hero with search and two actions, Continue, Featured, Industries, New and updated.</td></tr>
             <tr><td><b>Examples</b></td><td>Tabs + facets row, 3 action cells per card</td><td>Facet sidebar (industry, features, workspace), cards or list, one action on hover, the card opens details. No levels.</td></tr>
             <tr><td><b>Details</b></td><td>Action cells row, metadata table</td><td>Header with version + actions, copies notice, README + facts sidebar, related.</td></tr>
-            <tr><td><b>Workspace</b></td><td>Cards, yellow banner, “Open” row</td><td>Table by default (grid optional), row is the link, ⋮ menu, storage meter with a calm “Not persistent” badge that explains itself.</td></tr>
+            <tr><td><b>Workspace</b></td><td>Cards, yellow banner, “Open” row</td><td>The Examples page layout: facet sidebar (source, example, version, storage), cards or list, the card opens the project, ⋮ menu. Storage meter with a calm “Not persistent” badge that explains itself.</td></tr>
             <tr><td><b>Project home</b></td><td>README card + cards on the canvas</td><td>Title, origin, README excerpt, Entry points (service signatures), Workbooks, side panel with Model counts, Tests, Origin. “Overview” label on the Flow tab at the root.</td></tr>
         </tbody></table>
     </main>`
@@ -884,9 +970,10 @@ const NOTES = {
         'Level removed. Features link back to a filtered gallery.',
     ],
     workspace: [
-        'Table first: name, source, saved. Row opens the project; ⋮ has Open, Rename, Duplicate, View original, Delete.',
-        'Storage is a compact meter in the header; “Not persistent” opens an explanation with one action.',
-        '“Update available” sits next to the source coordinates.',
+        'Same page as Examples: header, facet sidebar, search + sort + cards/list, result line with removable chips.',
+        'Facets: Source (all / from examples / own), Example (which example a copy comes from), Version (update available / up to date).',
+        'Card = link to the project, same card as an example: industry eyebrow, update badge, name, description, the features of its example; footer has the source coordinate, workbooks, saved time and ⋮ (Open, Rename, Duplicate, View original, Delete).',
+        'Storage sits at the bottom of the sidebar; it opens “Projects live only in this browser.” with one action.',
     ],
     project: [
         'Two rows, two jobs. Row 1 is the app bar — the same on every page (Home · Examples · Workspace · open project tab · search). Row 2 is the Shell header row of the library: kind square · Project ▾ › workbook · settings · Flow / Boxed / Code / Tests · split.',
@@ -1232,8 +1319,27 @@ document.addEventListener('click', (ev) => {
                 return openPop(
                     a,
                     `<div style="padding:10px;max-width:300px;font-size:13px"><b>Projects live only in this browser.</b><p class="muted" style="margin:6px 0 10px">The browser may delete them when it runs low on space. Ask it to keep them — the browser may show a prompt.</p><div style="display:flex;justify-content:space-between;font-size:12px" class="mono muted"><span>150 KB used</span><span>10 GB available</span></div><div class="meter" style="width:100%;margin:6px 0 12px"><i style="width:4%"></i></div><button class="btn sm primary" data-act="persist">Keep my projects</button></div>`,
-                    'right',
                 );
+            case 'wsorigin':
+                S.wsOrigins.has(a.dataset.o) ? S.wsOrigins.delete(a.dataset.o) : S.wsOrigins.add(a.dataset.o);
+                return render();
+            case 'wsstatus':
+                S.wsStatus = a.dataset.k;
+                return render();
+            case 'wssort':
+                return openPop(
+                    a,
+                    ['Last saved', 'Name']
+                        .map(
+                            (s) =>
+                                `<button class="mi" data-act="setwssort" data-s="${s}">${s}${S.wsSort === s ? `<span class="r">${ic('check')}</span>` : ''}</button>`,
+                        )
+                        .join(''),
+                );
+            case 'setwssort':
+                S.wsSort = a.dataset.s;
+                S.pop = null;
+                return render();
             case 'persist':
                 closeAll();
                 return toast('Storage is now persistent');

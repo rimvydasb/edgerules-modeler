@@ -395,6 +395,68 @@
     }
 
     /* workspace */
+    .storage-f {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--r-sm);
+        background: var(--surface);
+        font-size: 12.5px;
+        color: var(--text-2);
+        cursor: pointer;
+        text-align: left;
+    }
+    .storage-f:hover {
+        border-color: var(--border-strong);
+    }
+    .storage-f .sf-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font: inherit;
+        color: inherit;
+    }
+    .storage-f .sf-top span {
+        margin: 0;
+        font-size: 12px;
+    }
+    .storage-f .meter {
+        width: 100%;
+    }
+    .fg .storage-f span {
+        margin-left: 0;
+    }
+    .excard .cf {
+        white-space: nowrap;
+    }
+    .excard .cf .saved {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .excard .cf .saved svg {
+        width: 13px;
+        height: 13px;
+    }
+    .excard .cf .iconbtn.sm {
+        width: 26px;
+        height: 26px;
+        margin: -4px -6px -4px 0;
+    }
+    .excard .cf .hov {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .excard .cf .hov svg {
+        width: 13px;
+        height: 13px;
+    }
     .storage {
         display: flex;
         align-items: center;
