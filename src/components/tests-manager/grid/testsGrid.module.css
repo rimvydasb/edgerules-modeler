@@ -27,6 +27,8 @@
   border-collapse: separate;
   border-top: 1px solid var(--grid-border);
   border-left: 1px solid var(--grid-border);
+  /* The open fill of the sheet: a page behind the grid (the dotted canvas of the Shell) never shows through a cell. */
+  background-color: var(--mantine-color-body);
 }
 
 .table th,

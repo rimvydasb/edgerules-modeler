@@ -399,7 +399,7 @@ export function Shell({
             <div className={classes.content}>
                 {explorer}
                 <div className={classes.main}>
-                    <div className={classes.body}>
+                    <div className={cx(classes.body, !(view === 'flow' && root !== '*') && classes.bodyPage)}>
                         {view === 'preview' && <DocumentPreview markdown={readme} onModelLink={openModelLink} />}
                         {view === 'code' && isDocument && (
                             <DocumentCode

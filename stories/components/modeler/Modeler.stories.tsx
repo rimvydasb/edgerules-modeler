@@ -1,6 +1,7 @@
 import type {Meta, StoryObj} from '@storybook/react-vite';
 import {expect, userEvent, within} from 'storybook/test';
 import {CLIENT_OUTREACH_PROJECT} from '../../../models/client-outreach';
+import {LOAN_REPAYMENT_PROJECT} from '../../../models/loan-repayment';
 import {ModelerApp, type ModelerRoute, type StoryWorkspace} from '../../support/ModelerApp';
 import {COPIES, openStoryWorkspace} from '../../support/workspaceStory';
 
@@ -8,6 +9,7 @@ interface ModelerArgs {
     route: ModelerRoute;
     seeded?: boolean; // the workspace holds the sample copies
     outreach?: boolean; // the workspace holds the client outreach project, which needs an optimisation solver
+    loanRepayment?: boolean; // the workspace holds the loan repayment project, whose tests all pass
     workspaceKey?: string; // a stored workspace that a reload reopens; not seeded
 }
 
@@ -28,7 +30,15 @@ const meta: Meta<ModelerArgs> = {
         async ({args}) => ({
             workspace: args.workspaceKey
                 ? await openStoryWorkspace([], `edgerules-storybook-modeler-${args.workspaceKey}`)
-                : await openStoryWorkspace(args.outreach ? [CLIENT_OUTREACH_PROJECT] : args.seeded ? COPIES : []),
+                : await openStoryWorkspace(
+                      args.outreach
+                          ? [CLIENT_OUTREACH_PROJECT]
+                          : args.loanRepayment
+                            ? [LOAN_REPAYMENT_PROJECT]
+                            : args.seeded
+                              ? COPIES
+                              : [],
+                  ),
         }),
     ],
     render: (args, {loaded}) => <ModelerApp {...(loaded.workspace as StoryWorkspace)} initialRoute={args.route} />,
@@ -88,5 +98,14 @@ export const OptimiseProjectTests: Story = {
     args: {
         route: {page: 'project', projectPath: 'client-outreach', path: 'contactPlan', view: 'tests'},
         outreach: true,
+    },
+};
+
+/** A fixture of the e2e specs: the tests of the loan repayment service, opened as the app does. Every case passes, so "Run all" shows the "All tests passed" notification. */
+export const LoanRepaymentProjectTests: Story = {
+    tags: ['fixture'],
+    args: {
+        route: {page: 'project', projectPath: 'loan-repayment', path: 'loanRepayment', view: 'tests'},
+        loanRepayment: true,
     },
 };

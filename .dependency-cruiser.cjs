@@ -216,6 +216,13 @@ module.exports = {
         'CodeEditorCell or HighlightedCode instead of using CodeMirror directly.',
     ),
     packageOwner(
+      'peer-mantine-notifications-only-in-tests-manager',
+      '@mantine/notifications/',
+      ['src/components/tests-manager/'],
+      'it is an optional peer dependency of the tests-manager subpath; importing it elsewhere makes every ' +
+        'consumer of that other subpath install it.',
+    ),
+    packageOwner(
       'dnd-kit-only-in-grid-editors',
       '@dnd-kit/',
       ['src/components/boxed-editor/', 'src/components/tests-manager/'],

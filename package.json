@@ -213,6 +213,7 @@
     "@lezer/highlight": "^1.0.0",
     "@mantine/core": "^9.0.0",
     "@mantine/hooks": "^9.0.0",
+    "@mantine/notifications": "^9.0.0",
     "@tabler/icons-react": "^3.0.0",
     "@tanstack/charts": "^1.1.0",
     "@tanstack/markdown": "^1.2.0",
@@ -256,6 +257,9 @@
     },
     "@tanstack/markdown": {
       "optional": true
+    },
+    "@mantine/notifications": {
+      "optional": true
     }
   },
   "dependencies": {
@@ -277,6 +281,7 @@
     "@lezer/highlight": "^1.2.5",
     "@mantine/core": "^9.7.3",
     "@mantine/hooks": "^9.7.3",
+    "@mantine/notifications": "^9.7.3",
     "@playwright/test": "^1.64.1",
     "@storybook/react-vite": "^10.6.3",
     "@swc/core": "^1.16.20",

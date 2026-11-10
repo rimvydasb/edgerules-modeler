@@ -56,6 +56,7 @@
   overflow: hidden;
   border-radius: 7px;
   background-color: #17191c;
+  color: #fff;
 }
 
 .mark {
@@ -271,10 +272,28 @@
   height: calc(100vh - 49px);
 }
 
+/* While a project opens, the mark hangs in the middle of the page and sways without a stop. */
 .loading {
   display: flex;
+  min-height: calc(100vh - 49px);
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 14px;
   padding: 48px;
+  color: var(--er-text-2, var(--er-text));
+  font-size: 13.5px;
+}
+
+.loading .mark {
+  opacity: 0.85;
+  animation: sway 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading .mark {
+    animation: none;
+  }
 }
 
 @media (max-width: 760px) {

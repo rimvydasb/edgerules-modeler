@@ -185,11 +185,13 @@ since they exercise built, running instances of the components rather than isola
   re-exports everything for convenience.
 - **Peer dependencies**: `react`, `react-dom`, `@mantine/core`, `@mantine/hooks` and other heavy, component-specific
   libraries (`reactflow`, `@tanstack/charts`, `@tanstack/markdown`, `@codemirror/state`/`@codemirror/view`/
-  `@codemirror/lint`, `@codemirror/lang-markdown`, `@tabler/icons-react`) are declared as `peerDependencies` (most
-  marked optional via `peerDependenciesMeta`), never bundled, so consuming apps control their own versions and bundle
-  size. Wrap the app in Mantine's `MantineProvider` and import `@mantine/core/styles.css` once; the library's own CSS
-  Modules are injected at runtime, so no stylesheet of ours needs importing. Components take `className`/`style` (not
-  `sx`) for host styling.
+  `@codemirror/lint`, `@codemirror/lang-markdown`, `@tabler/icons-react`, `@mantine/notifications`) are declared as
+  `peerDependencies` (most marked optional via `peerDependenciesMeta`), never bundled, so consuming apps control their
+  own versions and bundle size. Wrap the app in Mantine's `MantineProvider` and import `@mantine/core/styles.css` once;
+  the library's own CSS Modules are injected at runtime, so no stylesheet of ours needs importing. The Tests Manager
+  shows an "All tests passed" notification through `@mantine/notifications`: mount its `<Notifications />` inside
+  `MantineProvider` and import `@mantine/notifications/styles.css`. Components take `className`/`style` (not `sx`) for
+  host styling.
 - **Build output**: `tsdown` builds dual ESM/CJS bundles with generated `.d.ts` files, one per component entry point,
   enabling tree-shaking. `sideEffects: false` is set in `package.json` (CSS files excluded) so bundlers can drop unused
   components entirely.

@@ -413,6 +413,32 @@
   overflow: auto;
 }
 
+/*
+ * Every page except the Flow canvas sits on the dotted canvas of the Flow Editor, inset by one margin step on each
+ * side so the canvas shows around the component. The Flow view fills the body edge to edge: it is the canvas itself.
+ * Dots: the Flow Editor tokens (`--fe-canvas`, `--fe-dot`), 20px gap, 1.2px size.
+ */
+.bodyPage {
+  --sh-step: 16px; /* one margin step: two 8px grid units */
+  --sh-canvas: var(--mantine-color-gray-0);
+  --sh-dot: #ced4da;
+  padding: var(--sh-step);
+  border: 1px solid var(--sh-border);
+  background-color: var(--sh-canvas);
+  background-image: radial-gradient(circle at 1px 1px, var(--sh-dot) 0.6px, transparent 0.9px);
+  background-size: 20px 20px;
+}
+
+:global([data-mantine-color-scheme='dark']) .bodyPage {
+  --sh-canvas: var(--mantine-color-dark-8);
+  --sh-dot: #3a3a3a;
+}
+
+/* The component of a page: a card on the canvas, in the full height of the page. */
+.bodyPage > * {
+  min-height: 100%;
+}
+
 .status {
   flex: none;
   margin-top: var(--mantine-spacing-xs);
@@ -474,10 +500,9 @@
  * right line of the Project Explorer.
  */
 .workbooks {
-  height: 100%;
-  overflow: auto;
-  border: 1px solid var(--sh-border);
-  background-color: var(--er-bg);
+  min-height: 100%;
+  /* No fill and no frame of its own: the page lies on the dotted canvas of the Shell body. */
+  background-color: transparent;
   font: 14px/1.5 var(--er-sans);
 }
 

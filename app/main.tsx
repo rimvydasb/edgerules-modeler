@@ -1,7 +1,9 @@
 import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 import {StrictMode, useEffect, useState, type ReactElement} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Loader, MantineProvider} from '@mantine/core';
+import {Notifications} from '@mantine/notifications';
 import {RouterProvider} from '@tanstack/react-router';
 import {init, MutableDecisionService} from '@edgerules/web/mutable';
 import {createLocalProjectRepository, createProjectFactory} from '../src/components/project-session';
@@ -33,6 +35,7 @@ function App(): ReactElement {
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <MantineProvider>
+            <Notifications position="bottom-right" />
             <App />
         </MantineProvider>
     </StrictMode>,

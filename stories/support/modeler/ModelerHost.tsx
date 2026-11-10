@@ -11,7 +11,7 @@ import {
     type ReactElement,
     type ReactNode,
 } from 'react';
-import {Alert, Button, Loader, Modal, Text} from '@mantine/core';
+import {Alert, Button, Modal, Text} from '@mantine/core';
 import {IconDatabase, IconHome, IconLibrary, IconMoon, IconX} from '@tabler/icons-react';
 import {MutableDecisionService} from '@edgerules/web/mutable';
 import {
@@ -225,16 +225,16 @@ const TITLES: Record<ModelerRoute['page'], string> = {
     project: 'Project',
 };
 
-/** The EdgeRules mark on the dark square of the top bar: three diamonds under a hanging star. */
-function Mark(): ReactElement {
+/** The EdgeRules mark: three diamonds under a hanging star, in the current text color. */
+function Mark({size = 22}: {size?: number}): ReactElement {
     return (
-        <svg viewBox="0 0 500 500" width="22" height="22" aria-hidden="true" className={classes.mark}>
-            <g fill="#fff">
+        <svg viewBox="0 0 500 500" width={size} height={size} aria-hidden="true" className={classes.mark}>
+            <g fill="currentColor">
                 <path d="M248 128 L330 210 L248 292 L166 210 Z" />
                 <path d="M157 216 L239 298 L157 380 L75 298 Z" />
                 <path d="M343 216 L425 298 L343 380 L261 298 Z" />
             </g>
-            <g fill="none" stroke="#fff" strokeWidth="14" strokeLinecap="square">
+            <g fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="square">
                 <path d="M248 48 V116 M214 82 H282 M224 58 L272 106 M272 58 L224 106" />
                 <path d="M157 392 V442 M141 432 H173" />
                 <path d="M248 312 V372 M232 366 H264" />
@@ -522,8 +522,10 @@ export function ProjectPage({
         );
     if (!opened.session)
         return (
-            <div className={classes.loading}>
-                <Loader size="sm" aria-label="Opening project" />
+            // easter egg: while the project opens the mark sways
+            <div className={classes.loading} role="status" aria-label="Opening project">
+                <Mark size={52} />
+                <span>Opening project…</span>
             </div>
         );
 
