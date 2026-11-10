@@ -139,7 +139,7 @@ window.DATA = {
     ],
     models: {
         lo: {
-            title: 'Mortgage Origination',
+            title: 'Loan origination',
             readme: 'Scores, checks, prices and decides a joint mortgage application. Every applicant gets a scorecard grade and a policy check; the household is graded by its weaker applicant, the loan is priced by grade and loan-to-value, the payment is stress-tested, and the bank APPROVEs, REFERs or DECLINEs the application, with an offer or a counter-offer.',
             services: [
                 {
@@ -209,7 +209,7 @@ window.DATA = {
             cases: 38,
         },
         co: {
-            title: 'Client Outreach Planner',
+            title: 'Client outreach',
             readme: 'Decides whom to call, email or text in one working day for the largest expected revenue. A sales team of two workers has seven hours each to reach 100 prospects. A call takes 30 minutes, an email 15 and an SMS 5, and each convinces a different share of clients.',
             services: [
                 {
@@ -268,7 +268,7 @@ window.DATA = {
             cases: 22,
         },
         lr: {
-            title: 'Loan Repayment Planner',
+            title: 'Loan repayment',
             readme: 'Prices a loan request and returns its monthly repayment schedule: the rate comes from a decision table by amount and term, the schedule from an annuity.',
             services: [
                 {

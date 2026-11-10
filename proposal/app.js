@@ -58,6 +58,21 @@ const IC = {
     info: P('M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z|M12 11v5|M12 8h.01'),
     filter: P('M4 5h16l-6 8v6l-4-2v-4z'),
     enter: P('M20 5v6a3 3 0 0 1-3 3H5|M9 10l-4 4 4 4'),
+    split: P('M4 4h16v16H4z|M15 4v16'),
+    sitemap: P('M9 3h6v5H9z|M3 16h6v5H3z|M15 16h6v5h-6z|M6 16v-3h12v3|M12 8v5'),
+    panelOpen: P('M4 4h16v16H4z|M9 4v16|M13 10l2 2-2 2'),
+    panelClose: P('M4 4h16v16H4z|M9 4v16|M15 10l-2 2 2 2'),
+    minus: P('M5 12h14'),
+    fit: P('M4 9V4h5|M15 4h5v5|M20 15v5h-5|M9 20H4v-5'),
+    arrange: P('M4 4v16|M20 4v16|M9 8h6v8H9z'),
+    inputN: P('M10 4h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-8|M3 12h11|M11 9l3 3-3 3'),
+    outputN: P('M14 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8|M21 12H10|M13 9l-3 3 3 3'),
+    listN: P('M4 5h5v5H4z|M4 14h5v5H4z|M13 6h7|M13 9h5|M13 15h7|M13 18h5'),
+    varx: '<text x="12" y="16.5" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-style="italic" font-size="12" fill="currentColor" stroke="none">(x)</text>',
+    fxN: P('M8 20c2 0 2.6-1.6 3-4l1.6-9c.4-2.4 1-3 3.4-3|M8 9h7|M14 13l5 6|M19 13l-5 6'),
+    sqrt: P('M3 13h3l3 7 5-16h7|M14 10l5 6|M19 10l-5 6'),
+    chart: P('M4 4v16h16|M7 15l4-4 3 3 5-6'),
+    ext: P('M14 4h6v6|M20 4l-9 9|M18 14v6H4V6h6'),
 };
 const ic = (n, cls = 'i') =>
     `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || ''}</svg>`;
@@ -97,6 +112,7 @@ const S = {
     wsSource: 'all',
     wsQuery: '',
     explorerOpen: true,
+    openPid: null, // the project open as a tab in the app bar
     notes: false,
     pop: null,
     modal: null,
@@ -138,23 +154,37 @@ function go(h) {
 function logo() {
     return `<a class="logo" href="#/" title="EdgeRules"><span class="mk"><img src="assets/sodas-solid-white.svg" alt=""/></span>EdgeRules</a>`;
 }
-function libraryBar(active) {
-    const last = D.projects[0];
+/*
+ * One app bar on every page — it says where you can go, never where you are. The open project is a tab of this bar
+ * (as in the app today), so it stays one click away while you browse examples or the workspace. Where you are inside
+ * a project is the job of the Shell header row below it (unchanged library component).
+ */
+function appBar(active) {
+    const open = S.openPid && proj(S.openPid);
     return `<header class="bar">
         ${logo()}
         <nav class="nav">
-            <a href="#/" class="${active === 'home' ? 'on' : ''}"><span class="lbl">Home</span></a>
-            <a href="#/examples" class="${active === 'examples' ? 'on' : ''}"><span class="lbl">Examples</span></a>
-            <a href="#/workspace" class="${active === 'workspace' ? 'on' : ''}"><span class="lbl">Workspace</span></a>
+            <a href="#/" class="${active === 'home' ? 'on' : ''}">${ic('home')}<span class="lbl">Home</span></a>
+            <a href="#/examples" class="${active === 'examples' ? 'on' : ''}">${ic('library')}<span class="lbl">Examples</span></a>
+            <a href="#/workspace" class="${active === 'workspace' ? 'on' : ''}">${ic('db')}<span class="lbl">Workspace</span></a>
+            ${
+                open
+                    ? `<span class="nsep"></span><span class="ptab ${active === 'project' ? 'on' : ''}"><a href="#/project/${open.pid}" title="${esc(open.name)}">${projMark(open, 'xs')}<span class="lbl">${esc(open.name)}</span></a><button data-act="closeproj" title="Close project">${ic('x')}</button></span>`
+                    : ''
+            }
         </nav>
         <span class="sp"></span>
-        <button class="searchbtn" data-act="palette">${ic('search')}<span class="lbl">Search examples and projects</span><span class="k kbd">/</span></button>
-        <span class="vsep"></span>
-        <a class="btn ghost sm" href="#/project/${last.pid}" title="Continue where you left off">${ic('clock')}<span class="lbl">${esc(last.name)}</span></a>
+        <button class="searchbtn" data-act="palette">${ic('search')}<span class="lbl">Search projects and examples</span><span class="k kbd">/</span></button>
         <button class="iconbtn" data-act="theme" title="Theme">${ic('moon')}</button>
     </header>`;
 }
-function projectBar(p, root, view, isHome) {
+/* The Shell header row of the library (src/components/shell): kind square · breadcrumbs · settings · view cells ·
+ * split toggle. One project is one model with one name, so the first crumb is the project (= model) name, and it is
+ * the project menu ▾ — the separate project menu on the right and the second "model title" name are gone.
+ * The gear is the settings of the root path, as ShellSettings today: Model settings at the root, Workbook settings
+ * on a workbook. Only the Flow cell reads "Overview" at the project root. */
+function shellRow(p, root, view, isHome) {
+    const settings = root ? 'Workbook settings' : 'Model settings';
     const views = [
         ['flow', 'Flow', 'flow'],
         ['boxed', 'Boxed', 'boxed'],
@@ -162,28 +192,21 @@ function projectBar(p, root, view, isHome) {
         ['tests', 'Tests', 'tests'],
     ];
     const base = `#/project/${p.pid}${root ? '/' + root : ''}`;
-    const rootLabel = root ? D.models[p.model].workbooks.find((w) => w.id === root)?.id || root : null;
-    return `<header class="bar">
-        ${logo()}
-        <nav class="crumb">
-            <span class="sl">/</span>
-            <a href="#/workspace">Workspace</a>
-            <span class="sl">/</span>
-            <button class="proj" data-act="projmenu">${esc(p.name)} ${ic('chev')}</button>
-            ${rootLabel ? `<span class="sl">/</span><a class="cur mono" href="${base}?view=${view}">${esc(rootLabel)}</a>` : ''}
-        </nav>
-        <span class="sp"></span>
-        <nav class="seg">${views
+    const crumbs =
+        `<button class="sh-proj ${root ? '' : 'cur'}" data-act="projmenu" title="Project menu">${esc(p.name)}${ic('chev')}</button>` +
+        (root ? `${ic('chevr', 'i sh-sep')}<span class="sh-cur">${esc(root)}</span>` : '');
+    return `<div class="sh-row">
+        <a class="sh-kind" href="${base}?view=flow" title="Open in the Flow view">${ic(root ? 'book' : 'sitemap')}</a>
+        <nav class="sh-crumbs">${crumbs}</nav>
+        <button class="sh-cell sq" data-act="settings" data-root="${esc(root || '*')}" title="${settings}">${ic('gear')}</button>
+        <nav class="sh-views">${views
             .map(
                 ([v, l, i]) =>
-                    `<a class="${view === v ? 'on' : ''}" href="${base}?view=${v}">${ic(i)}${isHome && v === 'flow' ? 'Overview' : l}</a>`,
+                    `<a class="sh-cell ${view === v ? 'on' : ''}" href="${base}?view=${v}">${ic(i)}${isHome && v === 'flow' ? 'Overview' : l}</a>`,
             )
             .join('')}</nav>
-        <span class="vsep"></span>
-        <button class="iconbtn" data-act="palette" title="Search (/)">${ic('search')}</button>
-        <button class="iconbtn" title="Model settings">${ic('gear')}</button>
-        <button class="iconbtn" data-act="explorer" title="Toggle explorer">${ic('sidebar')}</button>
-    </header>`;
+        <button class="sh-cell sq" title="Split screen">${ic('split')}</button>
+    </div>`;
 }
 
 /* ───────────── shared components ───────────── */
@@ -261,7 +284,7 @@ function pageHome() {
     const featured = D.examples.filter((e) => e.featured).sort((a, b) => a.featured - b.featured);
     const newest = [...D.examples].sort((a, b) => (a.released < b.released ? 1 : -1)).slice(0, 5);
     return (
-        libraryBar('home') +
+        appBar('home') +
         `<main class="page home">
         <section class="hero">
             <div class="eyebrow">EdgeRules Modeler</div>
@@ -333,7 +356,7 @@ function pageExamples(industry, q) {
         ),
     ];
     return (
-        libraryBar('examples') +
+        appBar('examples') +
         `<main class="page wide">
         <div class="ph">
             <div><div class="eyebrow">Library · read-only</div><h1>${industry ? ind(industry).title : 'Examples'}</h1>
@@ -407,7 +430,7 @@ function pageDetails(industry, coord) {
             : `<button class="btn primary" data-act="copy-open" data-id="${e.id}">${ic('copy')}Copy and open</button><button class="btn" data-act="copy-only" data-id="${e.id}">${ic('plus')}Copy to workspace</button>`;
     const m = {'loan-origination': D.models.lo, 'client-outreach': D.models.co, 'loan-repayment': D.models.lr}[e.id];
     return (
-        libraryBar('examples') +
+        appBar('examples') +
         `<main class="page wide">
         <nav class="pcrumb"><a href="#/examples">Examples</a>${ic('chevr')}<a href="#/examples/${e.ind}">${ind(e.ind).title}</a>${ic('chevr')}<span>${esc(e.name)}</span></nav>
         <div class="dhead">
@@ -483,7 +506,7 @@ function pageWorkspace(q) {
         })
         .join('');
     return (
-        libraryBar('workspace') +
+        appBar('workspace') +
         `<main class="page wide">
         <div class="ph">
             <div style="flex:1"><div class="eyebrow">Local workspace</div><h1>Workspace</h1><p>${D.projects.length} projects stored in this browser.</p></div>
@@ -521,7 +544,11 @@ function explorer(p, root) {
     const m = D.models[p.model];
     const sec = (title, items) =>
         `<details open><summary><span>${title}</span><span class="c">${items.length}</span></summary>${items.length ? items.map(([k, n]) => `<a class="ei">${kind(k, 'sm')}<span class="mono">${esc(n)}</span></a>`).join('') : '<div class="ei muted" style="font-size:12px;padding-left:30px">None</div>'}</details>`;
-    return `<aside class="explorer ${S.explorerOpen ? '' : 'closed'}">
+    if (!S.explorerOpen)
+        return `<aside class="explorer closed"><button class="ex-toggle" data-act="explorer" title="Show the Project Explorer">${ic('panelOpen')}</button></aside>`;
+    return `<aside class="explorer">
+        <div class="ex-head"><b>Project</b><button class="ex-toggle" data-act="explorer" title="Hide the Project Explorer">${ic('panelClose')}</button></div>
+        <div class="ex-body">
         <label class="input sm">${ic('search')}<input placeholder="Search project"/></label>
         <a class="ei top ${!root ? 'on' : ''}" href="#/project/${p.pid}?view=flow">${ic('home')}<span>Overview</span></a>
         <a class="ei top">${kind('doc', 'sm')}<span>README.md</span></a>
@@ -534,6 +561,7 @@ function explorer(p, root) {
         ${Object.entries(m.tree)
             .map(([t, items]) => sec(t, items))
             .join('')}
+        </div>
     </aside>`;
 }
 function projectHome(p) {
@@ -549,7 +577,7 @@ function projectHome(p) {
     return `<div class="phome">
         <div class="phead">
             <div style="flex:1;min-width:0">
-                <div class="eyebrow">Project · ${esc(p.name)}</div>
+                <div class="eyebrow">Project</div>
                 <h1>${esc(m.title)}</h1>
                 <div class="pmeta">${p.origin ? `<a class="tag" href="#/examples/financial/${p.origin}">${ic('library')}&nbsp;from ${esc(p.origin)}</a>` : '<span class="tag">Own project</span>'}${os && os.update ? `<span class="badge accent">${ic('up')}Update ${os.update} available</span>` : ''}<span class="muted">Saved ${esc(p.saved)}</span></div>
             </div>
@@ -614,16 +642,135 @@ function projectHome(p) {
         </div>
     </div>`;
 }
+/*
+ * Flow Editor mock, drawn after src/components/flow-editor (coreNode.module.css, flowEditor.module.css): the collapsed
+ * node palette rail, the dotted canvas, 40px ruled rows, kind tiles, typed pins and wires, controls and minimap. It shows
+ * the capacityBook flow of the Mortgage Origination example as http://localhost:5174 renders it.
+ */
 function flowMock(p, root) {
-    return `<div class="canvas">
-        <div class="note-chip">${ic('info')}Flow Editor — unchanged, shown for context</div>
-        <div class="fn" style="left:60px;top:50px;width:300px"><div class="fh"><span class="kind" style="background:var(--k-type)">${ic('type')}</span><b>Household</b><span class="mono muted">${root}.household</span></div><div class="fd">The monthly income, the monthly debt payments and the offered rate</div>
-            <div class="fr"><span>monthlyIncome</span><span class="v">6800</span></div><div class="fr"><span>monthlyDebtPayments</span><span class="v">250</span></div><div class="fr"><span>rate</span><span class="v">0.0425</span></div></div>
-        <div class="fn" style="left:420px;top:50px;width:280px"><div class="fh"><span class="kind" style="background:var(--k-function)">${ic('fx')}</span><b>Borrowing capacity</b></div><div class="fd">The largest affordable payment and loan for each term</div>
-            <div class="fr"><span>householdIncome</span><span></span></div><div class="fr"><span>householdDebtPayments</span><span></span></div><div class="fr"><span>rate</span><span class="muted">result ▸</span></div></div>
-        <div class="fn" style="left:760px;top:40px;width:260px"><div class="fh"><span class="kind" style="background:var(--k-test)">${ic('table')}</span><b>Capacity by term</b></div>
-            ${[10, 15, 20, 25, 30].map((t, i) => `<div class="fr"><span class="v">${t}</span><span class="v">2810</span><span class="v">${[239351, 307823, 355527, 388762, 411917][i]}</span></div>`).join('')}</div>
-        <svg class="wires" viewBox="0 0 1100 400"><path d="M360 138 C390 138 390 138 420 138"/><path d="M360 168 C390 168 390 168 420 168"/><path d="M360 198 C390 198 390 198 420 198"/><path d="M700 198 C730 198 730 76 760 76"/></svg>
+    const C = {
+        input: 'var(--fe-k-input)',
+        fn: 'var(--fe-k-fn)',
+        expr: 'var(--fe-k-expr)',
+        out: 'var(--fe-k-out)',
+    };
+    const head = (color, icon, title, path) =>
+        `<div class="fe-row"><span class="fe-tile" style="background:${color}">${ic(icon)}</span><div class="fe-hs"><div class="fe-hl fe-hfirst"><div class="fe-title"><b>${title}</b><span class="fe-path">${path}</span></div><span class="fe-kebab">${ic('dots')}</span></div></div></div>`;
+    const pin = (side, type, on = true) => `<i class="fe-pin ${side} ${type} ${on ? 'on' : ''}"></i>`;
+    const desc = (t) => `<div class="fe-row fe-desc"><span>${t}</span></div>`;
+    const band = (a, b, wa) =>
+        `<div class="fe-row"><div class="fe-track fe-band" style="width:${wa}px">${a}</div><div class="fe-track fe-band fe-band-out">${b}</div></div>`;
+    const rk = `<span class="fe-rk">${ic('dots')}</span>`;
+    const path = root || 'capacityBook';
+
+    const household = `<div class="fe-node" style="left:0;top:40px;width:400px">
+        ${head(C.input, 'inputN', 'Household', `${path}.household`)}
+        <div class="fe-row fe-sumrow"><span class="fe-lbl">Input</span><span class="fe-sum">{ monthlyIncome, monthlyDebtPayments, rate }</span>${pin('out', 'rec', false)}</div>
+        ${desc('The monthly income, the monthly debt payments and the offered rate of the household')}
+        ${band('Fields', 'Values', 260)}
+        ${[
+            ['monthlyIncome', '6800'],
+            ['monthlyDebtPayments', '250'],
+            ['rate', '0.0425'],
+        ]
+            .map(
+                ([n, v]) =>
+                    `<div class="fe-row"><div class="fe-track fe-name" style="width:260px">${n}${rk}</div><div class="fe-track fe-val">${v}</div>${pin('out', 'num')}</div>`,
+            )
+            .join('')}
+    </div>`;
+
+    const capacity = `<div class="fe-node" style="left:480px;top:40px;width:400px">
+        ${head(C.fn, 'fxN', 'Borrowing capacity', `${path}.capacity`)}
+        <div class="fe-row fe-sumrow"><span class="fe-lbl">Calls</span><span class="fe-pick"><span class="fe-mini" style="background:${C.fn}">${ic('fxN')}</span>borrowingCapacity${ic('chev')}</span><span class="fe-ext">${ic('ext')}</span><span class="fe-sum" style="margin-left:0">→ object[]</span>${pin('out', 'rec', false)}</div>
+        ${desc('The largest affordable payment and loan for each term')}
+        ${band('Arguments', 'Result', 260)}
+        ${['householdIncome', 'householdDebtPayments', 'rate']
+            .map(
+                (n, i) =>
+                    `<div class="fe-row">${pin('in', 'num')}<div class="fe-track fe-name" style="width:260px">${n}<span class="fe-req">*</span>${rk}</div>${
+                        i === 0
+                            ? `<div class="fe-track fe-name fe-outname"><i>result</i></div>${pin('out', 'rec')}`
+                            : `<div class="fe-track fe-filler"></div>`
+                    }</div>`,
+            )
+            .join('')}
+    </div>`;
+
+    const rows = [
+        [10, 2810, 239351],
+        [15, 2810, 307823],
+        [20, 2810, 355527],
+        [25, 2810, 388762],
+        [30, 2810, 411917],
+    ];
+    const table = `<div class="fe-node" style="left:960px;top:20px;width:max-content;min-width:340px">
+        ${head(C.out, 'outputN', 'Capacity by term', `${path}.capacity`)}
+        <div class="fe-row">${pin('in', 'rec')}<div class="fe-track fe-name" style="width:90px">value</div><div class="fe-track fe-tint">5 rows × 3 columns</div></div>
+        <table class="fe-table"><thead><tr><th>#</th><th>termYears</th><th>maxPayment</th><th>maxLoan</th></tr></thead><tbody>
+            ${rows.map((r, i) => `<tr><td>${i + 1}</td>${r.map((v) => `<td>${v}</td>`).join('')}</tr>`).join('')}
+        </tbody></table>
+    </div>`;
+
+    // bar chart: x = termYears, y = maxLoan, 0..600K
+    const W = 378,
+        H = 236,
+        L = 58,
+        R = 12,
+        T = 16,
+        B = 44;
+    const ph = H - T - B,
+        pw = W - L - R,
+        bw = pw / rows.length;
+    const y = (v) => T + ph - (v / 600000) * ph;
+    const svg = `<svg class="fe-chart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+        ${[0, 200000, 400000, 600000].map((t) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" class="g"/><text x="${L - 6}" y="${y(t) + 3.5}" text-anchor="end">${t ? t / 1000 + 'K' : 0}</text>`).join('')}
+        <line x1="${L}" x2="${L}" y1="${T}" y2="${T + ph}" class="ax"/>
+        ${rows.map((r, i) => `<rect x="${L + i * bw + bw * 0.12}" y="${y(r[2])}" width="${bw * 0.76}" height="${T + ph - y(r[2])}"/><text x="${L + i * bw + bw / 2}" y="${T + ph + 15}" text-anchor="middle">${r[0]}</text>`).join('')}
+        <text x="${L + pw / 2}" y="${H - 8}" text-anchor="middle" class="t">termYears</text>
+        <text transform="translate(16 ${T + ph / 2}) rotate(-90)" text-anchor="middle" class="t">maxLoan</text>
+    </svg>`;
+    const chart = `<div class="fe-node" style="left:960px;top:380px;width:380px">
+        ${head(C.expr, 'chart', 'Largest affordable loan', `${path}.capacity`)}
+        <div class="fe-row">${pin('in', 'rec')}<div class="fe-track fe-name" style="width:90px">data</div><div class="fe-track fe-sum" style="flex:1;justify-content:flex-end;display:flex;align-items:center">5 rows</div></div>
+        <div class="fe-chartbox">${svg}<span class="fe-resize"></span></div>
+    </div>`;
+
+    const wire = (x1, y1, x2, y2, cls) => {
+        const dx = Math.max(40, (x2 - x1) / 2);
+        return `<path class="${cls}" d="M${x1} ${y1} C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}"/>`;
+    };
+    const wires = `<svg class="fe-wires" width="1300" height="700">
+        ${[220, 260, 300].map((yy) => wire(406, yy, 474, yy, 'num')).join('')}
+        ${wire(886, 220, 954, 80, 'rec')}
+        ${wire(886, 220, 954, 440, 'rec')}
+    </svg>`;
+
+    const rail = [
+        ['input', 'inputN', 'Add object input'],
+        ['input', 'listN', 'Add list input'],
+        ['input', 'varx', 'Add value input'],
+        ['fn', 'fxN', 'Add invocation'],
+        ['expr', 'sqrt', 'Add expression'],
+        ['out', 'outputN', 'Add output'],
+        ['expr', 'chart', 'Add chart'],
+    ];
+    const mm = (x, yy, w, h, c) => `<rect x="${x}" y="${yy}" width="${w}" height="${h}" rx="2" style="fill:${C[c]}"/>`;
+    return `<div class="fe">
+        <div class="fe-rail">
+            <button class="fe-railbtn" title="Show node palette">${ic('panelOpen')}</button>
+            ${rail.map(([c, i, t]) => `<span class="fe-railitem" title="${t}"><span class="fe-rt" style="background:${C[c]}">${ic(i)}</span></span>`).join('')}
+        </div>
+        <div class="fe-canvas">
+            <div class="fe-world">${wires}${household}${capacity}${table}${chart}</div>
+            <div class="fe-controls">
+                <button title="Zoom in">${ic('plus')}</button><button title="Zoom out">${ic('minus')}</button><button title="Fit view">${ic('fit')}</button><button title="Arrange nodes">${ic('arrange')}</button>
+            </div>
+            <svg class="fe-minimap" viewBox="-200 -230 1700 1180" width="200" height="150">
+                <rect class="vp" x="-200" y="-40" width="1700" height="740"/>
+                ${mm(0, 40, 400, 280, 'input')}${mm(480, 40, 400, 280, 'fn')}${mm(960, 20, 340, 320, 'out')}${mm(960, 380, 380, 320, 'expr')}
+            </svg>
+        </div>
     </div>`;
 }
 function boxedMock(p) {
@@ -655,20 +802,21 @@ function pageProject(seg, q) {
     const root = seg[2] || null;
     const view = q.view || 'flow';
     const isHome = !root;
+    S.openPid = p.pid;
     let body;
     if (view === 'flow') body = isHome ? projectHome(p) : flowMock(p, root);
     else if (view === 'boxed') body = boxedMock(p);
     else if (view === 'code') body = codeMock(p);
     else body = testsMock(p);
     return (
-        projectBar(p, root, view, isHome) +
-        `<div class="shell">${explorer(p, root)}<div class="stage ${view === 'flow' && !isHome ? 'dots' : ''} ${isHome ? 'dots' : ''}">${body}</div></div>`
+        appBar('project') +
+        `<div class="shell">${shellRow(p, root, view, isHome)}<div class="shell-body">${explorer(p, root)}<div class="stage ${isHome ? 'dots' : ''}">${body}</div></div></div>`
     );
 }
 
 function page404(msg) {
     return (
-        libraryBar('') +
+        appBar('') +
         `<main class="page"><div class="empty" style="padding-top:120px"><img class="sway" src="assets/sodas.svg" alt="" style="width:96px;opacity:.5"/><h4 style="font-size:20px">${msg || 'Nothing hangs here'}</h4><p>The page does not exist.</p><a class="btn" href="#/">Go home</a></div></main>`
     );
 }
@@ -677,7 +825,7 @@ function page404(msg) {
 function pageDesign() {
     const sw = (n, v) => `<div class="sw"><span style="background:var(${v})"></span><b>${n}</b><code>${v}</code></div>`;
     return (
-        libraryBar('') +
+        appBar('') +
         `<main class="page">
         <div class="ph"><div><div class="eyebrow">Proposal v2</div><h1>Design notes</h1><p>A neutral, modern shell around the editors. The editors set the vocabulary (kind squares, hairlines, mono values); the pages around them get out of the way.</p></div></div>
         <div class="notesgrid">
@@ -704,7 +852,7 @@ function pageDesign() {
         </div>
         <div class="sec"><h2>What changes, page by page</h2></div>
         <table class="table"><thead><tr><th>Page</th><th>Today</th><th>Proposal</th></tr></thead><tbody>
-            <tr><td><b>Top bar</b></td><td>Host bar + Shell bar, two logos, project as a ✕ tab</td><td>One 48px bar. Library: Home · Examples · Workspace, search, last project. Project: Workspace / Project ▾ / path, view switch, settings. Needs a <code>leading</code> slot in the Shell bar for the host.</td></tr>
+            <tr><td><b>Top bar</b></td><td>Host bar + Shell bar, two logos, project as a ✕ tab</td><td>One app bar on every page: Home · Examples · Workspace, the open project as a closable tab, search, theme. It says where you can go. Inside a project the Shell header row says where you are: Project ▾ › workbook, settings of what is open, view cells. One change to the Shell: the project menu moves from the right into the first crumb, because project name = model name. The host bar and the Shell keep their split — no new Shell slot needed.</td></tr>
             <tr><td><b>Search</b></td><td>Search field on Home and Examples</td><td>Global palette (<kbd>/</kbd>, <kbd>⌘K</kbd>): projects, examples, actions — the Home suggestions dropdown of the spec, available everywhere.</td></tr>
             <tr><td><b>Home</b></td><td>700px column, cramped cards</td><td>Short hero with search and two actions, Continue, Featured, Industries, New and updated.</td></tr>
             <tr><td><b>Examples</b></td><td>Tabs + facets row, 3 action cells per card</td><td>Facet sidebar (industry, features, workspace), cards or list, one action on hover, the card opens details. No levels.</td></tr>
@@ -741,10 +889,12 @@ const NOTES = {
         '“Update available” sits next to the source coordinates.',
     ],
     project: [
-        'One bar: logo · Workspace / Project ▾ / path · view switch. The ▾ is the spec project menu.',
-        'At the project root the Flow tab is labelled Overview — same behaviour as today, clearer name.',
-        'Entry points = service methods, written as signatures. Workbooks as cards. Side: model counts, tests, origin.',
-        'Explorer gets an “Overview” row at the top. Flow / Boxed / Code / Tests bodies are mocks of the unchanged editors.',
+        'Two rows, two jobs. Row 1 is the app bar — the same on every page (Home · Examples · Workspace · open project tab · search). Row 2 is the Shell header row of the library: kind square · Project ▾ › workbook · settings · Flow / Boxed / Code / Tests · split.',
+        'One project is one model, with one name. The first crumb is that name and it is the project menu ▾ (recent projects, origin, README, Model settings). Today the Shell shows the model title as a crumb and the project name again as a menu on the right — two names for one thing.',
+        'The gear is the settings of what is open, as in the app: Workbook settings (Name, Description) on a workbook, Model settings (Name, Version, Description) at the root. Renaming the model renames the project.',
+        'The open project is a tab of the app bar, as in the app today. Go to Examples and back: the tab stays, one click returns to where you were. ✕ closes it.',
+        'v2 merged both rows into one bar, so the bar changed shape between Workspace and a project. Now nothing in row 1 moves when you open a project; only row 2 appears.',
+        'At the project root the Flow cell reads Overview. The Flow body is drawn after the real Flow Editor (localhost:5174 capacityBook): palette rail, ruled 40px nodes, typed pins and wires, controls, minimap.',
     ],
     design: ['Fonts, colours and the page-by-page change list.'],
 };
@@ -775,6 +925,7 @@ function overlays(key) {
     if (S.pop) h += S.pop.html;
     if (S.modal === 'palette') h += palette();
     if (S.modal === 'new') h += newProjectModal();
+    if (S.modal === 'settings') h += settingsDialog();
     if (S.toast) h += `<div class="toast">${ic('check')}${S.toast}</div>`;
     h += `<button class="notes-fab" data-act="notes">${ic('info')}Proposal notes</button>`;
     if (S.notes)
@@ -869,11 +1020,41 @@ function openPop(anchor, html, align = 'left') {
     S.pop = {html: `<div class="pop" data-stop style="${style}">${html}</div>`};
     render();
 }
+/* The settings of the root path, as ShellSettings draws it: a glass sheet with a one-step header, ruled field rows
+ * (label | value, hint row below) and Cancel / Save step cells. The model has Name, Version and Description; a
+ * workbook has Name (its @Workbook annotation) and Description. The model name is the project name. */
+function settingsDialog() {
+    const p = proj(parse().seg[1]);
+    if (!p) return '';
+    const m = D.models[p.model];
+    const isModel = S.settingsRoot === '*';
+    const wb = !isModel && m.workbooks.find((w) => w.id === S.settingsRoot);
+    const field = (label, value, hint, area) =>
+        `<div class="st-field"><label>${label}</label><div class="st-cell">${area ? `<textarea rows="4">${esc(value)}</textarea>` : `<input value="${esc(value)}"/>`}</div>${hint ? `<div class="st-hint">${hint}</div>` : ''}</div>`;
+    return `<div class="scrim st-scrim" data-act="close"><div class="st-dialog" data-stop>
+        <div class="st-head"><span class="st-tile">${ic('gear')}</span><b>${isModel ? 'Model settings' : 'Workbook settings'}</b><button class="st-x" data-act="close" title="Close">${ic('x')}</button></div>
+        ${
+            isModel
+                ? field('Name', p.name, 'The name of the model — and of the project: one project is one model') +
+                  field('Version', (p.origin || '@1.0.0').split('@')[1], '') +
+                  field('Description', p.desc, '', true)
+                : field(
+                      'Name',
+                      wb ? wb.name : S.settingsRoot,
+                      'The name of the @Workbook annotation; empty shows the field name',
+                  ) + field('Description', wb ? wb.desc : '', '', true)
+        }
+        <div class="st-actions"><button data-act="close">Cancel</button><button class="save" data-act="save-settings">Save</button></div>
+    </div></div>`;
+}
 function projMenu() {
     const {seg} = parse();
     const p = proj(seg[1]);
     const others = D.projects.filter((x) => x.pid !== p.pid).slice(0, 5);
     return `<div style="padding:8px 9px 10px"><div style="font-weight:600">${esc(p.name)}</div><div class="muted" style="font-size:12px">Saved ${p.saved}</div>${p.origin ? `<a class="tag" style="margin-top:8px" href="#/examples/financial/${p.origin}">from ${p.origin} ${ic('open')}</a>` : ''}</div>
+        <div class="hr"></div>
+        <a class="mi" href="#/project/${p.pid}?view=flow">${ic('sitemap')}Overview</a>
+        <button class="mi" data-act="settings" data-root="*">${ic('gear')}Model settings…</button>
         <div class="hr"></div><div class="gl eyebrow">Recent projects</div>
         ${others.map((o) => `<a class="mi" href="#/project/${o.pid}">${projMark(o, 'sm')}${esc(o.name)}<span class="r">${o.saved}</span></a>`).join('')}
         <div class="hr"></div>
@@ -926,7 +1107,8 @@ document.addEventListener('click', (ev) => {
     const a = ev.target.closest('[data-act]');
     if (a) {
         const act = a.dataset.act;
-        if (act === 'close' && ev.target.closest('[data-stop]') && !ev.target.closest('.mf')) return;
+        if (act === 'close' && ev.target.closest('[data-stop]') && !ev.target.closest('.mf, .st-actions, .st-x'))
+            return;
         ev.preventDefault();
         ev.stopPropagation();
         switch (act) {
@@ -1024,6 +1206,20 @@ document.addEventListener('click', (ev) => {
             }
             case 'projmenu':
                 return openPop(a, projMenu());
+            case 'settings':
+                closeAll();
+                S.modal = 'settings';
+                S.settingsRoot = a.dataset.root;
+                return render();
+            case 'save-settings':
+                closeAll();
+                return toast('Settings saved');
+            case 'closeproj': {
+                const wasOpen = parse().seg[0] === 'project';
+                S.openPid = null;
+                closeAll();
+                return wasOpen ? go('#/workspace') : render();
+            }
             case 'rowmenu': {
                 const p = proj(a.dataset.pid);
                 return openPop(
