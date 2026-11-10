@@ -283,9 +283,18 @@ function footer() {
 
 /* ───────────── pages ───────────── */
 function pageHome() {
-    const recent = D.projects.slice(0, 4);
-    const featured = D.examples.filter((e) => e.featured).sort((a, b) => a.featured - b.featured);
-    const newest = [...D.examples].sort((a, b) => (a.released < b.released ? 1 : -1)).slice(0, 5);
+    const recent = D.projects.slice(0, 3);
+    const featured = D.examples
+        .filter((e) => e.featured)
+        .sort((a, b) => a.featured - b.featured)
+        .slice(0, 3);
+    const releases = [
+        ['2026-11-08', 'modeler', 'Flow Editor', 'Calmer canvas, typed pins and wires.'],
+        ['2026-11-08', 'engine', 'Portable format', 'Fields maps and a kinds filter.'],
+        ['2026-11-01', 'modeler', 'Workspace', 'Filter by My Projects and Example Projects.'],
+        ['2026-10-20', 'engine', 'Execution', 'Faster execute and get on large models.'],
+        ['2026-10-12', 'modeler', 'Editors', 'Test Runner and Decision Table Editor improvements.'],
+    ];
     return (
         appBar('home') +
         `<main class="page home">
@@ -300,10 +309,10 @@ function pageHome() {
             </div>
         </section>
 
-        <div class="sec"><h2>Continue</h2><span class="cnt">${D.projects.length}</span><a class="more" href="#/workspace">All projects ${ic('arrow')}</a></div>
-        <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">${recent.map(projCard).join('')}</div>
+        <div class="sec"><h2>Workspace</h2><span class="cnt">${D.projects.length}</span><a class="more" href="#/workspace">All projects ${ic('arrow')}</a></div>
+        <div class="grid">${recent.map(wsCard).join('')}</div>
 
-        <div class="sec"><h2>Featured examples</h2><a class="more" href="#/examples">All examples ${ic('arrow')}</a></div>
+        <div class="sec"><h2>Examples</h2><span class="cnt">${D.examples.length}</span><a class="more" href="#/examples">All examples ${ic('arrow')}</a></div>
         <div class="grid">${featured.map((e) => exCard(e)).join('')}</div>
 
         <div class="split2">
@@ -317,11 +326,11 @@ function pageHome() {
                     .join('')}</div>
             </div>
             <div>
-                <div class="sec"><h2>New and updated</h2></div>
-                <div class="news">${newest
+                <div class="sec"><h2>Release log</h2></div>
+                <div class="relog">${releases
                     .map(
-                        (e) =>
-                            `<a href="${exUrl(e)}"><span class="mono muted">${e.released}</span><b>${esc(e.name)}</b><span class="tag">v${e.v}</span></a>`,
+                        ([d, p, t, x]) =>
+                            `<div class="rel"><span class="rprod ${p}">${p === 'modeler' ? 'Modeler' : 'Rule Engine'}</span><div class="rbody"><div class="rtitle">${t}</div><div class="rtext">${x}</div></div><span class="mono muted">${d}</span></div>`,
                     )
                     .join('')}</div>
             </div>
@@ -918,7 +927,7 @@ function pageDesign() {
         <table class="table"><thead><tr><th>Page</th><th>Today</th><th>Proposal</th></tr></thead><tbody>
             <tr><td><b>Top bar</b></td><td>Host bar + Shell bar, two logos, project as a ✕ tab</td><td>One app bar on every page: Home · Examples · Workspace, the open project as a closable tab, search, theme. It says where you can go. Inside a project the Shell header row says where you are: Project ▾ › workbook, settings of what is open, view cells. One change to the Shell: the project menu moves from the right into the first crumb, because project name = model name. The host bar and the Shell keep their split — no new Shell slot needed.</td></tr>
             <tr><td><b>Search</b></td><td>Search field on Home and Examples</td><td>Global palette (<kbd>/</kbd>, <kbd>⌘K</kbd>): projects, examples, actions — the Home suggestions dropdown of the spec, available everywhere.</td></tr>
-            <tr><td><b>Home</b></td><td>700px column, cramped cards</td><td>Short hero with search and two actions, Continue, Featured, Industries, New and updated.</td></tr>
+            <tr><td><b>Home</b></td><td>700px column, cramped cards</td><td>Short hero with search and two actions, Workspace, Examples, Industries, Release log.</td></tr>
             <tr><td><b>Examples</b></td><td>Tabs + facets row, 3 action cells per card</td><td>Facet sidebar (industry, features, workspace), cards or list, one action on hover, the card opens details. No levels.</td></tr>
             <tr><td><b>Details</b></td><td>Action cells row, metadata table</td><td>Header with version + actions, copies notice, README + facts sidebar, related.</td></tr>
             <tr><td><b>Workspace</b></td><td>Cards, yellow banner, “Open” row</td><td>The Examples page layout: filter sidebar (All / My Projects / Example Projects, storage), cards or list, the card opens the project, ⋮ menu. Storage meter with a calm “Not persistent” badge that explains itself.</td></tr>
@@ -932,8 +941,8 @@ function pageDesign() {
 const NOTES = {
     home: [
         'Short hero: one sentence, the search, two actions. No marketing.',
-        'Continue = 4 newest projects (spec: up to 6). Projects use a monogram, not a kind colour.',
-        'Featured uses the same card as the Examples page. Industries and “New and updated” share one row.',
+        'Workspace = 4 newest projects (spec: up to 6). Projects use a monogram, not a kind colour.',
+        'Examples uses the same card as the Examples page. Industries and the Release log (what is new in the Modeler and the Rule Engine) share one row.',
         'Footer mark sways on hover — the only Sodas besides the logo.',
     ],
     examples: [
