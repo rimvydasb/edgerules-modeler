@@ -1,11 +1,13 @@
 import type {Meta, StoryObj} from '@storybook/react-vite';
 import {expect, userEvent, within} from 'storybook/test';
+import {CLIENT_OUTREACH_PROJECT} from '../../../models/client-outreach';
 import {ModelerApp, type ModelerRoute, type StoryWorkspace} from '../../support/ModelerApp';
 import {COPIES, openStoryWorkspace} from '../../support/workspaceStory';
 
 interface ModelerArgs {
     route: ModelerRoute;
     seeded?: boolean; // the workspace holds the sample copies
+    outreach?: boolean; // the workspace holds the client outreach project, which needs an optimisation solver
     workspaceKey?: string; // a stored workspace that a reload reopens; not seeded
 }
 
@@ -26,7 +28,7 @@ const meta: Meta<ModelerArgs> = {
         async ({args}) => ({
             workspace: args.workspaceKey
                 ? await openStoryWorkspace([], `edgerules-storybook-modeler-${args.workspaceKey}`)
-                : await openStoryWorkspace(args.seeded ? COPIES : []),
+                : await openStoryWorkspace(args.outreach ? [CLIENT_OUTREACH_PROJECT] : args.seeded ? COPIES : []),
         }),
     ],
     render: (args, {loaded}) => <ModelerApp {...(loaded.workspace as StoryWorkspace)} initialRoute={args.route} />,
@@ -78,4 +80,13 @@ export const Project: Story = {
 export const StoredWorkspace: Story = {
     tags: ['fixture'],
     args: {route: {page: 'examples'}, workspaceKey: 'default'},
+};
+
+/** A fixture of the e2e specs: the tests of a project with an `optimise` element, opened as the app does, with no solver registered by the story. */
+export const OptimiseProjectTests: Story = {
+    tags: ['fixture'],
+    args: {
+        route: {page: 'project', projectPath: 'client-outreach', path: 'contactPlan', view: 'tests'},
+        outreach: true,
+    },
 };

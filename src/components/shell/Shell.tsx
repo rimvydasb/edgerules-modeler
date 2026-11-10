@@ -92,7 +92,7 @@ export function Shell({
     const {version, metadata} = useProjectSlice('model');
     const {subjects} = useProjectSlice('tests');
     const testSubjects = useMemo(() => Object.keys(subjects), [subjects]);
-    const {dslValidity, name: projectName, origin: projectOrigin, savedAt, projectId} = useProjectSnapshot();
+    const {dslValidity, name: projectName, origin: projectOrigin, savedAt} = useProjectSnapshot();
     const {byPath: descriptions} = useProjectSlice('documentation');
     const readme = useProjectSlice('readme');
     const readmeExists = hasReadme(readme);
@@ -349,13 +349,12 @@ export function Shell({
     const projectMenu = navigation && (
         <ShellProjectMenu
             name={projectName}
-            projectId={projectId}
             origin={projectOrigin}
             savedAt={savedAt}
             navigation={navigation}
             current={root === '*'}
             onOpenOverview={() => navigate({path: '*', view: modelView})}
-            onOpenReadme={openReadme}
+            onOpenReadme={readmeExists ? openReadme : undefined}
         />
     );
 

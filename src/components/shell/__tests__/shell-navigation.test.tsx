@@ -46,7 +46,7 @@ describe('Shell navigation', () => {
         const nav = screen.getByRole('navigation', {name: 'Model path'});
         expect(within(nav).queryByRole('button', {name: 'Workspace'})).toBeNull();
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-        await screen.findByRole('menuitem', {name: 'Browse examples'});
+        await screen.findByRole('menuitem', {name: 'Overview'});
         expect(screen.queryByRole('menuitem', {name: /workspace/i})).toBeNull();
     });
 
@@ -74,21 +74,20 @@ describe('Shell navigation', () => {
         const user = userEvent.setup();
         await renderNavigated();
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-        await screen.findByRole('menuitem', {name: 'Browse examples'});
+        await screen.findByRole('menuitem', {name: 'Overview'});
         expect(screen.queryByTestId('shell-origin-chip')).toBeNull();
         expect(screen.queryByRole('menuitem', {name: 'View original example'})).toBeNull();
         expect(screen.queryByRole('menuitem', {name: 'Duplicate'})).toBeNull();
     });
 
-    it('lists up to 5 recent projects without the open one, and runs the menu actions', async () => {
+    it('keeps the menu to the overview, README and project actions, without the Shell links', async () => {
         const user = userEvent.setup();
         const opened = await openFixtureProject({name: 'Loan repayment'});
-        const others = Array.from({length: 6}, (_, i) => recent(`Other ${i}`, `id-${i}`));
         const handlers = {
             onBrowseExamples: vi.fn(),
             onOpenProject: vi.fn(),
             onDuplicate: vi.fn(),
-            recentProjects: [recent('Loan repayment', opened.session.projectId), ...others],
+            recentProjects: [recent('Other', 'id-1')],
         };
         render(
             <ProjectProvider session={opened.session}>
@@ -97,16 +96,11 @@ describe('Shell navigation', () => {
         );
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
         const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent);
-        expect(items.filter((text) => text?.startsWith('Other'))).toHaveLength(5);
-        expect(items).not.toContain('Loan repayment');
+        expect(items).not.toContain('Other');
+        expect(items).not.toContain('Browse examples');
+        expect(screen.queryByText('Recent projects')).toBeNull();
+        expect(screen.getByTestId('shell-project-menu-header').textContent).not.toContain('Loan repayment');
 
-        await user.click(screen.getByRole('menuitem', {name: 'Other 0'}));
-        expect(handlers.onOpenProject).toHaveBeenCalledWith(others[0].locator);
-
-        await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-        await user.click(await screen.findByRole('menuitem', {name: 'Browse examples'}));
-        expect(handlers.onBrowseExamples).toHaveBeenCalled();
-        await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
         await user.click(await screen.findByRole('menuitem', {name: 'Duplicate'}));
         expect(handlers.onDuplicate).toHaveBeenCalled();
     });
@@ -115,7 +109,7 @@ describe('Shell navigation', () => {
         const user = userEvent.setup();
         await renderNavigated();
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-        await user.click(await screen.findByRole('menuitem', {name: 'Open README'}));
+        await user.click(await screen.findByRole('menuitem', {name: 'README.md'}));
         const nav = screen.getByRole('navigation', {name: 'Model path'});
         expect(await within(nav).findByText('README.md')).toBeTruthy();
     });

@@ -24,6 +24,7 @@ import {
 import {addWorkspaceProject, LocalWorkspace} from '../../../src/components/local-workspace';
 import {ModelerHome} from '../../../src/components/modeler-home';
 import {SheetProjectMark, sheetClasses} from '../../../src/ui/sheet';
+import {registerHighsSolver} from '../highsSolver';
 import {
     createProjectSessionManager,
     ProjectProvider,
@@ -451,9 +452,14 @@ export function ProjectPage({
         let session: ProjectSession | undefined;
         let cancelled = false;
         manager.open(locator).then(
-            (next) => {
+            async (next) => {
                 session = next;
                 retain(manager, next);
+                // EdgeRules ships no solver: a project with an `optimise` element runs only after the host registers one.
+                if (next.engine.requiresSolver() && next.engine.solverHandler === undefined) {
+                    // A failed load leaves the project open: the Tests view then shows the missing-solver banner.
+                    await registerHighsSolver(next.engine).catch((failure: unknown) => console.error(failure));
+                }
                 if (cancelled) release(manager, next);
                 else setOpened({session: next});
             },

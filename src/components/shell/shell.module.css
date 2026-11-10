@@ -1057,10 +1057,6 @@ span.overviewOrigin {
   padding: 6px 12px;
 }
 
-.projectMenuName {
-  font-weight: 600;
-}
-
 .projectMenuMeta {
   color: var(--mantine-color-dimmed);
   font-size: var(--mantine-font-size-xs);
