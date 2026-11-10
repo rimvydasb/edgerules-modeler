@@ -361,16 +361,6 @@ export function WorkbookPicker({
                     {overview && (
                         <aside className={classes.overviewSide} aria-label="Project facts">
                             <section className={classes.sideCard}>
-                                <div className={sheetClasses.eyebrow}>Model</div>
-                                {overview.counts.map((item) => (
-                                    <div key={item.label} className={classes.countRow}>
-                                        <span className={classes.countIcon} style={{backgroundColor: item.color}} />
-                                        <span>{item.label}</span>
-                                        <b>{item.count}</b>
-                                    </div>
-                                ))}
-                            </section>
-                            <section className={classes.sideCard}>
                                 <div className={sheetClasses.eyebrow}>Tests</div>
                                 <div className={classes.sideBig}>
                                     <b>{count(overview.testSuites, 'suite')}</b>
@@ -415,6 +405,16 @@ export function WorkbookPicker({
                                     )}
                                 </section>
                             )}
+                            <section className={classes.sideCard}>
+                                <div className={sheetClasses.eyebrow}>Model</div>
+                                {overview.counts.map((item) => (
+                                    <div key={item.label} className={classes.countRow}>
+                                        <span className={classes.countIcon} style={{backgroundColor: item.color}} />
+                                        <span>{item.label}</span>
+                                        <b>{item.count}</b>
+                                    </div>
+                                ))}
+                            </section>
                         </aside>
                     )}
                 </div>
