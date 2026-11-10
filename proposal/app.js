@@ -213,13 +213,18 @@ function shellRow(p, root, view, isHome) {
 }
 
 /* ───────────── shared components ───────────── */
+// Feature tags for a card: the first `max`, then a "+N" tag for the rest.
+function featTags(feats, max = 3) {
+    return (
+        feats
+            .slice(0, max)
+            .map((f) => `<span class="tag">${f}</span>`)
+            .join('') + (feats.length > max ? `<span class="tag">+${feats.length - max}</span>` : '')
+    );
+}
 function exCard(e, opts = {}) {
     const st = exStatus(e);
-    const feats =
-        e.feats
-            .slice(0, 3)
-            .map((f) => `<span class="tag">${f}</span>`)
-            .join('') + (e.feats.length > 3 ? `<span class="tag">+${e.feats.length - 3}</span>` : '');
+    const feats = featTags(e.feats, opts.maxTags);
     const badge =
         st.k === 'in'
             ? `<span class="badge ok">${ic('check')}In workspace · ${st.n}</span>`
@@ -283,11 +288,9 @@ function footer() {
 
 /* ───────────── pages ───────────── */
 function pageHome() {
-    const recent = D.projects.slice(0, 3);
-    const featured = D.examples
-        .filter((e) => e.featured)
-        .sort((a, b) => a.featured - b.featured)
-        .slice(0, 3);
+    const recent = D.projects.slice(0, 4);
+    // Featured examples first (in order), then the rest, to fill a row of 4.
+    const featured = [...D.examples].sort((a, b) => (a.featured || Infinity) - (b.featured || Infinity)).slice(0, 4);
     const releases = [
         ['2026-11-08', 'modeler', 'Flow Editor', 'Calmer canvas, typed pins and wires.'],
         ['2026-11-08', 'engine', 'Portable format', 'Fields maps and a kinds filter.'],
@@ -297,7 +300,7 @@ function pageHome() {
     ];
     return (
         appBar('home') +
-        `<main class="page home">
+        `<main class="page wide home">
         <section class="hero">
             <div class="eyebrow">EdgeRules Modeler</div>
             <h1>Model, test and run<br/>business decisions.</h1>
@@ -310,10 +313,10 @@ function pageHome() {
         </section>
 
         <div class="sec"><h2>Workspace</h2><span class="cnt">${D.projects.length}</span><a class="more" href="#/workspace">All projects ${ic('arrow')}</a></div>
-        <div class="grid">${recent.map(wsCard).join('')}</div>
+        <div class="grid">${recent.map((p) => wsCard(p, {maxTags: 2})).join('')}</div>
 
         <div class="sec"><h2>Examples</h2><span class="cnt">${D.examples.length}</span><a class="more" href="#/examples">All examples ${ic('arrow')}</a></div>
-        <div class="grid">${featured.map((e) => exCard(e)).join('')}</div>
+        <div class="grid">${featured.map((e) => exCard(e, {maxTags: 2})).join('')}</div>
 
         <div class="split2">
             <div>
@@ -502,16 +505,11 @@ function pageDetails(industry, coord) {
 
 /* Workspace — the same page as Examples: header, facet sidebar, toolbar, result line, cards or list. */
 const originId = (p) => (p.origin ? p.origin.split('@')[0] : null);
-function wsCard(p) {
+function wsCard(p, opts = {}) {
     const os = originStatus(p);
     const e = originId(p) && ex(originId(p));
     const m = D.models[p.model];
-    const tags = e
-        ? e.feats
-              .slice(0, 3)
-              .map((f) => `<span class="tag">${f}</span>`)
-              .join('') + (e.feats.length > 3 ? `<span class="tag">+${e.feats.length - 3}</span>` : '')
-        : '<span class="tag">blank</span>';
+    const tags = e ? featTags(e.feats, opts.maxTags) : '<span class="tag">blank</span>';
     return `<a class="card link excard" href="#/project/${p.pid}">
         <div class="cb">
             <div class="row1"><span class="eyebrow">${e ? ind(e.ind).title : 'Own project'}</span>${os && os.update ? `<span class="badge accent" title="A newer version of the example exists">${ic('up')}Update ${os.update}</span>` : ''}</div>

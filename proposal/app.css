@@ -353,6 +353,66 @@ kbd,
   font-size: 15px;
   max-width: 640px;
 }
+/* Home hero: same weight and tracking as .ph h1, only larger. */
+.hero {
+  padding: 36px 0 8px;
+}
+.hero h1 {
+  font: 600 46px/1.08 var(--sans);
+  letter-spacing: -0.03em;
+  margin: 14px 0 14px;
+}
+.hero p {
+  font-size: 16px;
+  color: var(--text-2);
+  margin: 0 0 26px;
+  max-width: 540px;
+}
+.herosearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 620px;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 10px;
+  color: var(--text-3);
+  cursor: text;
+  font-size: 15px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.herosearch:hover {
+  border-color: var(--text-3);
+}
+.herosearch span:first-of-type {
+  flex: 1;
+}
+.quick {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+/* Home rows hold 4 cards: fixed columns avoid a 3+1 orphan row. */
+.home .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+  .home .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .home .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 960px) {
+  .hero h1 {
+    font-size: 36px;
+  }
+}
 .sec {
   display: flex;
   align-items: center;
