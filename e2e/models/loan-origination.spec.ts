@@ -146,3 +146,19 @@ test('the facts of a type open as their own root, not as the type', async ({page
         await expect(page.getByTestId(`row-ApplicantFacts.${field}`), field).toBeVisible();
     }
 });
+
+test('the rows a run discovers stay valid when the Tests view is left and opened again', async ({page}) => {
+    await openStory(page, 'models-loan-origination--model-tests');
+    // A workbook is an opaque invocation call site: its rows are not in the schema, the first run finds them.
+    const discovered = page.getByTestId('row-capacityBook.capacity');
+    await expect(discovered).toBeVisible(SLOW);
+    await expect(page.locator('[data-invalid="true"]')).toHaveCount(0);
+
+    await page.getByRole('radio', {name: 'Boxed'}).click();
+    await expect(page.getByTestId('tests-grid')).toHaveCount(0);
+    await page.getByRole('radio', {name: 'Tests'}).click();
+
+    // The bug: opening the view again derived the schema rows only, and flagged every discovered row as dropped.
+    await expect(discovered).toBeVisible(SLOW);
+    await expect(page.locator('[data-invalid="true"]')).toHaveCount(0);
+});
