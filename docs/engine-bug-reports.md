@@ -43,6 +43,18 @@ Still reproduces on `0.2.7-alpha.202611081915`: the statics are still only `from
 `PortableMethodInterface`-shaped entries with named `parameters`, optional/variadic markers per parameter (or one entry
 per overload), and `return`. `get('*', Kinds.INVOCABLE_INTERFACES)` already covers user callables.
 
+## [VALID] `rename()` does not return the paths whose references it rewrote
+
+**What is wrong:** `rename(oldPath, newPath)` returns `void`. A callable rename also rewrites every call site in the
+model, but the caller cannot learn which entries changed. A host must compare `getCode` of every entry before and after.
+This is a missing capability: `api-spec.md` specifies the `void` return.
+
+**Expected behaviour:** `rename()` returns the paths of the entries whose code it rewrote, and an empty list when it
+rewrote nothing. `edit-model` of the WebMCP story reports these paths in `changed`
+([webmcp-story.md](stories/webmcp-story.md)).
+
+**Issue:** https://github.com/rimvydasb/edgerules/issues/68
+
 ## [NOT A BUG] `getCode('*')` drops source comments
 
 **What happens:** `fromCode` followed by `getCode('*')` returns the code without its comments. (Output formatting is
