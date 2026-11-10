@@ -13,12 +13,12 @@ function panelNames(): string[] {
 }
 
 describe('ExampleGallery', () => {
-    it('shows one panel per example, with industry tabs and counts', async () => {
+    it('shows one panel per example, with industry facets and counts', async () => {
         render(<ExampleGallery client={createFixtureClient()} {...callbacks()} />);
         await waitFor(() => expect(panelNames()).toHaveLength(3));
         expect(panelNames()).toEqual(['Client outreach', 'Loan origination', 'Loan repayment']);
-        expect(screen.getByRole('tab', {name: 'All (3)'})).toBeTruthy();
-        expect(screen.getByRole('tab', {name: 'Financial (3)'})).toBeTruthy();
+        expect(screen.getByRole('button', {name: /^All industries/})).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', {name: /^Financial/})).toBeTruthy();
     });
 
     it('searches as the user types and reports the query', async () => {
@@ -44,13 +44,14 @@ describe('ExampleGallery', () => {
         const user = userEvent.setup();
         render(<ExampleGallery client={createFixtureClient()} {...callbacks()} />);
         await waitFor(() => expect(panelNames()).toHaveLength(3));
-        await user.click(screen.getByRole('combobox', {name: 'Level'}));
-        await user.click(await screen.findByRole('option', {name: 'Advanced'}));
+        await user.click(
+            within(screen.getByRole('radiogroup', {name: 'Level'})).getByRole('radio', {name: 'Advanced'}),
+        );
         expect(panelNames()).toEqual(['Client outreach']);
         expect(screen.getByRole('status').textContent).toBe('1 example');
     });
 
-    it('reports the industry tab', async () => {
+    it('reports the industry facet', async () => {
         const user = userEvent.setup();
         const onIndustryChange = vi.fn();
         render(
@@ -61,7 +62,7 @@ describe('ExampleGallery', () => {
                 onIndustryChange={onIndustryChange}
             />,
         );
-        await user.click(await screen.findByRole('tab', {name: 'Financial (3)'}));
+        await user.click(await screen.findByRole('button', {name: /^Financial/}));
         expect(onIndustryChange).toHaveBeenCalledWith('financial');
     });
 

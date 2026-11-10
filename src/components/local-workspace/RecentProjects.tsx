@@ -1,32 +1,50 @@
 import type {ReactElement} from 'react';
 import {Text} from '@mantine/core';
-import {IconArrowRight, IconSitemap} from '@tabler/icons-react';
-import {KIND_COLORS} from '#ui/kindColors';
-import {SheetGrid, SheetPanelButton, SheetPanelHeader, SheetSection} from '#ui/sheet';
+import {IconChevronRight} from '@tabler/icons-react';
+import {SheetGrid, SheetLinkButton, SheetSection} from '#ui/sheet';
+import type {LibraryClient} from '../example-library';
 import type {LocalProjectRepository, ProjectLocator} from '../project-session';
-import {DEFAULT_PROJECTS_LIMIT, recentProjects, savedAgo} from './workspaceModel';
+import {ProjectCard} from './ProjectCard';
+import {DEFAULT_PROJECTS_LIMIT, recentProjects} from './workspaceModel';
 import {useWorkspaceProjects} from './useWorkspaceProjects';
-import * as classes from './localWorkspace.module.css';
+import {isOutdated, useExampleIndustries, useNewestVersions} from './useNewestVersions';
 
 export interface RecentProjectsProps {
     repository: LocalProjectRepository; // the IndexedDB repository of the workspace
-    limit?: number; // number of project panels, default 3
+    library?: LibraryClient; // the industry label and the "Update available" badge of a copy; without it neither shows
+    limit?: number; // number of project cards, default 3
     onOpen: (locator: ProjectLocator) => void; // the host opens the project in the Shell
-    onShowAll?: () => void; // the "Browse other projects" panel, shown only when more projects exist than `limit`
+    onShowAll?: () => void; // the "All projects" link, shown only when more projects exist than `limit`
 }
 
-/** The newest saved projects as compact one-row panels, for the Home page. */
+/** The newest saved projects as cards under a "Workspace" heading, for the Home page. */
 export function RecentProjects({
     repository,
+    library,
     limit = DEFAULT_PROJECTS_LIMIT,
     onOpen,
     onShowAll,
 }: RecentProjectsProps): ReactElement {
     const {projects, error} = useWorkspaceProjects(repository);
+    const newest = useNewestVersions(library);
+    const industries = useExampleIndustries(library);
     const recent = projects ? recentProjects(projects, limit) : [];
 
     return (
-        <SheetSection label="Workspace" aria-label="Recent projects">
+        <SheetSection
+            label="Workspace"
+            aria-label="Recent projects"
+            count={projects?.length}
+            actions={
+                onShowAll &&
+                projects &&
+                projects.length > limit && (
+                    <SheetLinkButton onClick={onShowAll}>
+                        All projects <IconChevronRight size={14} aria-hidden="true" />
+                    </SheetLinkButton>
+                )
+            }
+        >
             {error && (
                 <Text c="red" size="sm" role="alert">
                     {error}
@@ -37,27 +55,16 @@ export function RecentProjects({
                     No projects yet.
                 </Text>
             )}
-            <SheetGrid compact>
+            <SheetGrid fourUp={limit === 4}>
                 {recent.map((project) => (
-                    <SheetPanelButton
+                    <ProjectCard
                         key={project.locator.projectPath}
-                        aria-label={`Open ${project.name}`}
-                        onClick={() => onOpen(project.locator)}
-                    >
-                        <SheetPanelHeader
-                            only
-                            icon={<IconSitemap size={18} />}
-                            iconColor={KIND_COLORS.model}
-                            title={project.name}
-                            aside={<span className={classes.recentMeta}>{savedAgo(project.savedAt)}</span>}
-                        />
-                    </SheetPanelButton>
+                        project={project}
+                        industry={project.origin ? industries.get(project.origin.id) : undefined}
+                        updateAvailable={project.origin ? isOutdated(project.origin, newest) : false}
+                        onOpen={() => onOpen(project.locator)}
+                    />
                 ))}
-                {onShowAll && projects && projects.length > limit && (
-                    <SheetPanelButton onClick={onShowAll}>
-                        <SheetPanelHeader only icon={<IconArrowRight size={18} />} title="Browse other projects" />
-                    </SheetPanelButton>
-                )}
             </SheetGrid>
         </SheetSection>
     );

@@ -13,7 +13,7 @@ import {
     IconTag,
     IconVariable,
 } from '@tabler/icons-react';
-import {Fragment, type ReactElement} from 'react';
+import {Fragment, type ReactElement, type ReactNode} from 'react';
 import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
 import type {ShellPathKind, ShellPathSegment} from './shell-path';
@@ -28,6 +28,7 @@ export interface ShellBreadcrumbsProps {
     primaryView: PrimaryView; // the view the kind icon opens: Flow when the root path has it, otherwise Boxed
     onOpenPrimary: () => void;
     tests?: boolean; // the Tests view: the root path is a test subject
+    first?: ReactNode; // the first crumb instead of the model name: the project menu, which names the project
 }
 
 /** The main view of a root path: Preview for a document, Flow when the root path has it, otherwise Boxed. */
@@ -131,6 +132,7 @@ export function ShellBreadcrumbs({
     primaryView,
     onOpenPrimary,
     tests,
+    first,
 }: ShellBreadcrumbsProps): ReactElement {
     const items = [
         {label: rootLabel, path: '*'},
@@ -149,7 +151,9 @@ export function ShellBreadcrumbs({
                 {items.map((item, index) => (
                     <Fragment key={item.path}>
                         {index > 0 && <IconChevronRight aria-hidden="true" size={14} className={classes.separator} />}
-                        {index === 0 || index < items.length - 1 ? (
+                        {index === 0 && first ? (
+                            first
+                        ) : index === 0 || index < items.length - 1 ? (
                             <button
                                 type="button"
                                 className={cx(classes.crumb, index === items.length - 1 && classes.crumbCurrent)}

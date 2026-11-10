@@ -2,6 +2,8 @@ import {Menu} from '@mantine/core';
 import {IconChevronDown} from '@tabler/icons-react';
 import type {ReactElement} from 'react';
 import {savedAgo} from '#lib/savedAgo';
+import {cx} from '#ui/cx';
+import {SheetProjectMark} from '#ui/sheet';
 import type {ProjectOrigin} from '../project-session';
 import * as classes from './shell.module.css';
 import type {ShellNavigation} from './shell-types';
@@ -14,6 +16,8 @@ export interface ShellProjectMenuProps {
     origin?: ProjectOrigin; // the library example that the project is a copy of
     savedAt?: string; // ISO time of the last save
     navigation: ShellNavigation;
+    current?: boolean; // the root path is the model: the name reads as the current item
+    onOpenOverview?: () => void; // "Overview": the model root in its main view
     onOpenReadme: () => void;
 }
 
@@ -28,6 +32,8 @@ export function ShellProjectMenu({
     origin,
     savedAt,
     navigation,
+    current,
+    onOpenOverview,
     onOpenReadme,
 }: ShellProjectMenuProps): ReactElement {
     const {onBrowseExamples, onOpenProject, recentProjects, onShowOrigin, originStatus, onDuplicate} = navigation;
@@ -36,7 +42,12 @@ export function ShellProjectMenu({
     return (
         <Menu position="bottom" withinPortal>
             <Menu.Target>
-                <button type="button" className={classes.projectMenu} aria-label={`Project menu: ${name}`}>
+                <button
+                    type="button"
+                    className={cx(classes.projectMenu, current && classes.projectMenuCurrent)}
+                    aria-label={`Project menu: ${name}`}
+                >
+                    <SheetProjectMark name={name} size="xs" />
                     <span className={classes.projectName}>{name}</span>
                     <IconChevronDown aria-hidden="true" size={14} />
                 </button>
@@ -61,10 +72,15 @@ export function ShellProjectMenu({
                         </Menu.Item>
                     )}
                 </div>
+                {onOpenOverview && <Menu.Item onClick={onOpenOverview}>Overview</Menu.Item>}
                 <Menu.Divider />
                 {recent.length > 0 && <Menu.Label>Recent projects</Menu.Label>}
                 {recent.map((project) => (
-                    <Menu.Item key={project.projectId} onClick={() => onOpenProject(project.locator)}>
+                    <Menu.Item
+                        key={project.projectId}
+                        leftSection={<SheetProjectMark name={project.name} size="sm" />}
+                        onClick={() => onOpenProject(project.locator)}
+                    >
                         {project.name}
                     </Menu.Item>
                 ))}

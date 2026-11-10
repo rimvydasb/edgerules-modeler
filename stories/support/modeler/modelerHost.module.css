@@ -1,14 +1,15 @@
 /*
- * The frame of the hosted Modeler: a top bar in the style of the Shell header row — 41px, the muted fill, 1px lines,
- * the model icon square and one cell per section, the active cell open and underlined in the primary color.
+ * The frame of the hosted Modeler: one 48px top bar on the surface fill (brand, section links, one tab per opened
+ * project, the theme switch) and the page under it. Tokens come from `sheetClasses.tokens`.
  */
 .app {
-  --mh-border: var(--mantine-color-default-border);
-  --mh-muted: var(--mantine-color-default-hover);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: var(--mantine-color-body);
+  background-color: var(--er-bg);
+  color: var(--er-text);
+  font: 14px/1.5 var(--er-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 .app *,
@@ -23,108 +24,158 @@
   top: 0;
   display: flex;
   flex: none;
-  align-items: stretch;
-  height: 41px;
-  border-bottom: 1px solid var(--mh-border);
-  background-color: var(--mh-muted);
-  font-size: var(--mantine-font-size-sm);
-  backdrop-filter: blur(6px);
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--er-border);
+  background-color: var(--er-surface);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px 0 0;
+  gap: 9px;
+  padding: 4px 8px 4px 2px;
   border: 0;
-  border-right: 1px solid var(--mh-border);
+  border-radius: var(--er-r-sm);
   background: transparent;
-  color: var(--mantine-color-text);
+  color: var(--er-text);
   font: inherit;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   text-decoration: none;
   cursor: pointer;
 }
 
 .brandIcon {
-  display: flex;
-  width: 40px;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-  border-right: 1px solid var(--mh-border);
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 7px;
   background-color: #17191c;
-  color: #fff;
+}
+
+.mark {
+  transform-origin: 50% 8%;
+}
+
+/* easter egg: the mark hangs from the ceiling and sways when touched */
+.brand:hover .mark {
+  animation: sway 2.4s ease-in-out;
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(7deg);
+  }
+  45% {
+    transform: rotate(-5deg);
+  }
+  70% {
+    transform: rotate(2.5deg);
+  }
+  85% {
+    transform: rotate(-1deg);
+  }
 }
 
 .brandName {
-  font-weight: 700;
+  white-space: nowrap;
 }
 
-.brandProduct {
-  color: var(--mantine-color-dimmed);
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .nav {
   display: flex;
-  align-items: stretch;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
 }
 
 .navItem {
   display: flex;
-  width: 132px;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  padding: 0;
+  padding: 6px 10px;
   border: 0;
-  border-right: 1px solid var(--mh-border);
+  border-radius: var(--er-r-sm);
   background-color: transparent;
-  color: var(--mantine-color-dimmed);
+  color: var(--er-text-2);
   font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.navItem:hover,
-.brand:hover {
-  background-color: var(--mh-border);
-  color: var(--mantine-color-text);
+.navItem svg {
+  color: var(--er-text-3);
+}
+
+.navItem:hover {
+  background-color: var(--er-hover);
+  color: var(--er-text);
 }
 
 .navItem[aria-current='page'] {
-  background-color: var(--mantine-color-body);
-  color: var(--mantine-color-text);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--mantine-primary-color-filled);
+  background-color: var(--er-subtle);
+  color: var(--er-text);
+}
+
+.navItem[aria-current='page'] svg {
+  color: var(--er-text);
 }
 
 .navItem:focus-visible,
 .brand:focus-visible,
 .tabLink:focus-visible,
-.tabClose:focus-visible {
-  outline: 2px solid var(--mantine-primary-color-filled);
+.tabClose:focus-visible,
+.iconButton:focus-visible {
+  outline: 2px solid var(--er-accent);
   outline-offset: -2px;
 }
 
-/* A project tab: the project link and its close button in one cell, active like a section cell. */
-.tab:hover {
-  background-color: var(--mh-border);
-  color: var(--mantine-color-text);
+.separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background-color: var(--er-border);
 }
 
+/* A project tab: the project link and its close button in one rounded cell. */
 .tab {
   display: flex;
   min-width: 0;
   max-width: 260px;
-  align-items: stretch;
-  border-right: 1px solid var(--mh-border);
-  color: var(--mantine-color-dimmed);
+  align-items: center;
+  border-radius: var(--er-r-sm);
+  color: var(--er-text-2);
+}
+
+.tab:hover {
+  background-color: var(--er-hover);
+  color: var(--er-text);
 }
 
 .tab[data-active] {
-  background-color: var(--mantine-color-body);
-  color: var(--mantine-color-text);
-  box-shadow: inset 0 -2px 0 var(--mantine-primary-color-filled);
+  background-color: var(--er-subtle);
+  box-shadow: inset 0 0 0 1px var(--er-border);
+  color: var(--er-text);
 }
 
 .tabLink {
@@ -132,17 +183,15 @@
   min-width: 0;
   align-items: center;
   gap: 6px;
-  padding: 0 6px 0 14px;
+  padding: 6px 4px 6px 8px;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-}
-
-.tab[data-active] .tabLink {
-  font-weight: 600;
 }
 
 .tabName {
@@ -152,48 +201,65 @@
 }
 
 .tabClose {
-  display: flex;
+  display: grid;
   width: 22px;
   height: 22px;
   flex: none;
-  align-items: center;
-  align-self: center;
-  justify-content: center;
-  margin-right: 10px;
+  place-items: center;
+  margin-right: 4px;
   padding: 0;
   border: 0;
-  border-radius: 3px;
+  border-radius: 4px;
   background: transparent;
-  color: inherit;
+  color: var(--er-text-3);
   cursor: pointer;
 }
 
 .tabClose:hover {
-  background-color: color-mix(in srgb, var(--mantine-color-text) 14%, transparent);
+  background-color: var(--er-border);
+  color: var(--er-text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.iconButton {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--er-r-sm);
+  background: none;
+  color: var(--er-text-2);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background-color: var(--er-hover);
+  color: var(--er-text);
 }
 
 .route {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
   padding-inline: 12px;
   overflow: hidden;
-  color: var(--mantine-color-dimmed);
-  font-family: var(--mantine-font-family-monospace);
-  font-size: var(--mantine-font-size-xs);
+  color: var(--er-text-3);
+  font: 12px var(--er-mono);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 /* A page of the Library or the Workspace: a centered column. */
-.main {
+.main,
+.mainWide {
   width: 100%;
   max-width: 1320px;
   margin: 0 auto;
-  padding: 20px 24px 48px;
+  padding: 40px 32px 96px;
 }
 
-/* A project: the Shell fills the window under the bar; its header frame line lies on the bar line, one line not two. */
+/* A project: the Shell fills the window under the bar. */
 .projectMain {
   display: flex;
   flex: 1;
@@ -202,8 +268,7 @@
 }
 
 .project {
-  height: calc(100vh - 41px);
-  margin-top: -1px;
+  height: calc(100vh - 49px);
 }
 
 .loading {
@@ -212,18 +277,14 @@
   padding: 48px;
 }
 
-@media (max-width: 640px) {
-  .brandProduct,
+@media (max-width: 760px) {
+  .navLabel,
   .route {
     display: none;
   }
 
-  .navItem {
-    width: auto;
-    padding-inline: 12px;
-  }
-
-  .main {
-    padding: 16px;
+  .main,
+  .mainWide {
+    padding: 24px 16px 64px;
   }
 }

@@ -25,7 +25,9 @@ describe('ExampleDetails', () => {
             workspaceOrigins: [{library: FIXTURE_SOURCE.indexUrl, id: 'loan-repayment', version: '1.3.0'}],
         });
         await screen.findByRole('heading', {name: 'Loan repayment'});
-        expect(screen.getAllByText('✓ In workspace').length).toBeGreaterThan(0);
+        expect(screen.getAllByRole('status').map((node) => node.textContent)).toEqual([
+            expect.stringContaining('You have 1 copy of this example in your workspace'),
+        ]);
         await user.click(screen.getAllByRole('button', {name: 'Open copy'})[0]);
         expect(onOpenCopy).toHaveBeenCalledWith('loan-repayment');
 
@@ -129,7 +131,7 @@ describe('ExampleDetails', () => {
 
     it('shows the update badge when only an older version is in the workspace', async () => {
         setup({workspaceOrigins: [{library: FIXTURE_SOURCE.indexUrl, id: 'loan-repayment', version: '1.2.0'}]});
-        expect((await screen.findAllByText('Update available')).length).toBeGreaterThan(0);
+        expect((await screen.findByRole('status')).textContent).toContain('A newer version is available');
     });
 
     it('names README.md when its file fails', async () => {

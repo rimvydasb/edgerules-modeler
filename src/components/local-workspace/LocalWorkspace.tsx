@@ -1,33 +1,8 @@
 import {forwardRef, useCallback, useImperativeHandle, useState, type ReactElement} from 'react';
-import {ActionIcon, Alert, Button, Group, Menu, Modal, Select, Stack, Text, TextInput} from '@mantine/core';
-import {
-    IconBooks,
-    IconDatabase,
-    IconDotsVertical,
-    IconExternalLink,
-    IconFile,
-    IconFolders,
-    IconPlus,
-    IconSearch,
-    IconSitemap,
-} from '@tabler/icons-react';
-import {KIND_COLORS} from '#ui/kindColors';
-import {
-    SheetAction,
-    SheetActions,
-    SheetBody,
-    SheetChip,
-    SheetDescription,
-    SheetEmpty,
-    SheetGrid,
-    SheetMeta,
-    SheetPageHeader,
-    SheetPanel,
-    SheetPanelHeader,
-    SheetToken,
-    SheetToolbar,
-    sheetClasses,
-} from '#ui/sheet';
+import {ActionIcon, Alert, Button, Group, Menu, Modal, Popover, Select, Stack, Text, TextInput} from '@mantine/core';
+import {IconDatabase, IconDotsVertical, IconPlus, IconSearch} from '@tabler/icons-react';
+import {cx} from '#ui/cx';
+import {SheetAction, SheetActions, SheetChip, SheetEmpty, SheetGrid, SheetPageHeader, sheetClasses} from '#ui/sheet';
 import {
     type LoadedProject,
     type LocalProjectRepository,
@@ -40,10 +15,20 @@ import type {LibraryClient} from '../example-library';
 import {addWorkspaceProject} from './addWorkspaceProject';
 import {ProjectDialog} from './ProjectDialog';
 import {useWorkspaceProjects} from './useWorkspaceProjects';
-import {isOutdated, useNewestVersions} from './useNewestVersions';
+import {isOutdated, useExampleIndustries, useNewestVersions} from './useNewestVersions';
+import {ProjectCard} from './ProjectCard';
 import {useWorkspaceStorage} from './useWorkspaceStorage';
 import * as classes from './localWorkspace.module.css';
-import {formatBytes, savedAgo, visibleProjects, type WorkspaceSort, type WorkspaceSource} from './workspaceModel';
+import {formatBytes, visibleProjects, type WorkspaceSort, type WorkspaceSource} from './workspaceModel';
+
+function StorageMeter({usage, quota}: {usage: number; quota?: number}): ReactElement | null {
+    if (quota === undefined || quota <= 0) return null;
+    return (
+        <span className={classes.meter} aria-hidden="true">
+            <i style={{width: `${Math.max(1, (usage / quota) * 100)}%`}} />
+        </span>
+    );
+}
 
 export interface LocalWorkspaceProps {
     repository: LocalProjectRepository; // the IndexedDB repository of the workspace
@@ -65,9 +50,9 @@ const SORT_OPTIONS = [
     {value: 'name', label: 'Name'},
 ];
 const SOURCE_OPTIONS = [
-    {value: 'all', label: 'All'},
-    {value: 'examples', label: 'From examples'},
-    {value: 'own', label: 'Own projects'},
+    {value: 'all', label: 'All projects'},
+    {value: 'examples', label: 'Example projects'},
+    {value: 'own', label: 'My projects'},
 ];
 const BLANK_MODEL = '{}';
 
@@ -88,6 +73,7 @@ export const LocalWorkspace = forwardRef<LocalWorkspaceHandle, LocalWorkspacePro
     const [actionError, setActionError] = useState<string | undefined>();
     const storage = useWorkspaceStorage(projects);
     const newest = useNewestVersions(library);
+    const industries = useExampleIndustries(library);
 
     const run = useCallback(
         async (work: () => Promise<unknown>) => {
@@ -150,187 +136,201 @@ export const LocalWorkspace = forwardRef<LocalWorkspaceHandle, LocalWorkspacePro
 
     const shown = projects ? visibleProjects(projects, {query, sort, source}) : [];
     const empty = projects !== undefined && projects.length === 0;
-    const count = projects?.length ?? 0;
+
+    const sourceCounts = {
+        all: projects?.length ?? 0,
+        examples: projects?.filter((project) => project.origin !== undefined).length ?? 0,
+        own: projects?.filter((project) => project.origin === undefined).length ?? 0,
+    };
 
     return (
-        <Stack gap="md" data-testid="local-workspace">
+        <Stack gap={28} className={sheetClasses.tokens} data-testid="local-workspace">
             <SheetPageHeader
-                icon={<IconFolders size={22} />}
-                iconColor={KIND_COLORS.model}
+                eyebrow="Local workspace"
                 title="Workspace"
-                subtitle={
-                    projects === undefined
-                        ? 'Loading projects'
-                        : `${count} ${count === 1 ? 'project' : 'projects'} in this browser`
-                }
                 aside={
-                    storage.usage !== undefined && (
-                        <span className={classes.storage} data-testid="workspace-storage">
-                            <IconDatabase size={14} aria-hidden="true" />
-                            {formatBytes(storage.usage)} used
-                            {storage.quota !== undefined && ` of ${formatBytes(storage.quota)}`}
-                            {storage.persistent !== undefined && (
-                                <SheetChip tone={storage.persistent ? 'green' : 'yellow'}>
-                                    {storage.persistent ? 'persistent' : 'not persistent'}
-                                </SheetChip>
-                            )}
-                        </span>
-                    )
+                    <SheetAction primary icon={<IconPlus size={16} />} onClick={() => setDialog({kind: 'new'})}>
+                        New project
+                    </SheetAction>
                 }
-            >
-                <SheetToolbar>
-                    <TextInput
-                        className={sheetClasses.toolbarGrow}
-                        size="xs"
-                        leftSection={<IconSearch size={14} />}
-                        placeholder="Search projects"
-                        aria-label="Search projects"
-                        value={query}
-                        onChange={(event) => setQuery(event.currentTarget.value)}
-                    />
-                    <Select
-                        size="xs"
-                        w={150}
-                        aria-label="Source"
-                        data={SOURCE_OPTIONS}
-                        value={source}
-                        allowDeselect={false}
-                        onChange={(value) => value && setSource(value as WorkspaceSource)}
-                    />
-                    <Select
-                        size="xs"
-                        w={140}
-                        aria-label="Sort"
-                        data={SORT_OPTIONS}
-                        value={sort}
-                        allowDeselect={false}
-                        onChange={(value) => value && setSort(value as WorkspaceSort)}
-                    />
-                </SheetToolbar>
-            </SheetPageHeader>
+            />
 
             {(loadError ?? actionError) && (
                 <Alert color="red" role="alert">
                     {loadError ?? actionError}
                 </Alert>
             )}
-            {storage.persistent === false && (
-                <Alert color="yellow" role="status" py={6}>
-                    The browser may delete these projects when it runs low on space. Projects live only in this browser
-                    profile.
-                </Alert>
-            )}
 
             {empty ? (
                 <SheetEmpty data-testid="workspace-empty">
-                    <Text fw={600} c="var(--mantine-color-text)">
+                    <Text fw={600} c="var(--er-text)">
                         No projects yet
                     </Text>
                     <Text size="sm">Copy an example from the library, or start from an empty model.</Text>
                     <Group>
-                        {onBrowseExamples && <Button onClick={onBrowseExamples}>Browse examples</Button>}
+                        {onBrowseExamples && (
+                            <Button color="dark" onClick={onBrowseExamples}>
+                                Browse examples
+                            </Button>
+                        )}
                         <Button variant="default" onClick={() => setDialog({kind: 'new'})}>
                             New project
                         </Button>
                     </Group>
                 </SheetEmpty>
             ) : (
-                <SheetGrid>
-                    <SheetPanel aria-label="New project" className={classes.newPanel}>
-                        <SheetPanelHeader icon={<IconPlus size={18} />} title="New project" />
-                        <div className={classes.newOptions}>
-                            <button
-                                type="button"
-                                className={classes.newOption}
-                                onClick={() => setDialog({kind: 'new'})}
-                            >
-                                <IconFile size={18} aria-hidden="true" />
-                                <span>
-                                    <span className={classes.newOptionTitle}>Blank project</span>
-                                    <span className={classes.newOptionHint}>Start from an empty model</span>
-                                </span>
-                            </button>
-                            {onBrowseExamples && (
-                                <button type="button" className={classes.newOption} onClick={onBrowseExamples}>
-                                    <IconBooks size={18} aria-hidden="true" />
-                                    <span>
-                                        <span className={classes.newOptionTitle}>From example →</span>
-                                        <span className={classes.newOptionHint}>Copy a model of the library</span>
+                <div className={classes.layout}>
+                    <aside className={cx(sheetClasses.facets, classes.side)} aria-label="Filters">
+                        <div className={sheetClasses.facetGroup} role="group" aria-label="Source">
+                            <div className={sheetClasses.eyebrow}>Source</div>
+                            {SOURCE_OPTIONS.map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    className={sheetClasses.facet}
+                                    aria-pressed={source === option.value}
+                                    onClick={() => setSource(option.value as WorkspaceSource)}
+                                >
+                                    {option.label}
+                                    <span className={sheetClasses.facetCount}>
+                                        {sourceCounts[option.value as WorkspaceSource]}
                                     </span>
                                 </button>
-                            )}
+                            ))}
                         </div>
-                    </SheetPanel>
-                    {shown.map((project) => (
-                        <SheetPanel key={project.locator.projectPath} data-testid="project-panel">
-                            <SheetPanelHeader
-                                icon={<IconSitemap size={18} />}
-                                iconColor={KIND_COLORS.model}
-                                title={
-                                    <button
-                                        type="button"
-                                        role="link"
-                                        className={sheetClasses.titleLink}
-                                        onClick={() => onOpen(project.locator)}
-                                    >
-                                        <span className={sheetClasses.titleText}>{project.name}</span>
-                                    </button>
-                                }
-                                aside={
-                                    <Menu position="bottom-end" withinPortal>
-                                        <Menu.Target>
-                                            <ActionIcon
-                                                variant="subtle"
-                                                color="gray"
-                                                size="sm"
-                                                aria-label={`Menu of ${project.name}`}
-                                            >
-                                                <IconDotsVertical size={16} />
-                                            </ActionIcon>
-                                        </Menu.Target>
-                                        <Menu.Dropdown>
-                                            <Menu.Item onClick={() => onOpen(project.locator)}>Open</Menu.Item>
-                                            <Menu.Item onClick={() => setDialog({kind: 'rename', project})}>
-                                                Rename
-                                            </Menu.Item>
-                                            <Menu.Item onClick={() => void duplicate(project)}>Duplicate</Menu.Item>
-                                            <Menu.Item color="red" onClick={() => setDialog({kind: 'delete', project})}>
-                                                Delete
-                                            </Menu.Item>
-                                        </Menu.Dropdown>
-                                    </Menu>
-                                }
+                        {storage.usage !== undefined && (
+                            <div className={sheetClasses.facetGroup} data-testid="workspace-storage">
+                                <div className={sheetClasses.eyebrow}>Storage</div>
+                                <Popover position="top-start" width={300} shadow="md" withArrow={false}>
+                                    <Popover.Target>
+                                        <button type="button" className={classes.storage} aria-haspopup="dialog">
+                                            <span className={classes.storageTop}>
+                                                <IconDatabase size={14} aria-hidden="true" />
+                                                {formatBytes(storage.usage)} used
+                                                {storage.quota !== undefined && ` of ${formatBytes(storage.quota)}`}
+                                            </span>
+                                            <StorageMeter usage={storage.usage} quota={storage.quota} />
+                                            {storage.persistent !== undefined && (
+                                                <SheetChip tone={storage.persistent ? 'green' : 'orange'}>
+                                                    {storage.persistent ? 'persistent' : 'not persistent'}
+                                                </SheetChip>
+                                            )}
+                                        </button>
+                                    </Popover.Target>
+                                    <Popover.Dropdown aria-label="Storage details">
+                                        <Stack gap={8}>
+                                            <Text fw={600} size="sm">
+                                                Projects live only in this browser.
+                                            </Text>
+                                            <Text size="sm" c="dimmed">
+                                                {storage.persistent
+                                                    ? 'The browser keeps them, even when it runs low on space.'
+                                                    : 'The browser may delete them when it runs low on space. Ask it to keep them — the browser may show a prompt.'}
+                                            </Text>
+                                            <Group justify="space-between" className={classes.storageNumbers}>
+                                                <span>{formatBytes(storage.usage)} used</span>
+                                                {storage.quota !== undefined && (
+                                                    <span>{formatBytes(storage.quota - storage.usage)} available</span>
+                                                )}
+                                            </Group>
+                                            <StorageMeter usage={storage.usage} quota={storage.quota} />
+                                            {storage.persistent === false && storage.canPersist && (
+                                                <Button size="xs" color="dark" onClick={() => void storage.keep()}>
+                                                    Keep my projects
+                                                </Button>
+                                            )}
+                                            {storage.persistent === false && storage.keepDenied && (
+                                                <Text size="xs" c="red" role="alert">
+                                                    The browser declined to keep the projects. It decides on its own,
+                                                    often based on how much you use this site; try again later or
+                                                    bookmark the page.
+                                                </Text>
+                                            )}
+                                            {storage.persistent === false && !storage.canPersist && (
+                                                <Text size="xs" c="dimmed">
+                                                    This browser cannot make storage persistent.
+                                                </Text>
+                                            )}
+                                        </Stack>
+                                    </Popover.Dropdown>
+                                </Popover>
+                            </div>
+                        )}
+                    </aside>
+                    <div className={classes.results}>
+                        <div className={classes.toolbar}>
+                            <TextInput
+                                className={classes.searchBox}
+                                classNames={{input: classes.input}}
+                                leftSection={<IconSearch size={15} />}
+                                placeholder="Search name, description, example…"
+                                aria-label="Search projects"
+                                value={query}
+                                onChange={(event) => setQuery(event.currentTarget.value)}
                             />
-                            <SheetBody>
-                                <SheetDescription>{project.description || <i>No description</i>}</SheetDescription>
-                                <SheetMeta>
-                                    {project.origin ? (
-                                        <SheetToken>
-                                            from {project.origin.id}@{project.origin.version}
-                                        </SheetToken>
-                                    ) : (
-                                        <SheetChip tone="gray">Own project</SheetChip>
-                                    )}
-                                    {project.origin && isOutdated(project.origin, newest) && (
-                                        <SheetChip tone="yellow">Update available</SheetChip>
-                                    )}
-                                    <span className={classes.saved}>{savedAgo(project.savedAt)}</span>
-                                </SheetMeta>
-                            </SheetBody>
-                            <SheetActions>
-                                <SheetAction
-                                    primary
-                                    icon={<IconExternalLink size={14} />}
-                                    onClick={() => onOpen(project.locator)}
-                                >
-                                    Open
-                                </SheetAction>
-                            </SheetActions>
-                        </SheetPanel>
-                    ))}
-                </SheetGrid>
+                            <Select
+                                classNames={{input: classes.input}}
+                                w={190}
+                                leftSection={<span className={classes.sortLabel}>Sort</span>}
+                                leftSectionWidth={44}
+                                aria-label="Sort"
+                                data={SORT_OPTIONS}
+                                value={sort}
+                                allowDeselect={false}
+                                onChange={(value) => value && setSort(value as WorkspaceSort)}
+                            />
+                        </div>
+                        <Text size="xs" c="dimmed" role="status">
+                            {projects === undefined
+                                ? 'Loading projects'
+                                : `${shown.length} ${shown.length === 1 ? 'project' : 'projects'}`}
+                        </Text>
+                        <SheetGrid>
+                            {shown.map((project) => (
+                                <ProjectCard
+                                    key={project.locator.projectPath}
+                                    project={project}
+                                    industry={project.origin ? industries.get(project.origin.id) : undefined}
+                                    updateAvailable={project.origin ? isOutdated(project.origin, newest) : false}
+                                    onOpen={() => onOpen(project.locator)}
+                                    menu={
+                                        <SheetActions>
+                                            <Menu position="bottom-end" withinPortal>
+                                                <Menu.Target>
+                                                    <ActionIcon
+                                                        variant="subtle"
+                                                        color="gray"
+                                                        size="sm"
+                                                        aria-label={`Menu of ${project.name}`}
+                                                    >
+                                                        <IconDotsVertical size={16} />
+                                                    </ActionIcon>
+                                                </Menu.Target>
+                                                <Menu.Dropdown>
+                                                    <Menu.Item onClick={() => onOpen(project.locator)}>Open</Menu.Item>
+                                                    <Menu.Item onClick={() => setDialog({kind: 'rename', project})}>
+                                                        Rename
+                                                    </Menu.Item>
+                                                    <Menu.Item onClick={() => void duplicate(project)}>
+                                                        Duplicate
+                                                    </Menu.Item>
+                                                    <Menu.Item
+                                                        color="red"
+                                                        onClick={() => setDialog({kind: 'delete', project})}
+                                                    >
+                                                        Delete
+                                                    </Menu.Item>
+                                                </Menu.Dropdown>
+                                            </Menu>
+                                        </SheetActions>
+                                    }
+                                />
+                            ))}
+                        </SheetGrid>
+                        {projects && shown.length === 0 && <SheetEmpty>No project matches the filters.</SheetEmpty>}
+                    </div>
+                </div>
             )}
-            {projects && !empty && shown.length === 0 && <SheetEmpty>No project matches the filters.</SheetEmpty>}
 
             {dialog?.kind === 'new' && (
                 <ProjectDialog

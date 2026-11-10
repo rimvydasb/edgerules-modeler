@@ -34,31 +34,30 @@ async function setup(
 describe('ModelerHome', () => {
     it('shows the search, the featured examples and the recent projects of the workspace', async () => {
         const callbacks = await setup([{name: 'My pricing'}]);
-        expect(await screen.findByRole('button', {name: 'Open My pricing'})).toBeTruthy();
+        expect(await screen.findByRole('link', {name: 'My pricing'})).toBeTruthy();
         const examples = screen.getByRole('region', {name: 'Examples'});
         expect(within(examples).getAllByTestId('example-panel').length).toBeGreaterThan(0);
         expect(screen.getByRole('region', {name: 'Recent projects'}).getAttribute('aria-label')).toBe(
             'Recent projects',
         );
         expect(screen.getByRole('heading', {name: 'Workspace'})).toBeTruthy();
-        for (const removed of ['Continue', 'Industries', 'Featured examples', 'New and updated', 'EdgeRules Modeler'])
+        for (const removed of ['Continue', 'Featured examples', 'New and updated'])
             expect(screen.queryByText(removed)).toBeNull();
-        expect(screen.queryByText(/See all examples/)).toBeNull();
         expect(screen.queryByTestId('industry-grid')).toBeNull();
 
         const user = userEvent.setup();
-        await user.click(within(examples).getByRole('button', {name: /Browse other examples/}));
-        await user.click(screen.getByRole('button', {name: 'Open My pricing'}));
+        await user.click(within(examples).getByRole('button', {name: /All examples/}));
+        await user.click(screen.getByRole('link', {name: 'My pricing'}));
         expect(callbacks.onShowAllExamples).toHaveBeenCalled();
         expect(callbacks.onOpenProject).toHaveBeenCalledWith(expect.objectContaining({projectPath: 'my-pricing'}));
-        // Three projects or fewer: nothing more to browse.
-        expect(screen.queryByRole('button', {name: /Browse other projects/})).toBeNull();
+        // Four projects or fewer: nothing more to browse.
+        expect(screen.queryByRole('button', {name: /All projects/})).toBeNull();
     });
 
-    it('lists the 3 newest projects and offers to browse the others only when they exist', async () => {
-        const callbacks = await setup([{name: 'One'}, {name: 'Two'}, {name: 'Three'}, {name: 'Four'}]);
-        const browse = await screen.findByRole('button', {name: /Browse other projects/});
-        expect(screen.getAllByRole('button', {name: /^Open /})).toHaveLength(3);
+    it('lists the 4 newest projects and offers to browse the others only when they exist', async () => {
+        const callbacks = await setup([{name: 'One'}, {name: 'Two'}, {name: 'Three'}, {name: 'Four'}, {name: 'Five'}]);
+        const browse = await screen.findByRole('button', {name: /All projects/});
+        expect(within(screen.getByRole('region', {name: 'Recent projects'})).getAllByRole('link')).toHaveLength(4);
         await userEvent.setup().click(browse);
         expect(callbacks.onShowAllProjects).toHaveBeenCalled();
     });
@@ -115,7 +114,7 @@ describe('ModelerHome', () => {
         expect(await screen.findByText('HTTP 503')).toBeTruthy();
         expect(screen.getAllByRole('alert')).toHaveLength(1);
         expect(screen.queryByRole('region', {name: 'Examples'})).toBeNull();
-        expect(await screen.findByRole('button', {name: 'Open My pricing'})).toBeTruthy();
+        expect(await screen.findByRole('link', {name: 'My pricing'})).toBeTruthy();
 
         failing = false;
         await userEvent.setup().click(screen.getByRole('button', {name: 'Retry'}));

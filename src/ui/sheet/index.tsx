@@ -1,5 +1,6 @@
 import {Loader} from '@mantine/core';
 import {Fragment, type ButtonHTMLAttributes, type HTMLAttributes, type ReactElement, type ReactNode} from 'react';
+import {projectInitials} from '#lib/projectInitials';
 import {cx} from '../cx';
 import * as classes from './sheet.module.css';
 
@@ -51,20 +52,34 @@ export function SheetPanelButton({className, children, ...rest}: SheetPanelButto
 export interface SheetPanelHeaderProps {
     icon?: ReactNode; // the glyph of the icon square
     iconColor?: string; // the kind color of the icon square; muted without it
+    eyebrow?: ReactNode; // the monospace label above the title: the industry of an example
     title: ReactNode;
     aside?: ReactNode; // chips, counts or a menu at the right end of the row
-    only?: boolean; // the panel is this header row only: no bottom line
+    only?: boolean; // the panel is this header row only: a compact tile
 }
 
-export function SheetPanelHeader({icon, iconColor, title, aside, only}: SheetPanelHeaderProps): ReactElement {
+export function SheetPanelHeader({icon, iconColor, eyebrow, title, aside, only}: SheetPanelHeaderProps): ReactElement {
     return (
         <div className={cx(classes.panelHeader, only && classes.panelHeaderOnly)}>
             {icon && <SheetIcon color={iconColor}>{icon}</SheetIcon>}
+            {eyebrow !== undefined && <span className={classes.eyebrow}>{eyebrow}</span>}
+            {eyebrow !== undefined && aside && <div className={classes.aside}>{aside}</div>}
             <div className={classes.title}>
                 {typeof title === 'string' ? <span className={classes.titleText}>{title}</span> : title}
             </div>
-            {aside && <div className={classes.aside}>{aside}</div>}
+            {eyebrow === undefined && aside && <div className={classes.aside}>{aside}</div>}
         </div>
+    );
+}
+
+/** The short mark of a project (its initials) in place of an icon. */
+export function SheetProjectMark({name, size = 'md'}: {name: string; size?: 'xs' | 'sm' | 'md'}): ReactElement {
+    return (
+        <span
+            className={cx(classes.projectMark, size !== 'md' && classes[`projectMark_${size}`])}
+            data-initials={projectInitials(name)}
+            aria-hidden="true"
+        />
     );
 }
 
@@ -80,12 +95,17 @@ export function SheetMeta({children}: {children: ReactNode}): ReactElement {
     return <div className={classes.meta}>{children}</div>;
 }
 
+/** The footer row of a card: the metadata on the left, the actions (shown on hover) on the right. */
+export function SheetFooter({children}: {children: ReactNode}): ReactElement {
+    return <div className={classes.footer}>{children}</div>;
+}
+
 /** Monospace tokens: features of an example, `id@version` coordinates. Shows `+N` past `max`. */
 export function SheetTokens({items, max}: {items: readonly string[]; max?: number}): ReactElement {
     const shown = max === undefined ? items : items.slice(0, max);
     const extra = items.length - shown.length;
     return (
-        <div className={classes.tokens}>
+        <div className={classes.tags}>
             {shown.map((item) => (
                 <span key={item} className={classes.token}>
                     {item}
@@ -100,11 +120,12 @@ export function SheetToken({children}: {children: ReactNode}): ReactElement {
     return <span className={classes.token}>{children}</span>;
 }
 
-export type SheetChipTone = 'green' | 'yellow' | 'red' | 'gray';
+export type SheetChipTone = 'green' | 'yellow' | 'orange' | 'red' | 'gray';
 
 const CHIP_TONES: Record<SheetChipTone, string> = {
     green: classes.chipGreen,
     yellow: classes.chipYellow,
+    orange: classes.chipOrange,
     red: classes.chipRed,
     gray: classes.chipGray,
 };
@@ -160,11 +181,12 @@ export function SheetAction({
 }
 
 export interface SheetPageHeaderProps {
-    icon: ReactNode;
+    icon?: ReactNode;
     iconColor?: string;
     title: ReactNode;
     subtitle?: ReactNode;
     aside?: ReactNode; // right end of the title row
+    eyebrow?: ReactNode; // the monospace label above the title
     children?: ReactNode; // rows under the title row: a SheetToolbar or SheetPageActions
 }
 
@@ -175,13 +197,15 @@ export function SheetPageHeader({
     title,
     subtitle,
     aside,
+    eyebrow,
     children,
 }: SheetPageHeaderProps): ReactElement {
     return (
         <header className={classes.pageHeader}>
             <div className={classes.pageHeaderRow}>
-                <SheetIcon color={iconColor}>{icon}</SheetIcon>
+                {icon && <SheetIcon color={iconColor}>{icon}</SheetIcon>}
                 <div className={classes.pageTitle}>
+                    {eyebrow !== undefined && <div className={classes.eyebrow}>{eyebrow}</div>}
                     <h2 className={classes.pageTitleText}>{title}</h2>
                     {subtitle && <div className={classes.pageSubtitle}>{subtitle}</div>}
                 </div>
@@ -254,9 +278,19 @@ export function SheetKeyValues({
     );
 }
 
-export function SheetGrid({compact, children, ...rest}: DivProps & {compact?: boolean}): ReactElement {
+/** A grid of panels. `fourUp` keeps four columns on a wide screen, so a row of four never leaves an orphan. */
+export function SheetGrid({
+    compact,
+    fourUp,
+    children,
+    className,
+    ...rest
+}: DivProps & {compact?: boolean; fourUp?: boolean}): ReactElement {
     return (
-        <div {...rest} className={cx(classes.grid, compact && classes.gridCompact)}>
+        <div
+            {...rest}
+            className={cx(classes.grid, compact && classes.gridCompact, fourUp && classes.gridFour, className)}
+        >
             {children}
         </div>
     );

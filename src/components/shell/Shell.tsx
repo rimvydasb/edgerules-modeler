@@ -5,6 +5,8 @@ import {isPortableError} from '#lib/portable';
 import {callableParameters, isRecord, portableAtPath} from '#lib/portableUtils';
 import type {PortableNode} from '@edgerules/portable';
 import {cx} from '#ui/cx';
+import {KIND_COLORS} from '#ui/kindColors';
+import {sheetClasses} from '#ui/sheet';
 import {createBoxedEditorService, type BoxedEditorOpenTarget} from '../boxed-editor';
 import {createFlowEditorService, type FlowEditorOpenTarget, type FlowFocusRequest} from '../flow-editor';
 import {ProjectExplorer} from '../project-explorer';
@@ -40,7 +42,13 @@ import {CodeView} from './views/CodeView';
 import {DocumentCode, DocumentPreview} from './views/DocumentView';
 import {FlowView} from './views/FlowView';
 import {TestsView} from './views/TestsView';
-import {WorkbookPicker, type ServiceSummary, type WorkbookSummary} from './views/WorkbookPicker';
+import {
+    WorkbookPicker,
+    type OverviewCount,
+    type ProjectOverview,
+    type ServiceSummary,
+    type WorkbookSummary,
+} from './views/WorkbookPicker';
 import * as classes from './shell.module.css';
 
 type OpenTarget = BoxedEditorOpenTarget | FlowEditorOpenTarget;
@@ -161,8 +169,8 @@ export function Shell({
 
     // The Flow view of the model root offers the workbooks and the services to open, when the model has workbooks.
     // A new workbook must not take a root name.
-    const {workbooks, services, taken} = useMemo(() => {
-        if (root !== '*') return {workbooks: [], services: [], taken: new Set<string>()};
+    const {workbooks, services, taken, counts} = useMemo(() => {
+        if (root !== '*') return {workbooks: [], services: [], taken: new Set<string>(), counts: [] as OverviewCount[]};
         const model = session.engine.toPortable();
         const workbooks: WorkbookSummary[] = modelWorkbooks(model).map((workbook) => ({
             path: workbook,
@@ -177,7 +185,15 @@ export function Shell({
             arguments: Object.keys(parametersAt(model, entry.path)).length,
         }));
         const taken = new Set(Object.keys(model.fields));
-        return {workbooks, services, taken};
+        const sections = buildSections(model, []);
+        const counts: OverviewCount[] = [
+            {label: 'Types', count: sections.types.length, color: KIND_COLORS.complexType},
+            {label: 'Facts', count: sections.factsLibrary.length, color: KIND_COLORS.facts},
+            {label: 'Methods', count: sections.methods.length, color: KIND_COLORS.function},
+            {label: 'Decisions', count: sections.decisions.length, color: KIND_COLORS.decision},
+            {label: 'Variables', count: sections.variables.length, color: '#adb5bd'},
+        ];
+        return {workbooks, services, taken, counts};
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session, root, version, descriptions]);
 
@@ -301,11 +317,11 @@ export function Shell({
 
     const explorer = (
         <ProjectExplorer
-            className={cx(classes.explorer, !explorerOpen && classes.explorerCollapsed)}
+            className={cx(sheetClasses.tokens, classes.explorer, !explorerOpen && classes.explorerCollapsed)}
             collapsed={!explorerOpen}
             service={session.engine}
             revision={version}
-            rootLabel="Project"
+            rootLabel="Project Explorer"
             documents={DOCUMENTS}
             testSubjects={testSubjects}
             // The entry of the open editor, or of the Flow node it centers: its section expands and it is selected.
@@ -317,12 +333,39 @@ export function Shell({
         />
     );
 
+    // The facts of the overview page: the project header and its side column.
+    const overview: ProjectOverview = {
+        name: projectName,
+        savedAt,
+        origin: projectOrigin,
+        originStatus: navigation?.originStatus,
+        onShowOrigin: navigation?.onShowOrigin,
+        counts,
+        testSuites: testSubjects.length,
+        onOpenTests: testSubjects.length > 0 ? () => navigate({path: '*', view: 'tests'}) : undefined,
+        onOpenModel: () => navigate({path: '*', view: 'boxed'}),
+    };
+
+    const projectMenu = navigation && (
+        <ShellProjectMenu
+            name={projectName}
+            projectId={projectId}
+            origin={projectOrigin}
+            savedAt={savedAt}
+            navigation={navigation}
+            current={root === '*'}
+            onOpenOverview={() => navigate({path: '*', view: modelView})}
+            onOpenReadme={openReadme}
+        />
+    );
+
     return (
         <div className={cx(classes.root, className)} style={style} data-testid="shell">
-            <div className={classes.header}>
+            <div className={cx(classes.header, sheetClasses.tokens)}>
                 <ShellBreadcrumbs
                     segments={segments}
                     rootLabel={rootLabel}
+                    first={projectMenu}
                     origin={originCrumb}
                     document={isDocument ? {path: root, label: README_FILE} : undefined}
                     // The model name opens the Flow view of the model, its workbooks, or its Boxed view when it declares
@@ -341,16 +384,6 @@ export function Shell({
                     onOpenPrimary={() => navigate({view: primaryView})}
                     tests={view === 'tests'}
                 />
-                {navigation && (
-                    <ShellProjectMenu
-                        name={projectName}
-                        projectId={projectId}
-                        origin={projectOrigin}
-                        savedAt={savedAt}
-                        navigation={navigation}
-                        onOpenReadme={openReadme}
-                    />
-                )}
                 {hasSettings && !readOnly && <ShellSettings key={root} root={root} />}
                 <ShellViewSwitch
                     view={view}
@@ -360,6 +393,7 @@ export function Shell({
                     onCreateTests={readOnly ? undefined : createTests}
                     onChange={(next) => navigate({view: next})}
                     document={isDocument}
+                    overview={root === '*'}
                 />
                 <ShellSplitToggle open={split} disabled={view !== 'flow'} onToggle={() => setSplit(!split)} />
             </div>
@@ -410,6 +444,7 @@ export function Shell({
                                 onModelLink={openModelLink}
                                 workbooks={workbooks}
                                 services={services}
+                                overview={overview}
                                 taken={taken}
                                 onSelect={(workbook) => navigate({path: workbook, view: 'flow'})}
                                 onSelectService={(service) => navigate({path: service, view: 'flow'})}

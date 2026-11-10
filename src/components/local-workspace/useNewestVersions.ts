@@ -27,3 +27,28 @@ export function isOutdated(origin: ProjectOrigin, newest: ReadonlyMap<string, st
     const latest = newest.get(origin.id);
     return latest !== undefined && latest !== origin.version;
 }
+
+/** The industry title of every example id, for the label of a project copied from an example. */
+export function useExampleIndustries(library: LibraryClient | undefined): ReadonlyMap<string, string> {
+    const [titles, setTitles] = useState<ReadonlyMap<string, string>>(new Map());
+    useEffect(() => {
+        if (!library) return;
+        let cancelled = false;
+        library.loadIndex().then(
+            (index) => {
+                if (cancelled) return;
+                const industries = new Map(index.industries.map((industry) => [industry.id, industry.title]));
+                setTitles(
+                    new Map(
+                        index.examples.map((entry) => [entry.id, industries.get(entry.industry) ?? entry.industry]),
+                    ),
+                );
+            },
+            () => undefined, // the label is informational; an index failure falls back to "From example"
+        );
+        return () => {
+            cancelled = true;
+        };
+    }, [library]);
+    return library ? titles : new Map();
+}

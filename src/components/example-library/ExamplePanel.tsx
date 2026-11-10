@@ -1,4 +1,4 @@
-import {IconCopy, IconExternalLink, IconInfoCircle, IconPlayerPlay} from '@tabler/icons-react';
+import {IconCopy, IconExternalLink, IconInfoCircle} from '@tabler/icons-react';
 import type {KeyboardEvent, ReactElement} from 'react';
 import {
     SheetAction,
@@ -6,27 +6,27 @@ import {
     SheetBody,
     SheetChip,
     SheetDescription,
+    SheetFooter,
     SheetMeta,
     SheetPanel,
     SheetPanelHeader,
     SheetTokens,
     sheetClasses,
 } from '#ui/sheet';
-import {IndustryIcon} from './industryIcon';
-import {LEVEL_COLORS, LEVEL_LABELS} from './levels';
 import type {WorkspaceStatus} from './libraryQuery';
 import type {LibraryEntry} from './types';
 
-const MAX_FEATURES = 3;
+const MAX_FEATURES = 3; // the default number of feature tags on a card
 
 export interface ExamplePanelProps {
     entry: LibraryEntry;
     industryTitle: string;
-    industryIcon?: string;
+    industryIcon?: string; // kept for the hosts; the card shows the industry as a text label
     status: WorkspaceStatus;
     copies?: number; // the number of workspace copies of the example
     incompatible?: boolean; // the loaded engine is outside the engine range of the example
     thumbnailUrl?: string;
+    maxTags?: number; // feature tags shown before "+N"; default 3
     busy?: boolean; // "Copy and open" is loading the files
     tabIndex?: 0 | -1;
     onCopyAndOpen: () => void;
@@ -50,11 +50,11 @@ export function WorkspaceChip({status, copies}: {status: WorkspaceStatus; copies
 export function ExamplePanel({
     entry,
     industryTitle,
-    industryIcon,
     status,
     copies,
     incompatible,
     thumbnailUrl,
+    maxTags = MAX_FEATURES,
     busy,
     tabIndex = 0,
     onCopyAndOpen,
@@ -78,8 +78,7 @@ export function ExamplePanel({
             onKeyDown={onKeyDown}
         >
             <SheetPanelHeader
-                icon={<IndustryIcon name={industryIcon ?? entry.industry} size={19} />}
-                iconColor={LEVEL_COLORS[entry.level]}
+                eyebrow={industryTitle}
                 title={
                     <button type="button" role="link" className={sheetClasses.titleLink} onClick={onDetails}>
                         <span className={sheetClasses.titleText}>{entry.name}</span>
@@ -90,38 +89,34 @@ export function ExamplePanel({
             {thumbnailUrl && <img className={sheetClasses.thumbnail} src={thumbnailUrl} alt="" loading="lazy" />}
             <SheetBody>
                 <SheetDescription>{entry.description}</SheetDescription>
-                <SheetTokens items={entry.features} max={MAX_FEATURES} />
+                <SheetTokens items={entry.features} max={maxTags} />
+            </SheetBody>
+            <SheetFooter>
                 <SheetMeta>
-                    <span>{industryTitle}</span>
-                    <span>{LEVEL_LABELS[entry.level]}</span>
                     {newest && <span>v{newest}</span>}
                     {entry.stats?.tests !== undefined && <span>{entry.stats.tests} tests</span>}
                     {incompatible && <SheetChip tone="red">Needs engine {entry.engine}</SheetChip>}
                 </SheetMeta>
-            </SheetBody>
-            <SheetActions>
-                {inWorkspace ? (
-                    <>
-                        <SheetAction primary icon={<IconExternalLink size={14} />} onClick={onOpenCopy}>
-                            Open copy
+                <SheetActions>
+                    {inWorkspace ? (
+                        <>
+                            <SheetAction icon={<IconExternalLink size={13} />} onClick={onOpenCopy}>
+                                Open copy
+                            </SheetAction>
+                            <SheetAction busy={busy} iconOnly icon={<IconCopy size={14} />} onClick={onCopyAndOpen}>
+                                {status === 'update-available' ? 'Copy newest' : 'Copy again'}
+                            </SheetAction>
+                        </>
+                    ) : (
+                        <SheetAction primary busy={busy} icon={<IconCopy size={13} />} onClick={onCopyAndOpen}>
+                            Copy and open
                         </SheetAction>
-                        <SheetAction busy={busy} icon={<IconCopy size={14} />} onClick={onCopyAndOpen}>
-                            {status === 'update-available' ? 'Copy newest' : 'Copy again'}
-                        </SheetAction>
-                    </>
-                ) : (
-                    <SheetAction primary busy={busy} icon={<IconPlayerPlay size={14} />} onClick={onCopyAndOpen}>
-                        Copy and open
+                    )}
+                    <SheetAction iconOnly icon={<IconInfoCircle size={15} />} onClick={onDetails}>
+                        Details
                     </SheetAction>
-                )}
-                <SheetAction
-                    iconOnly={inWorkspace}
-                    icon={<IconInfoCircle size={inWorkspace ? 16 : 14} />}
-                    onClick={onDetails}
-                >
-                    Details
-                </SheetAction>
-            </SheetActions>
+                </SheetActions>
+            </SheetFooter>
         </SheetPanel>
     );
 }

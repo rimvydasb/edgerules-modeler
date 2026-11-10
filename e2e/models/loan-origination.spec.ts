@@ -128,8 +128,8 @@ test('the service tests of joint and single applications pass when run', async (
     await openStory(page, 'models-loan-origination--service-tests');
     const summaries = page.getByTestId(/^assertion-summary-/);
     await expect(summaries).toHaveCount(6, SLOW);
-    await expect(summaries.first()).toHaveText('');
 
+    // The tests run when the subject opens; "Run all" runs them again.
     await page.getByRole('button', {name: 'Run all'}).click();
     for (let index = 0; index < 6; index++) await expect(summaries.nth(index)).toHaveText('11/11');
     await expect(page.locator('[data-mismatch="true"]')).toHaveCount(0);

@@ -51,7 +51,7 @@ test('Copy and open shows the copy in the Shell; the top bar, not the Shell, lea
 
     await page.getByTestId('modeler-app').getByRole('button', {name: 'Workspace', exact: true}).click();
     await expect(page.getByTestId('modeler-route')).toHaveText('/workspace');
-    await expect(page.getByTestId('project-panel')).toContainText('from loan-repayment@');
+    await expect(page.getByTestId('project-panel')).toContainText('loan-repayment@');
 
     // The Library now marks the example as copied and opens the copy instead of copying it again.
     await page.getByTestId('modeler-app').getByRole('button', {name: 'Examples', exact: true}).click();

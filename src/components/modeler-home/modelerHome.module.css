@@ -1,8 +1,185 @@
-/* The search box and its suggestions. */
+/* The Home page: hero, search, quick actions, sections, industries, footer. Tokens come from `sheetClasses.tokens`. */
+.home {
+  width: 100%;
+  font-family: var(--er-sans);
+}
+
+.hero {
+  padding: 36px 0 8px;
+}
+
+.heroTitle {
+  margin: 14px 0;
+  font: 600 46px/1.08 var(--er-sans);
+  letter-spacing: -0.03em;
+}
+
+.heroText {
+  max-width: 540px;
+  margin: 0 0 26px;
+  color: var(--er-text-2);
+  font-size: 16px;
+}
+
+@media (max-width: 960px) {
+  .heroTitle {
+    font-size: 36px;
+  }
+}
+
+.quick {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--er-border-strong);
+  border-radius: var(--er-r-sm);
+  background-color: var(--er-surface);
+  color: var(--er-text);
+  font: 500 13.5px var(--er-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: var(--er-hover);
+}
+
+.buttonPrimary {
+  border-color: var(--er-primary);
+  background-color: var(--er-primary);
+  color: var(--er-on-primary);
+}
+
+.buttonPrimary:hover {
+  background-color: var(--er-primary);
+  opacity: 0.88;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+  margin-top: 44px;
+}
+
+.industries {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .industries {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.industry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+  color: var(--er-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.industry:hover {
+  border-color: var(--er-border-strong);
+}
+
+.industry > svg {
+  color: var(--er-text-3);
+}
+
+.industryIcon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--er-border-strong);
+  border-radius: 7px;
+  color: var(--er-text-2);
+}
+
+.industryText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.industryText b {
+  font-weight: 600;
+}
+
+.industryText small {
+  color: var(--er-text-3);
+  font-size: 12.5px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 72px;
+  padding-top: 18px;
+  border-top: 1px solid var(--er-border);
+  color: var(--er-text-3);
+  font-size: 12.5px;
+}
+
+/* ---------------------------------------------------------------- the search box and its suggestions */
 .search {
   position: relative;
   width: 100%;
-  max-width: 560px;
+  max-width: 620px;
+}
+
+.search .heroInput {
+  height: 48px;
+  padding-left: 40px;
+  border: 1px solid var(--er-border-strong);
+  border-radius: 10px;
+  background-color: var(--er-surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  color: var(--er-text);
+  font: 15px var(--er-sans);
+}
+
+.search .heroInput:hover {
+  border-color: var(--er-text-3);
+}
+
+.search .heroInput:focus {
+  border-color: var(--er-text-3);
+  box-shadow: 0 0 0 3px var(--er-accent-soft);
+}
+
+.searchIcon {
+  color: var(--er-text-3);
+}
+
+.kbd {
+  padding: 3px 5px;
+  border: 1px solid var(--er-border);
+  border-radius: 4px;
+  background-color: var(--er-surface);
+  color: var(--er-text-3);
+  font: 500 11px/1 var(--er-mono);
 }
 
 .suggestions {
@@ -12,39 +189,34 @@
   right: 0;
   left: 0;
   overflow: hidden;
-  margin-top: 4px;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: 4px;
-  background-color: var(--mantine-color-body);
-  box-shadow: var(--mantine-shadow-md);
+  margin-top: 6px;
+  padding: 5px;
+  border: 1px solid var(--er-border);
+  border-radius: 10px;
+  background-color: var(--er-surface);
+  box-shadow: var(--er-shadow-pop);
 }
 
 .groupLabel {
-  padding: 6px 12px 4px;
-  border-top: 1px solid var(--mantine-color-default-border);
-  background-color: var(--mantine-color-default-hover);
-  color: var(--mantine-color-dimmed);
-  font-size: 11px;
-  font-weight: 700;
+  padding: 8px 9px 4px;
+  color: var(--er-text-3);
+  font: 500 11px/1 var(--er-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-.group:first-child .groupLabel {
-  border-top: 0;
 }
 
 .option {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
-  border-top: 1px solid var(--mantine-color-default-border);
+  padding: 7px 9px;
+  border-radius: 7px;
   cursor: pointer;
 }
 
+.option:hover,
 .optionActive {
-  background-color: var(--mantine-primary-color-light);
+  background-color: var(--er-hover);
 }
 
 .optionIcon {
@@ -54,27 +226,10 @@
   height: 26px;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
+  border-radius: 6px;
   color: #fff;
 }
 
 .optionText {
   min-width: 0;
-}
-
-/* The "Browse other examples" panel: as tall as the example panels beside it, the label centered. */
-.browse {
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 96px;
-  padding: 16px;
-  color: var(--mantine-color-dimmed);
-  font-weight: 600;
-  text-align: center;
-}
-
-.browse:hover {
-  background-color: var(--mantine-color-default-hover);
-  color: var(--mantine-color-text);
 }

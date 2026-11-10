@@ -1,9 +1,22 @@
-import {IconArrowRight, IconBook2, IconMathFunction, IconPlus} from '@tabler/icons-react';
+import {
+    IconArrowRight,
+    IconArrowUp,
+    IconBook2,
+    IconChevronRight,
+    IconLayoutGrid,
+    IconLibrary,
+    IconMathFunction,
+    IconPlayerPlay,
+    IconPlus,
+} from '@tabler/icons-react';
 import {useLayoutEffect, useRef, useState, type MouseEvent, type ReactElement, type ReactNode} from 'react';
 import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
+import {sheetClasses} from '#ui/sheet';
+import {savedAgo} from '#lib/savedAgo';
 import {MarkdownView} from '../../markdown-view';
 import {CREATE_OPTIONS, CreateDialog} from '../../project-explorer/internal';
+import type {ProjectOrigin} from '../../project-session';
 import {README_FILE} from '../shell-path';
 import * as classes from '../shell.module.css';
 
@@ -24,7 +37,28 @@ export interface ServiceSummary {
     arguments: number;
 }
 
+/** One line of the model counts of the overview: "Types 3". */
+export interface OverviewCount {
+    label: string;
+    count: number;
+    color: string; // the kind color of its square
+}
+
+/** The project facts of the overview page: its header and its side column. */
+export interface ProjectOverview {
+    name: string; // the project name
+    savedAt?: string; // ISO time of the last save
+    origin?: ProjectOrigin; // the library example that the project is a copy of
+    originStatus?: 'latest' | 'update-available';
+    onShowOrigin?: (origin: ProjectOrigin) => void;
+    counts: readonly OverviewCount[]; // the entities of the model by kind
+    testSuites: number; // the test subjects that have tests
+    onOpenTests?: () => void; // "Run tests" and "Run all": the Tests view of the model
+    onOpenModel?: () => void; // "Whole model": the Boxed view of the model
+}
+
 export interface WorkbookPickerProps {
+    overview?: ProjectOverview; // the header and the side column; without it the page is the panels only
     readme?: string; // the README Markdown; without it there is no README panel
     onOpenReadme?: () => void; // a click on the README panel
     onModelLink?: (path: string) => void; // a `model:` link of the README panel
@@ -46,9 +80,7 @@ type Creating = keyof typeof CREATE;
 function AddPanel({label, onClick, testId}: {label: string; onClick: () => void; testId: string}): ReactElement {
     return (
         <button type="button" className={classes.workbookAdd} onClick={onClick} aria-label={label} data-testid={testId}>
-            <span className={classes.workbookAddIcon}>
-                <IconPlus aria-hidden="true" size={24} />
-            </span>
+            <IconPlus aria-hidden="true" size={16} />
             {label}
         </button>
     );
@@ -70,6 +102,7 @@ interface PanelProps {
     testId: string;
 }
 
+/** A workbook as a card: kind square, name, field name, description, and the node counts in the footer. */
 function Panel({
     title,
     field,
@@ -109,6 +142,32 @@ function Panel({
                     <IconArrowRight aria-hidden="true" size={14} />
                 </span>
             </span>
+        </button>
+    );
+}
+
+/** A service method as a row of the entry points list: kind square, signature, description, chevron. */
+function ServiceRow({service, onClick}: {service: ServiceSummary; onClick: () => void}): ReactElement {
+    return (
+        <button
+            type="button"
+            className={classes.serviceRow}
+            onClick={onClick}
+            aria-label={service.label}
+            aria-description={service.description}
+            data-testid={`shell-service-${service.path}`}
+        >
+            <span className={classes.serviceIcon} style={{backgroundColor: KIND_COLORS.service}}>
+                <IconMathFunction aria-hidden="true" size={14} color="#fff" />
+            </span>
+            <span className={classes.serviceText}>
+                <span className={classes.serviceSignature}>{service.label}</span>
+                <span className={service.description ? classes.serviceDescription : classes.serviceNoDescription}>
+                    {service.description || 'No description'}
+                </span>
+            </span>
+            <span className={classes.serviceMeta}>{count(service.arguments, 'argument')}</span>
+            <IconChevronRight aria-hidden="true" size={16} className={classes.serviceChevron} />
         </button>
     );
 }
@@ -159,7 +218,7 @@ function ReadmePanel({
             <div className={classes.workbookFooter}>
                 <span>{README_FILE}</span>
                 <button type="button" className={classes.readmeOpen} onClick={onOpen}>
-                    Open
+                    Read README
                     <IconArrowRight aria-hidden="true" size={14} />
                 </button>
             </div>
@@ -168,12 +227,12 @@ function ReadmePanel({
 }
 
 /**
- * The Flow view of the model root when the model has workbooks or services: the README panel when the model has a
- * README, then one panel per workbook with its name, its field name,
- * its description and its node counts, and a panel that creates a new workbook. A click opens its flow. Below, one
- * panel per `service` declaration of the model, and a panel that creates a new service; a click opens it.
+ * The overview page of the project, the Flow view of the model root: the project header, the README panel when the
+ * model has a README, the service methods as the entry points, one card per workbook and a card that creates a new
+ * workbook; the side column holds the model counts, the tests and the origin. A click on a card opens its flow.
  */
 export function WorkbookPicker({
+    overview,
     readme,
     onOpenReadme,
     onModelLink,
@@ -188,63 +247,178 @@ export function WorkbookPicker({
     const [creating, setCreating] = useState<Creating | undefined>();
     const create = creating === 'workbook' ? onCreate : creating === 'service' ? onCreateService : undefined;
     return (
-        <div className={classes.workbooks} data-testid="shell-workbook-picker">
-            {readme !== undefined && <ReadmePanel markdown={readme} onOpen={onOpenReadme} onModelLink={onModelLink} />}
-            {(workbooks.length > 0 || onCreate) && (
-                <section className={classes.workbookGroup} aria-label="Workbooks">
-                    <h2 className={classes.workbookGroupTitle}>Workbooks</h2>
-                    <div className={classes.workbookPanels}>
-                        {workbooks.map((workbook) => (
-                            <Panel
-                                key={workbook.path}
-                                title={workbook.name ?? workbook.path}
-                                field={workbook.name !== undefined ? workbook.path : undefined}
-                                description={workbook.description}
-                                icon={<IconBook2 aria-hidden="true" size={20} color="#fff" />}
-                                iconColor={KIND_COLORS.model}
-                                footer={`${count(workbook.inputs, 'input')} · ${count(workbook.functions, 'function')}`}
-                                action="Open flow"
-                                onClick={() => onSelect(workbook.path)}
-                                testId={`shell-workbook-${workbook.path}`}
-                            />
-                        ))}
-                        {onCreate && (
-                            <AddPanel
-                                label="New workbook"
-                                onClick={() => setCreating('workbook')}
-                                testId="shell-workbook-add"
-                            />
+        <div className={cx(sheetClasses.tokens, classes.workbooks)} data-testid="shell-workbook-picker">
+            <div className={classes.overview}>
+                {overview && (
+                    <header className={classes.overviewHead}>
+                        <div className={classes.overviewTitles}>
+                            <div className={sheetClasses.eyebrow}>Project</div>
+                            <h1 className={classes.overviewTitle}>{overview.name}</h1>
+                            <div className={classes.overviewMeta}>
+                                {overview.origin && (
+                                    <button
+                                        type="button"
+                                        className={classes.overviewOrigin}
+                                        disabled={!overview.onShowOrigin}
+                                        onClick={() => overview.origin && overview.onShowOrigin?.(overview.origin)}
+                                    >
+                                        <IconLibrary aria-hidden="true" size={12} />
+                                        from {overview.origin.id}@{overview.origin.version}
+                                    </button>
+                                )}
+                                {!overview.origin && <span className={classes.overviewOrigin}>Own project</span>}
+                                {overview.originStatus === 'update-available' && (
+                                    <span className={classes.overviewUpdate}>
+                                        <IconArrowUp aria-hidden="true" size={12} />
+                                        Update available
+                                    </span>
+                                )}
+                                {overview.savedAt && <span>{savedAgo(overview.savedAt)}</span>}
+                            </div>
+                        </div>
+                        <div className={classes.overviewActions}>
+                            {overview.onOpenTests && (
+                                <button type="button" className={classes.overviewButton} onClick={overview.onOpenTests}>
+                                    <IconPlayerPlay aria-hidden="true" size={14} />
+                                    Run tests
+                                </button>
+                            )}
+                            {overview.onOpenModel && (
+                                <button type="button" className={classes.overviewButton} onClick={overview.onOpenModel}>
+                                    <IconLayoutGrid aria-hidden="true" size={14} />
+                                    Whole model
+                                </button>
+                            )}
+                        </div>
+                    </header>
+                )}
+                <div className={overview ? classes.overviewGrid : undefined}>
+                    <div className={classes.overviewMain}>
+                        {readme !== undefined && (
+                            <ReadmePanel markdown={readme} onOpen={onOpenReadme} onModelLink={onModelLink} />
+                        )}
+                        {(services.length > 0 || onCreateService) && (
+                            <section className={classes.workbookGroup} aria-label="Service Methods">
+                                <h2 className={classes.workbookGroupTitle}>
+                                    Entry points
+                                    <span className={classes.workbookGroupHint}>service methods</span>
+                                </h2>
+                                <div className={classes.services}>
+                                    {services.map((service) => (
+                                        <ServiceRow
+                                            key={service.path}
+                                            service={service}
+                                            onClick={() => onSelectService(service.path)}
+                                        />
+                                    ))}
+                                    {onCreateService && (
+                                        <button
+                                            type="button"
+                                            className={classes.serviceAdd}
+                                            onClick={() => setCreating('service')}
+                                            aria-label="New service"
+                                            data-testid="shell-service-add"
+                                        >
+                                            <IconPlus aria-hidden="true" size={14} />
+                                            New service method
+                                        </button>
+                                    )}
+                                </div>
+                            </section>
+                        )}
+                        {(workbooks.length > 0 || onCreate) && (
+                            <section className={classes.workbookGroup} aria-label="Workbooks">
+                                <h2 className={classes.workbookGroupTitle}>
+                                    Workbooks
+                                    <span className={classes.workbookGroupCount}>{workbooks.length}</span>
+                                </h2>
+                                <div className={classes.workbookPanels}>
+                                    {workbooks.map((workbook) => (
+                                        <Panel
+                                            key={workbook.path}
+                                            title={workbook.name ?? workbook.path}
+                                            field={workbook.name !== undefined ? workbook.path : undefined}
+                                            description={workbook.description}
+                                            icon={<IconBook2 aria-hidden="true" size={18} color="#fff" />}
+                                            iconColor={KIND_COLORS.model}
+                                            footer={`${count(workbook.inputs, 'input')} · ${count(workbook.functions, 'function')}`}
+                                            action="Open flow"
+                                            onClick={() => onSelect(workbook.path)}
+                                            testId={`shell-workbook-${workbook.path}`}
+                                        />
+                                    ))}
+                                    {onCreate && (
+                                        <AddPanel
+                                            label="New workbook"
+                                            onClick={() => setCreating('workbook')}
+                                            testId="shell-workbook-add"
+                                        />
+                                    )}
+                                </div>
+                            </section>
                         )}
                     </div>
-                </section>
-            )}
-            {(services.length > 0 || onCreateService) && (
-                <section className={classes.workbookGroup} aria-label="Service Methods">
-                    <h2 className={classes.workbookGroupTitle}>Service Methods</h2>
-                    <div className={classes.workbookPanels}>
-                        {services.map((service) => (
-                            <Panel
-                                key={service.path}
-                                title={service.label}
-                                description={service.description}
-                                icon={<IconMathFunction aria-hidden="true" size={20} color="#fff" />}
-                                iconColor={KIND_COLORS.service}
-                                footer={count(service.arguments, 'argument')}
-                                action="Open"
-                                onClick={() => onSelectService(service.path)}
-                                testId={`shell-service-${service.path}`}
-                            />
-                        ))}
-                        {onCreateService && (
-                            <AddPanel
-                                label="New service"
-                                onClick={() => setCreating('service')}
-                                testId="shell-service-add"
-                            />
-                        )}
-                    </div>
-                </section>
-            )}
+                    {overview && (
+                        <aside className={classes.overviewSide} aria-label="Project facts">
+                            <section className={classes.sideCard}>
+                                <div className={sheetClasses.eyebrow}>Model</div>
+                                {overview.counts.map((item) => (
+                                    <div key={item.label} className={classes.countRow}>
+                                        <span className={classes.countIcon} style={{backgroundColor: item.color}} />
+                                        <span>{item.label}</span>
+                                        <b>{item.count}</b>
+                                    </div>
+                                ))}
+                            </section>
+                            <section className={classes.sideCard}>
+                                <div className={sheetClasses.eyebrow}>Tests</div>
+                                <div className={classes.sideBig}>
+                                    <b>{count(overview.testSuites, 'suite')}</b>
+                                </div>
+                                {overview.onOpenTests && overview.testSuites > 0 && (
+                                    <button
+                                        type="button"
+                                        className={classes.overviewButton}
+                                        onClick={overview.onOpenTests}
+                                    >
+                                        <IconPlayerPlay aria-hidden="true" size={14} />
+                                        Run all
+                                    </button>
+                                )}
+                            </section>
+                            {overview.origin && (
+                                <section className={classes.sideCard}>
+                                    <div className={sheetClasses.eyebrow}>Origin</div>
+                                    <code className={classes.sideOrigin}>
+                                        {overview.origin.id}@{overview.origin.version}
+                                    </code>
+                                    {overview.originStatus && (
+                                        <span
+                                            className={
+                                                overview.originStatus === 'latest'
+                                                    ? classes.badgeOk
+                                                    : classes.badgeAccent
+                                            }
+                                        >
+                                            {overview.originStatus === 'latest' ? 'Up to date' : 'Update available'}
+                                        </span>
+                                    )}
+                                    {overview.onShowOrigin && (
+                                        <button
+                                            type="button"
+                                            className={classes.sideLink}
+                                            onClick={() => overview.origin && overview.onShowOrigin?.(overview.origin)}
+                                        >
+                                            View original example
+                                            <IconArrowRight aria-hidden="true" size={13} />
+                                        </button>
+                                    )}
+                                </section>
+                            )}
+                        </aside>
+                    )}
+                </div>
+            </div>
             {creating && create && (
                 <CreateDialog
                     option={CREATE[creating]}

@@ -1,25 +1,52 @@
+/* The Example details page: crumbs, the README card and the metadata column. Tokens: `sheetClasses.tokens`. */
 .crumbs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
-  margin-bottom: -10px;
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
+  gap: 4px;
+  margin-bottom: -4px;
+  color: var(--er-text-3);
+  font-size: 13px;
 }
 
 .crumbCurrent {
-  padding: 2px 6px;
-  color: var(--mantine-color-text);
-  font-weight: 600;
+  color: var(--er-text);
 }
 
-/* README on the left, the metadata sheet on the right; one column on a narrow screen. */
+.versionInput {
+  height: 34px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r-sm);
+  background-color: var(--er-surface);
+  color: var(--er-text-2);
+  font: 500 13.5px var(--er-sans);
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--er-r);
+  background-color: var(--er-ok-soft);
+  color: var(--er-text);
+  font-size: 13.5px;
+}
+
+.notice > svg {
+  color: var(--er-ok);
+}
+
+.notice > span {
+  flex: 1;
+}
+
+/* README on the left, the metadata column on the right; one column on a narrow screen. */
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   align-items: start;
-  gap: 16px;
+  gap: 20px;
 }
 
 @media (max-width: 900px) {
@@ -32,9 +59,34 @@
   height: auto;
 }
 
+.readmeHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--er-border);
+  color: var(--er-text-3);
+  font: 12.5px var(--er-mono);
+}
+
 .readmeBody {
   min-height: 120px;
-  padding: 12px 20px 20px;
+  padding: 12px 28px 24px;
+}
+
+.side {
+  position: sticky;
+  top: 68px;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
 }
 
 .github {
@@ -42,4 +94,5 @@
   align-items: center;
   gap: 6px;
   padding-left: 2px;
+  color: var(--er-text-2);
 }

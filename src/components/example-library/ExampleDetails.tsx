@@ -2,11 +2,13 @@ import {Alert, Anchor, Button, Loader, Select, Stack, Text} from '@mantine/core'
 import {
     IconBrandGithub,
     IconChevronRight,
+    IconClock,
     IconCopy,
     IconExternalLink,
     IconFileText,
+    IconInfoCircle,
     IconLink,
-    IconPlayerPlay,
+    IconPlus,
 } from '@tabler/icons-react';
 import {useEffect, useMemo, useState, type ReactElement} from 'react';
 import {
@@ -14,18 +16,17 @@ import {
     SheetGrid,
     SheetKeyValues,
     SheetLinkButton,
-    SheetPageActions,
     SheetPageHeader,
     SheetPanel,
-    SheetPanelHeader,
     SheetSection,
     SheetTokens,
+    sheetClasses,
 } from '#ui/sheet';
 import {MarkdownView} from '../markdown-view';
 import type {ProjectOrigin} from '../project-session';
-import {ExamplePanel, WorkspaceChip} from './ExamplePanel';
+import {ExamplePanel} from './ExamplePanel';
 import {IndustryIcon} from './industryIcon';
-import {LEVEL_COLORS, LEVEL_LABELS} from './levels';
+import {LEVEL_LABELS} from './levels';
 import {relatedExamples, workspaceCopies, workspaceStatus} from './libraryQuery';
 import {satisfiesEngine} from './semver';
 import type {ExampleCoordinates, LibraryClient, LibraryEntry, LoadedExample} from './types';
@@ -150,28 +151,27 @@ export function ExampleDetails({
         );
 
     return (
-        <Stack gap="lg" data-testid="example-details">
+        <Stack gap="lg" className={sheetClasses.tokens} data-testid="example-details">
             <nav aria-label="Library path" className={classes.crumbs}>
                 {crumb('Examples', undefined)}
-                <IconChevronRight size={12} aria-hidden="true" />
+                <IconChevronRight size={14} aria-hidden="true" />
                 {crumb(industry?.title ?? entry.industry, entry.industry)}
-                <IconChevronRight size={12} aria-hidden="true" />
+                <IconChevronRight size={14} aria-hidden="true" />
                 <span className={classes.crumbCurrent} aria-current="page">
                     {entry.name}
                 </span>
             </nav>
 
             <SheetPageHeader
-                icon={<IndustryIcon name={industry?.icon ?? entry.industry} size={24} />}
-                iconColor={LEVEL_COLORS[entry.level]}
+                icon={<IndustryIcon name={industry?.icon ?? entry.industry} size={22} />}
                 title={entry.name}
                 subtitle={entry.description}
                 aside={
                     <>
-                        <WorkspaceChip status={status} copies={copies} />
                         <Select
-                            size="xs"
-                            w={130}
+                            classNames={{input: classes.versionInput}}
+                            w={150}
+                            leftSection={<IconClock size={14} aria-hidden="true" />}
                             aria-label="Version"
                             data={entry.versions.map((item, index) => ({
                                 value: item.version,
@@ -181,34 +181,55 @@ export function ExampleDetails({
                             allowDeselect={false}
                             onChange={(next) => next && onVersionChange?.({id: entry.id, version: next})}
                         />
+                        {status !== 'none' && onOpenCopy && (
+                            <SheetAction
+                                primary
+                                icon={<IconExternalLink size={14} />}
+                                onClick={() => onOpenCopy(entry.id)}
+                            >
+                                Open copy
+                            </SheetAction>
+                        )}
+                        <SheetAction
+                            primary={status === 'none' || !onOpenCopy}
+                            busy={busy === 'open'}
+                            icon={<IconCopy size={14} />}
+                            onClick={() => void copy(true)}
+                        >
+                            Copy and open
+                        </SheetAction>
+                        <SheetAction
+                            busy={busy === 'copy'}
+                            icon={<IconPlus size={14} />}
+                            onClick={() => void copy(false)}
+                        >
+                            Copy to workspace
+                        </SheetAction>
+                        {shareUrl && (
+                            <SheetAction iconOnly icon={<IconLink size={16} />} onClick={() => void share()}>
+                                {copied ? 'Link copied' : 'Share link'}
+                            </SheetAction>
+                        )}
                     </>
                 }
-            >
-                <SheetPageActions>
-                    {status !== 'none' && onOpenCopy && (
-                        <SheetAction primary icon={<IconExternalLink size={14} />} onClick={() => onOpenCopy(entry.id)}>
-                            Open copy
-                        </SheetAction>
-                    )}
-                    <SheetAction
-                        primary={status === 'none' || !onOpenCopy}
-                        busy={busy === 'open'}
-                        icon={<IconPlayerPlay size={14} />}
-                        onClick={() => void copy(true)}
-                    >
-                        Copy and open
-                    </SheetAction>
-                    <SheetAction busy={busy === 'copy'} icon={<IconCopy size={14} />} onClick={() => void copy(false)}>
-                        Copy to workspace
-                    </SheetAction>
-                    {shareUrl && (
-                        <SheetAction icon={<IconLink size={14} />} onClick={() => void share()}>
-                            {copied ? 'Link copied' : 'Share link'}
-                        </SheetAction>
-                    )}
-                </SheetPageActions>
-            </SheetPageHeader>
+            />
 
+            {status !== 'none' && (
+                <div className={classes.notice} role="status">
+                    <IconInfoCircle size={16} aria-hidden="true" />
+                    <span>
+                        You have{' '}
+                        <b>
+                            {copies} {copies === 1 ? 'copy' : 'copies'}
+                        </b>{' '}
+                        of this example in your workspace.
+                        {status === 'update-available' && ' A newer version is available.'}
+                    </span>
+                    {onOpenCopy && (
+                        <SheetLinkButton onClick={() => onOpenCopy(entry.id)}>Open newest copy</SheetLinkButton>
+                    )}
+                </div>
+            )}
             {!isNewest && (
                 <Alert color="gray" role="status" py={6}>
                     You view version {version.version}; the newest version is {entry.versions[0].version}.
@@ -228,7 +249,10 @@ export function ExampleDetails({
 
             <div className={classes.columns}>
                 <SheetPanel className={classes.readme}>
-                    <SheetPanelHeader icon={<IconFileText size={18} />} title="README.md" />
+                    <div className={classes.readmeHead}>
+                        <IconFileText size={14} aria-hidden="true" />
+                        <span>README.md</span>
+                    </div>
                     <div className={classes.readmeBody}>
                         {!currentReadme && <Loader size="sm" aria-label="Loading README" />}
                         {currentReadme?.error && (
@@ -241,26 +265,23 @@ export function ExampleDetails({
                         )}
                     </div>
                 </SheetPanel>
-                <Stack gap="xs" component="aside" aria-label="Example metadata">
+                <Stack gap={12} component="aside" aria-label="Example metadata" className={classes.side}>
                     <SheetKeyValues
                         rows={[
                             ['Industry', industry?.title ?? entry.industry],
                             ['Level', LEVEL_LABELS[entry.level]],
-                            ['Version', version.version],
-                            ['Released', version.released],
+                            ['Version', <code key="version">{version.version}</code>],
+                            ['Released', <code key="released">{version.released}</code>],
                             ['Engine', <code key="engine">{entry.engine}</code>],
-                            ...(entry.stats
-                                ? [
-                                      [
-                                          'Size',
-                                          `${entry.stats.tests ?? 0} tests · ${entry.stats.lines ?? 0} lines`,
-                                      ] as const,
-                                  ]
-                                : []),
-                            ['Features', <SheetTokens key="features" items={entry.features} />],
+                            ...(entry.stats?.tests !== undefined ? [['Tests', entry.stats.tests] as const] : []),
+                            ...(entry.stats?.lines !== undefined ? [['Lines', entry.stats.lines] as const] : []),
                             ['Id', <code key="id">{entry.id}</code>],
                         ]}
                     />
+                    <div className={classes.features}>
+                        <div className={sheetClasses.eyebrow}>Features</div>
+                        <SheetTokens items={entry.features} />
+                    </div>
                     {repositoryUrl && (
                         <Anchor
                             href={repositoryUrl(entry, version.ref)}
@@ -269,7 +290,8 @@ export function ExampleDetails({
                             size="sm"
                             className={classes.github}
                         >
-                            <IconBrandGithub size={14} aria-hidden="true" /> View on GitHub →
+                            <IconBrandGithub size={14} aria-hidden="true" /> View on GitHub
+                            <IconExternalLink size={13} aria-hidden="true" />
                         </Anchor>
                     )}
                 </Stack>

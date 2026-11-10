@@ -1,0 +1,81 @@
+/* The Examples page: the filter column on the left, the toolbar and the cards on the right. */
+.layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.facets {
+  position: sticky;
+  top: 68px;
+  align-self: start;
+}
+
+@media (max-width: 860px) {
+  .facets {
+    position: static;
+  }
+}
+
+.feature {
+  font: 12.5px var(--er-mono);
+}
+
+.results {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchBox {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar .input {
+  height: 36px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r-sm);
+  background-color: var(--er-surface);
+  color: var(--er-text);
+  font: 14px var(--er-sans);
+}
+
+.toolbar .input:focus {
+  border-color: var(--er-text-3);
+  box-shadow: 0 0 0 3px var(--er-accent-soft);
+}
+
+.sortLabel {
+  padding-left: 6px;
+  color: var(--er-text-3);
+  font-size: 13px;
+}
+
+.kbd {
+  padding: 3px 5px;
+  border: 1px solid var(--er-border);
+  border-radius: 4px;
+  background-color: var(--er-surface);
+  color: var(--er-text-3);
+  font: 500 11px/1 var(--er-mono);
+}
+
+.count {
+  min-height: 20px;
+  margin-bottom: 2px;
+}

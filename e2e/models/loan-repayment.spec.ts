@@ -41,10 +41,10 @@ test('the decision table runs its own tests when its test column is shown', asyn
     await page.getByRole('button', {name: 'Show test column'}).click();
     // The tests of `pricingTier` itself, not of the whole model: its own row shows the whole result.
     const result = page.getByTestId('row-pricingTier').locator('[data-column="test-results"]');
-    await expect(result).toHaveText('{…}', SLOW);
+    await expect(result).toHaveText(/tier: \w+/, SLOW);
     await page.getByRole('button', {name: 'Next test case'}).click();
     await expect(page.getByTestId('header-row')).toContainText(/2\/\d+/);
-    await expect(result).toHaveText('{…}');
+    await expect(result).toHaveText(/tier: \w+/);
 });
 
 test('mortgageBook charts the repayment plan and shows its outputs', async ({page}) => {
@@ -85,12 +85,10 @@ test('termComparisonBook charts the balance of both terms', async ({page}) => {
     await expect(page.getByTestId('output-node-output2').getByTestId('output-value')).toHaveText('966.28');
 });
 
-test('the service tests pass when run, and show no result before', async ({page}) => {
+test('the service tests run when opened and pass when run again', async ({page}) => {
     await openStory(page, 'models-loan-repayment--service-tests');
     const summaries = page.getByTestId(/^assertion-summary-/);
     await expect(summaries).toHaveCount(5, SLOW);
-    await expect(summaries.first()).toHaveText('');
-    await expect(page.locator('[data-mismatch="true"]')).toHaveCount(0);
 
     // A narrow viewport scrolls the grid instead of squeezing the test-case columns.
     const header = page.getByTestId('case-header-loanRepayment-1');

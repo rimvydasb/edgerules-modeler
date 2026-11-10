@@ -62,7 +62,7 @@ describe('LocalWorkspace', () => {
         await addWorkspaceProject(store, {name: 'Loans', model: {dsl: MODEL}, origin: ORIGIN});
         const user = userEvent.setup();
         render(<LocalWorkspace repository={repository} factory={factory} onOpen={vi.fn()} />);
-        expect(await screen.findByText('from loan-repayment@1.2.0')).toBeTruthy();
+        expect(await screen.findByText('loan-repayment@1.2.0')).toBeTruthy();
 
         await openMenu(user, 'Loans');
         await user.click(await screen.findByRole('menuitem', {name: 'Duplicate'}));
@@ -103,8 +103,7 @@ describe('LocalWorkspace', () => {
         expect(panels()).toEqual(['Beta']);
         await user.clear(screen.getByLabelText('Search projects'));
 
-        await user.click(screen.getByRole('combobox', {name: 'Source'}));
-        await user.click(await screen.findByRole('option', {name: 'From examples'}));
+        await user.click(screen.getByRole('button', {name: /^Example projects/}));
         expect(panels()).toEqual(['Alpha']);
 
         await user.click(screen.getAllByRole('link')[0]);
@@ -121,8 +120,41 @@ describe('LocalWorkspace', () => {
         await waitFor(() => expect(panels().sort()).toEqual(['X', 'X (2)']));
     });
 
-    it('requests persistent storage and warns when the browser can evict', async () => {
-        const {repository, factory} = setup();
+    it('shows the storage popover and keeps the projects on request', async () => {
+        const {repository, factory, store} = setup();
+        await addWorkspaceProject(store, {name: 'Loans', model: {dsl: MODEL}});
+        const persist = vi.fn().mockResolvedValue(true);
+        vi.stubGlobal('navigator', {
+            ...navigator,
+            storage: {
+                persisted: vi.fn().mockResolvedValue(false),
+                persist,
+                estimate: vi.fn().mockResolvedValue({usage: 3_355_443, quota: 1_181_116_006}),
+            },
+        });
+        try {
+            render(<LocalWorkspace repository={repository} factory={factory} onOpen={vi.fn()} />);
+            const storage = await screen.findByTestId('workspace-storage');
+            expect(storage.textContent).toContain('not persistent');
+            expect(storage.textContent).toContain('3.2 MB used of 1.1 GB');
+            expect(persist).not.toHaveBeenCalled();
+            await userEvent.click(within(storage).getByRole('button'));
+            expect(await screen.findByText('Projects live only in this browser.')).toBeTruthy();
+            await userEvent.click(screen.getByRole('button', {name: 'Keep my projects'}));
+            expect(persist).toHaveBeenCalled();
+            await waitFor(() =>
+                expect(screen.getByTestId('workspace-storage').textContent).not.toContain('not persistent'),
+            );
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+});
+
+describe('LocalWorkspace storage denial', () => {
+    it('tells the user when the browser declines to keep the projects', async () => {
+        const {repository, factory, store} = setup();
+        await addWorkspaceProject(store, {name: 'Loans', model: {dsl: MODEL}});
         const persist = vi.fn().mockResolvedValue(false);
         vi.stubGlobal('navigator', {
             ...navigator,
@@ -134,9 +166,12 @@ describe('LocalWorkspace', () => {
         });
         try {
             render(<LocalWorkspace repository={repository} factory={factory} onOpen={vi.fn()} />);
-            expect(await screen.findByText(/may delete these projects/)).toBeTruthy();
+            const storage = await screen.findByTestId('workspace-storage');
+            await userEvent.click(within(storage).getByRole('button'));
+            await userEvent.click(await screen.findByRole('button', {name: 'Keep my projects'}));
             expect(persist).toHaveBeenCalled();
-            expect((await screen.findByTestId('workspace-storage')).textContent).toContain('3.2 MB used of 1.1 GB');
+            expect(await screen.findByRole('alert')).toBeTruthy();
+            expect(screen.getByText(/browser declined to keep the projects/)).toBeTruthy();
         } finally {
             vi.unstubAllGlobals();
         }
@@ -190,9 +225,9 @@ describe('RecentProjects', () => {
         const user = userEvent.setup();
         render(<RecentProjects repository={repository} limit={2} onOpen={onOpen} onShowAll={vi.fn()} />);
 
-        const buttons = await screen.findAllByRole('button', {name: /^Open /});
-        expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Open Three', 'Open Two']);
-        await user.click(buttons[0]);
+        const links = await screen.findAllByRole('link');
+        expect(links.map((link) => link.textContent)).toEqual(['Three', 'Two']);
+        await user.click(links[0]);
         expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({projectPath: 'three'}));
     });
 });

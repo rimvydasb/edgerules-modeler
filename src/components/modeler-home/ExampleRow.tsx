@@ -1,6 +1,6 @@
 import {Alert} from '@mantine/core';
 import {SheetGrid} from '#ui/sheet';
-import {useState, type ReactElement, type ReactNode} from 'react';
+import {useState, type ReactElement} from 'react';
 import type {ProjectOrigin} from '../project-session';
 import type {ExampleCoordinates, LibraryClient, LibraryEntry, LoadedExample} from '../example-library';
 import {
@@ -17,7 +17,6 @@ export interface ExampleRowProps {
     entries: LibraryEntry[];
     engineVersion?: string;
     workspaceOrigins?: ProjectOrigin[];
-    trailing?: ReactNode; // the last grid cell, after the panels
     onCopy: (example: LoadedExample, open: boolean) => void;
     onOpenCopy?: (exampleId: string) => void;
     onShowDetails: (coordinates: ExampleCoordinates) => void;
@@ -30,7 +29,6 @@ export function ExampleRow({
     entries,
     engineVersion,
     workspaceOrigins,
-    trailing,
     onCopy,
     onOpenCopy,
     onShowDetails,
@@ -58,7 +56,7 @@ export function ExampleRow({
                     {error}
                 </Alert>
             )}
-            <SheetGrid>
+            <SheetGrid fourUp>
                 {entries.map((entry) => (
                     <ExamplePanel
                         key={entry.id}
@@ -73,13 +71,13 @@ export function ExampleRow({
                                 ? client.resolveFileUrl(entry, entry.versions[0].version, entry.thumbnail)
                                 : undefined
                         }
+                        maxTags={2}
                         busy={busyId === entry.id}
                         onCopyAndOpen={() => void copyAndOpen(entry)}
                         onOpenCopy={onOpenCopy && (() => onOpenCopy(entry.id))}
                         onDetails={() => onShowDetails({id: entry.id, version: entry.versions[0].version})}
                     />
                 ))}
-                {trailing}
             </SheetGrid>
         </>
     );

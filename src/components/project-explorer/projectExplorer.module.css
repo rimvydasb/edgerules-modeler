@@ -9,7 +9,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--mantine-color-body);
+  background: var(--er-surface, var(--mantine-color-body));
+  font-family: var(--er-sans, inherit);
 }
 
 .root *,
@@ -25,13 +26,13 @@
   justify-content: space-between;
   padding-inline: 14px 8px;
   border-bottom: 1px solid var(--pe-border);
-  background: var(--pe-muted);
+  background: var(--er-surface, var(--pe-muted));
 }
 
 .title {
   overflow: hidden;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -52,6 +53,21 @@
 
 .search {
   padding: 10px 10px 4px;
+}
+
+.search input {
+  height: 32px;
+  min-height: 32px;
+  border: 1px solid var(--er-border, var(--pe-border));
+  border-radius: var(--er-r-sm, 6px);
+  background: var(--er-surface, var(--mantine-color-body));
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.search input:focus {
+  border-color: var(--er-text-3, var(--mantine-primary-color-filled));
+  box-shadow: 0 0 0 3px var(--er-accent-soft, transparent);
 }
 
 .empty {
@@ -99,9 +115,9 @@
   min-height: 30px;
   padding: 3px 6px;
   /* The tree level offset: a child's chevron sits below its parent's icon. */
-  padding-inline-start: calc(var(--label-offset) + 2px);
+  padding-inline-start: calc(max(var(--label-offset) - 14px, 0px) + 8px);
   border: 1px solid transparent;
-  border-radius: var(--mantine-radius-sm);
+  border-radius: 6px;
   cursor: pointer;
   user-select: none;
   outline: none;
@@ -109,8 +125,7 @@
 }
 
 .node:hover {
-  border-color: var(--pe-border);
-  background: var(--pe-muted);
+  background: var(--er-hover, var(--pe-muted));
 }
 
 .node:focus-visible {
@@ -133,7 +148,8 @@
 }
 
 .node[data-selected]:not(.heading) {
-  background: var(--mantine-primary-color-light);
+  background: var(--er-subtle, var(--mantine-primary-color-light));
+  font-weight: 500;
 }
 
 .label {
@@ -158,21 +174,16 @@
 
 /* A section header reads as a palette group label, with its member count. */
 .group {
-  color: var(--mantine-color-dimmed);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: var(--er-text-3, var(--mantine-color-dimmed));
+  font: 500 10.5px var(--er-mono, inherit);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .count {
   flex: 0 0 auto;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: var(--pe-muted);
-  color: var(--mantine-color-dimmed);
-  font-size: 10px;
-  font-weight: 600;
+  color: var(--er-text-3, var(--mantine-color-dimmed));
+  font: 500 11px var(--er-mono, inherit);
 }
 
 .tile {
@@ -180,9 +191,9 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   color: #fff;
 }
 
@@ -202,7 +213,7 @@
 }
 
 .chevronHidden {
-  visibility: hidden;
+  display: none;
 }
 
 /* The add button of a section header: shown on hover and focus of the row, like a row menu of the Boxed Editor. */

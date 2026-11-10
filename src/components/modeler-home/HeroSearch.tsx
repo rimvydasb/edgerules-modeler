@@ -61,7 +61,8 @@ export function HeroSearch({suggestions, placeholder, loading, onSearch, onPick}
             <TextInput
                 ref={input}
                 size="md"
-                leftSection={<IconSearch size={16} />}
+                classNames={{input: classes.heroInput}}
+                leftSection={<IconSearch size={16} className={classes.searchIcon} />}
                 placeholder={placeholder}
                 aria-label="Search examples and projects"
                 role="combobox"
@@ -69,7 +70,8 @@ export function HeroSearch({suggestions, placeholder, loading, onSearch, onPick}
                 aria-controls={listId}
                 aria-autocomplete="list"
                 aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-                rightSection={loading ? <Loader size="xs" /> : undefined}
+                rightSection={loading ? <Loader size="xs" /> : <span className={classes.kbd}>/</span>}
+                rightSectionPointerEvents="none"
                 value={query}
                 onChange={(event) => {
                     setQuery(event.currentTarget.value);

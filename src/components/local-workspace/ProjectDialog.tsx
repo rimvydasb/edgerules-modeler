@@ -55,7 +55,9 @@ export function ProjectDialog({
                     <Button variant="default" onClick={onCancel}>
                         Cancel
                     </Button>
-                    <Button type="submit">{submitLabel}</Button>
+                    <Button type="submit" color="dark">
+                        {submitLabel}
+                    </Button>
                 </Group>
             </form>
         </Modal>

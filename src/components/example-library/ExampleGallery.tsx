@@ -1,10 +1,11 @@
-import {Alert, Button, Checkbox, Loader, MultiSelect, Select, Stack, Tabs, Text, TextInput} from '@mantine/core';
-import {IconBooks, IconSearch} from '@tabler/icons-react';
+import {Alert, Button, Loader, Select, Stack, Text, TextInput} from '@mantine/core';
+import {IconSearch} from '@tabler/icons-react';
 import {useEffect, useMemo, useRef, useState, type ReactElement} from 'react';
-import {KIND_COLORS} from '#ui/kindColors';
-import {SheetEmpty, SheetPageHeader, SheetToolbar, sheetClasses} from '#ui/sheet';
+import {cx} from '#ui/cx';
+import {SheetEmpty, SheetPageHeader, sheetClasses} from '#ui/sheet';
 import type {ExampleLevel, ProjectOrigin} from '../project-session';
 import {ExamplePanel} from './ExamplePanel';
+import {IndustryIcon} from './industryIcon';
 import {LEVEL_LABELS} from './levels';
 import {VirtualGrid} from './VirtualGrid';
 import {
@@ -19,6 +20,7 @@ import {
 import {satisfiesEngine} from './semver';
 import type {ExampleCoordinates, LibraryClient, LibraryEntry, LoadedExample} from './types';
 import {useLibraryIndex} from './useLibraryIndex';
+import * as classes from './exampleGallery.module.css';
 
 export interface ExampleGalleryProps {
     client: LibraryClient; // from createLibraryClient(source)
@@ -35,9 +37,14 @@ export interface ExampleGalleryProps {
     onShowDetails: (coordinates: ExampleCoordinates) => void; // the host navigates to the details page
 }
 
-const ROW_HEIGHT = 232; // one panel and the grid gap
-const THUMBNAIL_HEIGHT = 91;
-const ALL = 'all';
+const ROW_HEIGHT = 232; // one card and the grid gap
+const THUMBNAIL_HEIGHT = 103;
+type WorkspaceFacet = 'any' | 'not-copied' | 'copied';
+const WORKSPACE_FACETS: {value: WorkspaceFacet; label: string}[] = [
+    {value: 'any', label: 'Any'},
+    {value: 'not-copied', label: 'Not copied yet'},
+    {value: 'copied', label: 'In my workspace'},
+];
 const LEVELS: {value: ExampleLevel; label: string}[] = (['beginner', 'intermediate', 'advanced'] as const).map(
     (value) => ({value, label: LEVEL_LABELS[value]}),
 );
@@ -80,6 +87,7 @@ export function ExampleGallery({
     const [level, setLevel] = useState<ExampleLevel | undefined>();
     const [features, setFeatures] = useState<string[]>([]);
     const [compatible, setCompatible] = useState(false);
+    const [workspace, setWorkspace] = useState<WorkspaceFacet>('any');
     const [sort, setSort] = useState<ExampleSort | undefined>();
     const [busyId, setBusyId] = useState<string | undefined>();
     const [copyError, setCopyError] = useState<string | undefined>();
@@ -110,17 +118,38 @@ export function ExampleGallery({
                   compatibleWith: compatible ? engineVersion : undefined,
                   sort,
               });
-        return limit === undefined ? shown : shown.slice(0, limit);
-    }, [search, featured, query, industry, level, features, compatible, engineVersion, sort, limit]);
+        const filtered =
+            workspace === 'any'
+                ? shown
+                : shown.filter(
+                      (entry) => (workspaceStatus(entry, workspaceOrigins) !== 'none') === (workspace === 'copied'),
+                  );
+        return limit === undefined ? filtered : filtered.slice(0, limit);
+    }, [
+        search,
+        featured,
+        query,
+        industry,
+        level,
+        features,
+        compatible,
+        engineVersion,
+        sort,
+        limit,
+        workspace,
+        workspaceOrigins,
+    ]);
 
     const industries = search?.index.industries ?? [];
     const byId = useMemo(() => new Map(industries.map((item) => [item.id, item])), [industries]);
     const counts = useMemo(() => (search ? countByIndustry(search.index) : new Map<string, number>()), [search]);
     const featureOptions = useMemo(() => (search ? allFeatures(search.index) : []), [search]);
-    const inWorkspace = useMemo(
-        () => new Set((workspaceOrigins ?? []).map((origin) => origin.id)).size,
-        [workspaceOrigins],
-    );
+    const featureCounts = useMemo(() => {
+        const counted = new Map<string, number>();
+        for (const entry of search?.index.examples ?? [])
+            for (const feature of entry.features) counted.set(feature, (counted.get(feature) ?? 0) + 1);
+        return counted;
+    }, [search]);
 
     if (error) {
         return (
@@ -148,101 +177,17 @@ export function ExampleGallery({
     const total = search.index.examples.length;
     const rowHeight = ROW_HEIGHT + (entries.some((entry) => entry.thumbnail) ? THUMBNAIL_HEIGHT : 0);
 
-    return (
-        <Stack gap="md" data-testid="example-gallery">
-            {!featured && (
-                <SheetPageHeader
-                    icon={<IconBooks size={22} />}
-                    iconColor={KIND_COLORS.model}
-                    title="Examples"
-                    subtitle={`Read-only library of ${total} ${total === 1 ? 'example' : 'examples'} · copy one into your workspace to edit it`}
-                    aside={
-                        inWorkspace > 0 && (
-                            <Text size="xs" c="dimmed">
-                                {inWorkspace} in your workspace
-                            </Text>
-                        )
-                    }
-                >
-                    <SheetToolbar>
-                        <TextInput
-                            ref={searchInput}
-                            className={sheetClasses.toolbarGrow}
-                            size="xs"
-                            leftSection={<IconSearch size={14} />}
-                            placeholder="Search examples  ( / )"
-                            aria-label="Search examples"
-                            value={query}
-                            onChange={(event) => {
-                                setOwnQuery(event.currentTarget.value);
-                                onQueryChange?.(event.currentTarget.value);
-                            }}
-                        />
-                        <Select
-                            size="xs"
-                            w={140}
-                            aria-label="Level"
-                            placeholder="Any level"
-                            data={LEVELS}
-                            value={level ?? null}
-                            clearable
-                            onChange={(value) => setLevel((value as ExampleLevel | null) ?? undefined)}
-                        />
-                        <MultiSelect
-                            size="xs"
-                            miw={160}
-                            maw={360}
-                            aria-label="Features"
-                            placeholder={features.length ? undefined : 'Features'}
-                            data={featureOptions}
-                            value={features}
-                            searchable
-                            clearable
-                            onChange={setFeatures}
-                        />
-                        <Select
-                            size="xs"
-                            w={140}
-                            aria-label="Sort"
-                            data={SORTS}
-                            value={sort ?? (query.trim() ? 'relevance' : 'name')}
-                            allowDeselect={false}
-                            onChange={(value) => setSort((value as ExampleSort | null) ?? undefined)}
-                        />
-                        {engineVersion && (
-                            <Checkbox
-                                size="xs"
-                                label="Works with my engine"
-                                checked={compatible}
-                                onChange={(event) => setCompatible(event.currentTarget.checked)}
-                            />
-                        )}
-                    </SheetToolbar>
-                    <Tabs
-                        value={industry ?? ALL}
-                        onChange={(value) => {
-                            const next = value === null || value === ALL ? undefined : value;
-                            setOwnIndustry(next);
-                            onIndustryChange?.(next);
-                        }}
-                        styles={{list: {borderTop: '1px solid var(--mantine-color-default-border)'}}}
-                    >
-                        <Tabs.List>
-                            <Tabs.Tab value={ALL}>All ({total})</Tabs.Tab>
-                            {industries.map((item) => (
-                                <Tabs.Tab key={item.id} value={item.id}>
-                                    {item.title} ({counts.get(item.id) ?? 0})
-                                </Tabs.Tab>
-                            ))}
-                        </Tabs.List>
-                    </Tabs>
-                </SheetPageHeader>
-            )}
-            {!featured && (
-                <Text size="xs" c="dimmed" role="status" mb={-6}>
-                    {entries.length} {entries.length === 1 ? 'example' : 'examples'}
-                </Text>
-            )}
+    const changeIndustry = (next: string | undefined) => {
+        setOwnIndustry(next);
+        onIndustryChange?.(next);
+    };
+    const toggleFeature = (feature: string) =>
+        setFeatures((current) =>
+            current.includes(feature) ? current.filter((item) => item !== feature) : [...current, feature],
+        );
+
+    const grid = (
+        <>
             {copyError && (
                 <Alert color="red" role="alert" withCloseButton onClose={() => setCopyError(undefined)}>
                     {copyError}
@@ -254,6 +199,8 @@ export function ExampleGallery({
                 items={entries}
                 itemKey={(entry) => entry.id}
                 rowHeight={rowHeight}
+                gap={14}
+                minColumnWidth={260}
                 renderItem={(entry, _index, tabIndex) => (
                     <ExamplePanel
                         entry={entry}
@@ -275,6 +222,137 @@ export function ExampleGallery({
                     />
                 )}
             />
+        </>
+    );
+
+    // The Home featured row: the cards only.
+    if (featured)
+        return (
+            <Stack gap="md" data-testid="example-gallery">
+                {grid}
+            </Stack>
+        );
+
+    return (
+        <Stack gap={28} className={sheetClasses.tokens} data-testid="example-gallery">
+            <SheetPageHeader eyebrow="Library · read-only" title="Examples" />
+            <div className={classes.layout}>
+                <aside className={cx(sheetClasses.facets, classes.facets)} aria-label="Filters">
+                    <div className={sheetClasses.facetGroup} role="group" aria-label="Industry">
+                        <div className={sheetClasses.eyebrow}>Industry</div>
+                        <button
+                            type="button"
+                            className={sheetClasses.facet}
+                            aria-pressed={industry === undefined}
+                            onClick={() => changeIndustry(undefined)}
+                        >
+                            All industries
+                            <span className={sheetClasses.facetCount}>{total}</span>
+                        </button>
+                        {industries.map((item) => (
+                            <button
+                                key={item.id}
+                                type="button"
+                                className={sheetClasses.facet}
+                                aria-pressed={industry === item.id}
+                                onClick={() => changeIndustry(item.id)}
+                            >
+                                <IndustryIcon name={item.icon ?? item.id} size={15} />
+                                {item.title}
+                                <span className={sheetClasses.facetCount}>{counts.get(item.id) ?? 0}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <div className={sheetClasses.facetGroup} role="radiogroup" aria-label="Level">
+                        <div className={sheetClasses.eyebrow}>Level</div>
+                        {[{value: undefined, label: 'Any level'}, ...LEVELS].map((item) => (
+                            <label key={item.label} className={sheetClasses.facet}>
+                                <input
+                                    type="radio"
+                                    name="level"
+                                    checked={level === item.value}
+                                    onChange={() => setLevel(item.value)}
+                                />
+                                {item.label}
+                            </label>
+                        ))}
+                    </div>
+                    <div className={sheetClasses.facetGroup} role="group" aria-label="Features">
+                        <div className={sheetClasses.eyebrow}>Features</div>
+                        {featureOptions.map((feature) => (
+                            <label key={feature} className={sheetClasses.facet}>
+                                <input
+                                    type="checkbox"
+                                    checked={features.includes(feature)}
+                                    onChange={() => toggleFeature(feature)}
+                                />
+                                <code className={classes.feature}>{feature}</code>
+                                <span className={sheetClasses.facetCount}>{featureCounts.get(feature) ?? 0}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <div className={sheetClasses.facetGroup} role="radiogroup" aria-label="Workspace">
+                        <div className={sheetClasses.eyebrow}>Workspace</div>
+                        {WORKSPACE_FACETS.map((item) => (
+                            <label key={item.value} className={sheetClasses.facet}>
+                                <input
+                                    type="radio"
+                                    name="workspace"
+                                    checked={workspace === item.value}
+                                    onChange={() => setWorkspace(item.value)}
+                                />
+                                {item.label}
+                            </label>
+                        ))}
+                    </div>
+                    {engineVersion && (
+                        <div className={sheetClasses.facetGroup}>
+                            <label className={sheetClasses.facet}>
+                                <input
+                                    type="checkbox"
+                                    checked={compatible}
+                                    onChange={(event) => setCompatible(event.currentTarget.checked)}
+                                />
+                                Works with my engine
+                            </label>
+                        </div>
+                    )}
+                </aside>
+                <div className={classes.results}>
+                    <div className={classes.toolbar}>
+                        <TextInput
+                            ref={searchInput}
+                            className={classes.searchBox}
+                            classNames={{input: classes.input}}
+                            leftSection={<IconSearch size={15} />}
+                            rightSection={<span className={classes.kbd}>/</span>}
+                            rightSectionPointerEvents="none"
+                            placeholder="Search name, feature, tag…"
+                            aria-label="Search examples"
+                            value={query}
+                            onChange={(event) => {
+                                setOwnQuery(event.currentTarget.value);
+                                onQueryChange?.(event.currentTarget.value);
+                            }}
+                        />
+                        <Select
+                            classNames={{input: classes.input}}
+                            w={170}
+                            leftSection={<span className={classes.sortLabel}>Sort</span>}
+                            leftSectionWidth={44}
+                            aria-label="Sort"
+                            data={SORTS}
+                            value={sort ?? (query.trim() ? 'relevance' : 'name')}
+                            allowDeselect={false}
+                            onChange={(value) => setSort((value as ExampleSort | null) ?? undefined)}
+                        />
+                    </div>
+                    <Text size="xs" c="dimmed" role="status" className={classes.count}>
+                        {entries.length} {entries.length === 1 ? 'example' : 'examples'}
+                    </Text>
+                    {grid}
+                </div>
+            </div>
         </Stack>
     );
 }

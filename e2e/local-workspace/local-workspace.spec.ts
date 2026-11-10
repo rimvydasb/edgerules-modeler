@@ -25,7 +25,7 @@ test('copies an example, renames, duplicates and deletes it, and keeps the proje
     await expect(page.getByRole('button', {name: 'Project menu: Loan repayment'})).toBeVisible(SLOW);
     await page.getByTestId('modeler-app').getByRole('button', {name: 'Workspace', exact: true}).click(SLOW);
     await expect(panelTitles(page)).toHaveText(['Loan repayment']);
-    await expect(page.getByTestId('project-panel')).toContainText('from loan-repayment@');
+    await expect(page.getByTestId('project-panel')).toContainText('loan-repayment@');
 
     // Rename.
     await page.getByRole('button', {name: 'Menu of Loan repayment'}).click();
@@ -38,7 +38,7 @@ test('copies an example, renames, duplicates and deletes it, and keeps the proje
     await page.getByRole('button', {name: 'Menu of My loans'}).click();
     await page.getByRole('menuitem', {name: 'Duplicate'}).click();
     await expect(panelTitles(page)).toHaveCount(2);
-    await expect(page.getByTestId('project-panel').filter({hasText: 'from loan-repayment@'})).toHaveCount(2);
+    await expect(page.getByTestId('project-panel').filter({hasText: 'loan-repayment@'})).toHaveCount(2);
 
     // Reload: the stored workspace keeps both.
     await page.reload();

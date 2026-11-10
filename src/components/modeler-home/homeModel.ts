@@ -5,7 +5,8 @@ import {matchesQuery} from '../local-workspace/internal';
 
 export const MAX_EXAMPLE_SUGGESTIONS = 5;
 export const MAX_PROJECT_SUGGESTIONS = 3;
-export const HOME_EXAMPLES = 3; // featured examples on the Home page, before the "Browse other examples" panel
+export const HOME_EXAMPLES = 4; // featured examples on the Home page: one row of four cards
+export const HOME_PROJECTS = 4; // recent projects on the Home page: one row of four cards
 
 export type Suggestion =
     | {kind: 'example'; key: string; label: string; detail: string; coordinates: ExampleCoordinates}

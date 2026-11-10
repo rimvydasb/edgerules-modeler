@@ -49,7 +49,7 @@ test('the model shows its name; the model settings rename it and set its version
 
 test('the Flow view of the model shows a panel per workbook with its name and description', async ({page}) => {
     await openStory(page, 'models-loan-repayment--overview');
-    await expect(page.getByRole('radio', {name: 'Flow'})).toHaveAttribute('aria-checked', 'true', SLOW);
+    await expect(page.getByRole('radio', {name: /^(Flow|Overview)$/})).toHaveAttribute('aria-checked', 'true', SLOW);
     const picker = page.getByTestId('shell-workbook-picker');
     const mortgage = picker.getByTestId('shell-workbook-mortgageBook');
     const terms = picker.getByTestId('shell-workbook-termComparisonBook');

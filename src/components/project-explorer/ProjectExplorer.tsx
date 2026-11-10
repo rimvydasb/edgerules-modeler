@@ -204,7 +204,7 @@ interface PendingCreate {
  */
 export function ProjectExplorer({
     service,
-    rootLabel = 'Project',
+    rootLabel = 'Project Explorer',
     collapsed = false,
     onCollapsedChange,
     revision,
@@ -534,7 +534,7 @@ export function ProjectExplorer({
                         className={classes.tree}
                         data={data}
                         tree={tree}
-                        levelOffset={20}
+                        levelOffset={14}
                         expandOnClick
                         renderNode={renderNode}
                     />

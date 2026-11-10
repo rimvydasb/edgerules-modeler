@@ -1,6 +1,7 @@
 // Shared with the other page-level components of this package (modeler-home); not published.
 export {
     buildSearchIndex,
+    countByIndustry,
     featuredExamples,
     newestExamples,
     searchExamples,

@@ -11,8 +11,8 @@ import {
     type ReactElement,
     type ReactNode,
 } from 'react';
-import {Alert, Button, Loader} from '@mantine/core';
-import {IconBooks, IconFolders, IconSitemap, IconX} from '@tabler/icons-react';
+import {Alert, Button, Loader, Modal, Text} from '@mantine/core';
+import {IconDatabase, IconHome, IconLibrary, IconMoon, IconX} from '@tabler/icons-react';
 import {MutableDecisionService} from '@edgerules/web/mutable';
 import {
     ExampleDetails,
@@ -23,6 +23,7 @@ import {
 } from '../../../src/components/example-library';
 import {addWorkspaceProject, LocalWorkspace} from '../../../src/components/local-workspace';
 import {ModelerHome} from '../../../src/components/modeler-home';
+import {SheetProjectMark, sheetClasses} from '../../../src/ui/sheet';
 import {
     createProjectSessionManager,
     ProjectProvider,
@@ -36,6 +37,7 @@ import {
 import {Shell, type ShellView} from '../../../src/components/shell';
 import {createExamplesClient, EXAMPLES_REPOSITORY_URL} from '../examplesSource';
 import {defaultView, routePath, sectionOf, type ModelerRoute, type ProjectRoute} from './routes';
+import {cx} from '../../../src/ui/cx';
 import * as classes from './modelerHost.module.css';
 
 const client = createExamplesClient();
@@ -164,8 +166,9 @@ export function ModelerProvider({
 }
 
 const SECTIONS = [
-    {section: 'examples', label: 'Examples', icon: IconBooks, route: {page: 'examples'}},
-    {section: 'workspace', label: 'Workspace', icon: IconFolders, route: {page: 'workspace'}},
+    {section: 'home', label: 'Home', icon: IconHome, route: {page: 'home'}},
+    {section: 'examples', label: 'Examples', icon: IconLibrary, route: {page: 'examples'}},
+    {section: 'workspace', label: 'Workspace', icon: IconDatabase, route: {page: 'workspace'}},
 ] as const satisfies readonly {section: string; label: string; icon: unknown; route: ModelerRoute}[];
 
 /** A plain click navigates in the page; a modified click (new tab, new window) keeps the browser default. */
@@ -221,41 +224,67 @@ const TITLES: Record<ModelerRoute['page'], string> = {
     project: 'Project',
 };
 
+/** The EdgeRules mark on the dark square of the top bar: three diamonds under a hanging star. */
+function Mark(): ReactElement {
+    return (
+        <svg viewBox="0 0 500 500" width="22" height="22" aria-hidden="true" className={classes.mark}>
+            <g fill="#fff">
+                <path d="M248 128 L330 210 L248 292 L166 210 Z" />
+                <path d="M157 216 L239 298 L157 380 L75 298 Z" />
+                <path d="M343 216 L425 298 L343 380 L261 298 Z" />
+            </g>
+            <g fill="none" stroke="#fff" strokeWidth="14" strokeLinecap="square">
+                <path d="M248 48 V116 M214 82 H282 M224 58 L272 106 M272 58 L224 106" />
+                <path d="M157 392 V442 M141 432 H173" />
+                <path d="M248 312 V372 M232 366 H264" />
+                <path d="M343 392 V442 M327 432 H359" />
+            </g>
+        </svg>
+    );
+}
+
 /**
- * The frame of every page: the top bar in the style of the Shell header (one 41px row on the muted fill, the model
- * icon square, one cell per section) and the page below it. A project fills the window under the bar; the other
- * pages sit in a centered column.
+ * The frame of every page: one top bar that says where you can go, never where you are (the Home, Examples and
+ * Workspace links and one tab per opened project), and the page below it. A project fills the window under the bar;
+ * the other pages sit in a centered column.
  */
 export function ModelerFrame({route, children}: {route: ModelerRoute; children: ReactNode}): ReactElement {
     const {href, tabs, closeTab} = useModeler();
     const active = sectionOf(route);
+    const [themeNotice, setThemeNotice] = useState(false);
     useEffect(() => {
         if (route.page !== 'project') document.title = `${TITLES[route.page]} · EdgeRules Modeler`;
     }, [route.page]);
 
     return (
-        <div className={classes.app} data-testid="modeler-app">
+        <div className={cx(classes.app, sheetClasses.tokens)} data-testid="modeler-app">
             <header className={classes.bar}>
                 <NavItem route={{page: 'home'}} className={classes.brand}>
                     <span className={classes.brandIcon} aria-hidden="true">
-                        <IconSitemap size={20} />
+                        <Mark />
                     </span>
                     <span className={classes.brandName}>EdgeRules</span>
-                    <span className={classes.brandProduct}>Modeler</span>
+                    <span className={classes.srOnly}> Modeler</span>
                 </NavItem>
                 <nav aria-label="Modeler" className={classes.nav}>
                     {SECTIONS.map(({section, label, icon: Icon, route: target}) => (
-                        <NavItem key={section} route={target} className={classes.navItem} current={active === section}>
-                            <Icon size={16} aria-hidden="true" />
-                            {label}
+                        <NavItem
+                            key={section}
+                            route={target}
+                            className={classes.navItem}
+                            current={active === section || (section === 'home' && route.page === 'home')}
+                        >
+                            <Icon size={15} aria-hidden="true" />
+                            <span className={classes.navLabel}>{label}</span>
                         </NavItem>
                     ))}
+                    {tabs.length > 0 && <span className={classes.separator} aria-hidden="true" />}
                     {tabs.map(({route: target, name}) => {
                         const current = route.page === 'project' && route.projectPath === target.projectPath;
                         return (
                             <div key={target.projectPath} className={classes.tab} data-active={current || undefined}>
                                 <NavItem route={target} className={classes.tabLink} current={current}>
-                                    <IconSitemap size={16} aria-hidden="true" />
+                                    <SheetProjectMark name={name} size="xs" />
                                     <span className={classes.tabName}>{name}</span>
                                 </NavItem>
                                 <button
@@ -265,26 +294,56 @@ export function ModelerFrame({route, children}: {route: ModelerRoute; children: 
                                     title={`Close ${name}`}
                                     onClick={() => closeTab(target.projectPath)}
                                 >
-                                    <IconX size={14} aria-hidden="true" />
+                                    <IconX size={13} aria-hidden="true" />
                                 </button>
                             </div>
                         );
                     })}
                 </nav>
+                <span className={classes.spacer} />
                 {/* The route of the in-memory host; the app shows it in the address bar instead. */}
                 {!href && (
                     <span className={classes.route} data-testid="modeler-route">
                         {routePath(route)}
                     </span>
                 )}
+                <button
+                    type="button"
+                    className={classes.iconButton}
+                    title="Theme"
+                    aria-label="Switch to the night theme"
+                    onClick={() => setThemeNotice(true)}
+                >
+                    <IconMoon size={16} aria-hidden="true" />
+                </button>
             </header>
-            <main className={route.page === 'project' ? classes.projectMain : classes.main}>{children}</main>
+            <Modal opened={themeNotice} onClose={() => setThemeNotice(false)} title="Night theme" size="sm" centered>
+                <Text size="sm">The night theme is not implemented yet. The Modeler has the light theme only.</Text>
+                <Button mt="md" size="compact-md" color="dark" onClick={() => setThemeNotice(false)}>
+                    OK
+                </Button>
+            </Modal>
+            <main
+                className={
+                    route.page === 'project'
+                        ? classes.projectMain
+                        : route.page === 'home'
+                          ? classes.mainWide
+                          : classes.main
+                }
+            >
+                {children}
+            </main>
         </div>
     );
 }
 
 export function HomePage(): ReactElement {
-    const {repository, navigate, copy, showDetails} = useModeler();
+    const {repository, factory, navigate, copy, showDetails} = useModeler();
+    const createBlank = async (name: string) => {
+        const added = await addWorkspaceProject({repository, factory}, {name, model: {dsl: '{}'}});
+        navigate({page: 'project', projectPath: added.locator.projectPath});
+    };
     return (
         <ModelerHome
             client={client}
@@ -293,8 +352,10 @@ export function HomePage(): ReactElement {
             onShowDetails={showDetails}
             onCopy={(example, open) => void copy(example, open)}
             onOpenProject={(locator) => navigate({page: 'project', projectPath: locator.projectPath})}
+            onCreateProject={(name) => void createBlank(name)}
             onShowAllProjects={() => navigate({page: 'workspace'})}
             onShowAllExamples={() => navigate({page: 'examples'})}
+            onShowIndustry={(industry) => navigate({page: 'examples', industry})}
         />
     );
 }
