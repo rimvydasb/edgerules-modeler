@@ -15,6 +15,18 @@ describe('getModelContext', () => {
     });
 });
 
+// The tools that a read-only project registers, in registration order.
+const READ_TOOLS = [
+    'run-tests',
+    'get-project-overview',
+    'get-language-guide',
+    'list-model-entries',
+    'read-source',
+    'search-model',
+    'list-tests',
+    'evaluate-model',
+];
+
 describe('registerProjectTools', () => {
     it('returns an inactive handle and registers nothing without a model context', async () => {
         const {session} = await openFixtureProject();
@@ -29,7 +41,7 @@ describe('registerProjectTools', () => {
         const {modelContext, handle} = await openToolsFixture(undefined, {readOnly: true});
         expect(handle.active).toBe(true);
         expect(handle.activity?.list()).toEqual([]);
-        expect(modelContext.names()).toEqual(['run-tests']);
+        expect(modelContext.names()).toEqual(READ_TOOLS);
         expect(modelContext.tool('run-tests')?.annotations).toEqual({
             readOnlyHint: true,
             untrustedContentHint: false,
@@ -37,7 +49,7 @@ describe('registerProjectTools', () => {
         });
         handle.setReadOnly(false);
         expect(modelContext.names()).toEqual([
-            'run-tests',
+            ...READ_TOOLS,
             'edit-model',
             'edit-tests',
             'set-documentation',
@@ -49,7 +61,7 @@ describe('registerProjectTools', () => {
             consequentialHint: false,
         });
         handle.setReadOnly(true);
-        expect(modelContext.names()).toEqual(['run-tests']);
+        expect(modelContext.names()).toEqual(READ_TOOLS);
     });
 
     it('takes the first baseline on registration, so the first run-tests reports what changed since', async () => {

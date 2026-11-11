@@ -208,6 +208,7 @@ describe('edit-model', () => {
 
     it('is not registered for a read-only project', async () => {
         const {modelContext} = await openToolsFixture(undefined, {readOnly: true});
-        expect(modelContext.names()).toEqual(['run-tests']);
+        expect(modelContext.names()).not.toContain('edit-model');
+        expect(modelContext.names()).toContain('run-tests');
     });
 });

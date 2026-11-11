@@ -1,4 +1,4 @@
-import {LIST_OUTPUT_BUDGET} from '../core/limits';
+import {LIST_OUTPUT_BUDGET} from './limits';
 
 export {LIST_OUTPUT_BUDGET};
 

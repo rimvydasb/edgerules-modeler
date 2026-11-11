@@ -1,0 +1,21 @@
+{
+  "commit": "3cf26f9c129ddc5008df5550d1d9fcc38018ae3b",
+  "files": [
+    "annotations-story.md",
+    "base-examples.md",
+    "dates-reference.md",
+    "decision-layers-reference.md",
+    "explain-reference.md",
+    "finance-functions-reference.md",
+    "list-functions-reference.md",
+    "loop-reference.md",
+    "numeric-functions-reference.md",
+    "optimise-examples.md",
+    "optimise-reference.md",
+    "playground.md",
+    "rulesets-reference.md",
+    "string-functions-reference.md",
+    "user-functions-reference.md",
+    "user-types-reference.md"
+  ]
+}

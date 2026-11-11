@@ -249,20 +249,20 @@ interface EvaluationResult {
 
 ## Tasks
 
-- [ ] Add `scripts/sync-language-guide.mjs` and run it to copy `../edgerules/docs/reference/`
-- [ ] Implement `LanguageGuide` and `get-language-guide`
-- [ ] Implement `ProjectInspector` with `project/inspection/*`
-- [ ] Build the outline from `buildSections` of `project-explorer/internal.ts` and `get('*', kinds)` interface kinds
-- [ ] Implement `get-project-overview`, `list-model-entries`, `read-source`, `search-model`, `list-tests` and
+- [x] Add `scripts/sync-language-guide.mjs` and run it to copy `../edgerules/docs/reference/`
+- [x] Implement `LanguageGuide` and `get-language-guide`
+- [x] Implement `ProjectInspector` with `project/inspection/*`
+- [x] Build the outline from `buildSections` of `project-explorer/internal.ts` and `get('*', kinds)` interface kinds
+- [x] Implement `get-project-overview`, `list-model-entries`, `read-source`, `search-model`, `list-tests` and
       `evaluate-model`
-- [ ] Add tests for the code of this phase
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `orientTools.test.ts`, `inspectTools.test.ts` and `languageGuide.test.ts`
-- [ ] `languageGuide.test.ts` loads every topic, lists its sections, and pages a section longer than 6,000 characters
-- [ ] `node scripts/sync-language-guide.mjs` copies the reference and leaves `git status` clean on a second run
-- [ ] `toolMetadata.test.ts` checks the name, description and parameter limits of every registered tool
+- [x] `npm test` passes, including `orientTools.test.ts`, `inspectTools.test.ts` and `languageGuide.test.ts`
+- [x] `languageGuide.test.ts` loads every topic, lists its sections, and pages a section longer than 6,000 characters
+- [x] `node scripts/sync-language-guide.mjs` copies the reference and leaves `git status` clean on a second run
+- [x] `toolMetadata.test.ts` checks the name, description and parameter limits of every registered tool
 
 ## Verification
 
@@ -271,3 +271,31 @@ Run the commands of [Verification](../webmcp-story.md#verification) that this ph
 ```sh
 npm run typecheck && npm run lint && npm run depcruise && npm test && npm run format:check
 ```
+
+## Implementation notes
+
+- **Entry points:** `webmcp/project/inspection/projectInspector.ts` — `ProjectInspector`,
+  `createProjectInspector(session, regression, host)`; the use cases sit beside it (`modelOutline`, `sourceReader`,
+  `modelSearch`, `testSuiteView`, `modelEvaluator`, `projectOverview`). `webmcp/project/guide/languageGuide.ts` —
+  `LanguageGuide`, `createLanguageGuide(texts?)`; `topics.ts` maps each `GuideTopic` to its `?raw` file.
+  `webmcp/tools/orient/*`, `webmcp/tools/inspect/*` — the seven tools, all appended to `TOOL_CATALOG`.
+  `scripts/sync-language-guide.mjs` — copies `../edgerules/docs/reference/` (16 topic files) and writes
+  `guide-source.json`.
+- **Contracts:** `createProjectToolsContext(session, host?)` takes `host: () => InspectionHostState` (`readOnly`,
+  `canSave`, `focus?`), read at each call; `registerProjectTools` builds it from its flags and `navigation.getFocus()`.
+  Phase 4 adds `host` (actions) to the context beside it. `fitOutput` and `LIST_OUTPUT_BUDGET` moved to
+  `core/outputBudget.ts` (`project/` may not import `protocol/`). `core/textPage.ts` — `pageOf`, shared by `read-source`
+  and the guide.
+- **Contracts (output):** `list-model-entries` and `search-model` fit 1,500 characters, so a page can hold fewer entries
+  than `limit`; `nextOffset` continues. `get-language-guide`: a topic whose file starts with a `##` heading (no
+  preamble, for example `annotations`) returns its first section as the introduction. `evaluate-model` returns the first
+  6,000 characters of the JSON text as a string when trimmed. The engine returns `Invalid(...)`/`Missing(...)` special
+  values as results, not errors.
+- **Contracts (data):** `getCode` of a plain field returns only its expression (`'1'`, not `'unused: 1'`), so
+  `search-model` code matches and `read-source` of such a field show the expression. A `decision: risk(...)` field is an
+  ordinary variable in the outline (not in `decisions`). A callable returning a record reads `(age: number): object`.
+- **Deviations and open items:** `tsdown.config.ts` has a `markdownRaw` plugin for the `?raw` imports. `.prettierignore`
+  lists `guide/reference`. `list-tests`, `project-explorer/internal.ts` and `tests-manager/internal.ts` gained exports
+  (`ExplorerEntryKind`, `ExplorerSection`, `listTestSubjects`). The story's folder layout (`protocol/outputBudget.ts`)
+  is outdated; Phase X should update it. `npm run build` still fails only on the existing `sheet.module.css` `tokens`
+  error. `get-project-overview` has no `project.description` (the session has none).

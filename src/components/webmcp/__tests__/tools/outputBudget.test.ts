@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {fitOutput, LIST_OUTPUT_BUDGET, outputSize} from '../../protocol/outputBudget';
+import {fitOutput, LIST_OUTPUT_BUDGET, outputSize} from '../../core/outputBudget';
 
 describe('fitOutput', () => {
     it('shrinks a value until its JSON fits the budget', () => {

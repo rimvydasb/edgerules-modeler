@@ -27,7 +27,12 @@ export function registerProjectTools(options: ProjectToolsOptions): ProjectTools
         navigation: options.navigation !== undefined,
         allowSave: options.allowSave ?? false,
     };
-    const context = createProjectToolsContext(session);
+    const {navigation} = options;
+    const context = createProjectToolsContext(session, () => ({
+        readOnly: flags.readOnly,
+        canSave: flags.allowSave && !flags.readOnly,
+        ...(navigation && {focus: navigation.getFocus()}),
+    }));
     const queue = createToolQueue();
     const registry = createToolRegistry({modelContext, tools: TOOL_CATALOG, context, queue});
     registry.sync(flags);

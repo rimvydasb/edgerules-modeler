@@ -1,3 +1,4 @@
+import {readFile} from 'node:fs/promises';
 import {basename, dirname, resolve} from 'node:path';
 import {build as esbuild} from 'esbuild';
 import {defineConfig} from 'tsdown';
@@ -62,6 +63,24 @@ function cssModules(): Plugin {
     };
 }
 
+// A Markdown file imported with `?raw` becomes its text, as in Vite: the language guide of the webmcp component copies
+// the engine reference and imports each file.
+function markdownRaw(): Plugin {
+    const SUFFIX = '.md?raw';
+    return {
+        name: 'markdown-raw',
+        resolveId(source, importer) {
+            if (!source.endsWith(SUFFIX) || !importer) return null;
+            return resolve(dirname(importer), source);
+        },
+        async load(id) {
+            if (!id.endsWith(SUFFIX)) return null;
+            const text = await readFile(id.slice(0, -'?raw'.length), 'utf8');
+            return {code: `export default ${JSON.stringify(text)};`, moduleType: 'js'};
+        },
+    };
+}
+
 export default defineConfig({
     entry: {
         index: 'src/index.ts',
@@ -88,7 +107,7 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
-    plugins: [cssModules()],
+    plugins: [cssModules(), markdownRaw()],
     // `dependencies` and `peerDependencies` are external by default; the dnd-kit packages are listed
     // so they stay out of the bundle either way.
 });

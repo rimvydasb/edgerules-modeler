@@ -26,6 +26,23 @@ describe('tool metadata', () => {
         },
     );
 
+    it('the catalog holds the change, feedback, orient and inspect tools in catalog order', () => {
+        expect(TOOL_CATALOG.map((definition) => definition.name)).toEqual([
+            'edit-model',
+            'edit-tests',
+            'set-documentation',
+            'undo-agent-change',
+            'run-tests',
+            'get-project-overview',
+            'get-language-guide',
+            'list-model-entries',
+            'read-source',
+            'search-model',
+            'list-tests',
+            'evaluate-model',
+        ]);
+    });
+
     it('the catalog has unique names', () => {
         const names = TOOL_CATALOG.map((definition) => definition.name);
         expect(new Set(names).size).toBe(names.length);

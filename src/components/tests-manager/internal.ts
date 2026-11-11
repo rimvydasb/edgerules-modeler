@@ -8,3 +8,5 @@ export {formatValue, matches} from './model/values';
 export type {MutableDecisionService, TestRunner, TestSubject, TestSubjectKind} from './tests-manager-types';
 // `edit-tests` syncs a subject's rows before it validates the paths, so they exist without a mounted Tests view.
 export {deriveRows} from './model/rows';
+// `list-tests` finds the test subjects of the model without a mounted Tests view.
+export {listTestSubjects} from './model/subjects';
