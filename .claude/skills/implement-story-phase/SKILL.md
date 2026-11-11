@@ -32,7 +32,9 @@ per phase):
    `grep -n '^##' <main story>` and read only its line range (`Read` with `offset` and `limit`). Do not read the whole
    main story, and do not read other phase files.
 4. Read the `## Verification` section of the main story the same way.
-5. Code that earlier phases built is the source of truth for their contracts. Read that code, not their phase files.
+5. Code that earlier phases built is the source of truth for their contracts. To find that code, read only the
+   `## Implementation notes` section of each phase file in the `Depends on` column (find it with `grep -n '^## '`). Then
+   read the code that the notes point to. Do not read the rest of those phase files.
 
 **Recommended model:** a phase file names one in its header table. If the current model differs, tell the user in one
 line before you start (they switch models in the app; you cannot). Then continue.
@@ -67,6 +69,19 @@ done while a command fails.
 Edit the file that holds the phase: the story file for a single-file story, the phase file for a split story. Change
 `- [ ]` to `- [x]` for every task and acceptance criterion of this phase that is done and verified. Leave an item open
 when it is not done, and say why in the report. Do this in the same turn as the code; it is part of the deliverable.
+
+## Write the handoff
+
+For a split story, append an `## Implementation notes` section to the end of the phase file. Later phases read this
+section instead of searching the code. Keep it to 5–15 lines:
+
+- **Entry points:** the files and exported symbols that later phases use, as `path` — `Symbol`: one-line purpose.
+- **Contracts:** decisions that are not obvious from the story, such as names, signatures or semantics that differ from
+  the story, and invariants that later code must keep.
+- **Deviations and open items:** what differs from the phase file, and why.
+
+Write only facts that a later phase needs. Do not repeat the story or describe how you did the work. If the section
+already exists because the phase was continued, update it. For a single-file story, skip this step.
 
 ## Report
 
