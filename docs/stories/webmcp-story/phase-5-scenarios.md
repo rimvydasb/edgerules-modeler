@@ -21,19 +21,19 @@ Read these sections of the main story before you start. Do not read the other ph
 
 ## Tasks
 
-- [ ] Add scenario fixtures in `src/components/webmcp/__tests__/scenarios/`: a task, the tool calls and the expected
+- [x] Add scenario fixtures in `src/components/webmcp/__tests__/scenarios/`: a task, the tool calls and the expected
       regression reports
-- [ ] Cover these change-and-react scenarios:
-  - [ ] Change a ruleset row, get one newly failing case, fix the row, get it newly passing
-  - [ ] Add a function and its test cases, get every case passing
-  - [ ] Rename a callable that a ruleset uses, get `changed` with the rewritten paths and no newly failing case
-  - [ ] Send a change with a link error, get the diagnostics, send the fixed change
-  - [ ] Undo a wrong change, get the failing cases newly passing
-- [ ] Replay each fixture through `execute` of the registered tools and compare each regression report
+- [x] Cover these change-and-react scenarios:
+  - [x] Change a ruleset row, get one newly failing case, fix the row, get it newly passing
+  - [x] Add a function and its test cases, get every case passing
+  - [x] Rename a callable that a ruleset uses, get `changed` with the rewritten paths and no newly failing case
+  - [x] Send a change with a link error, get the diagnostics, send the fixed change
+  - [x] Undo a wrong change, get the failing cases newly passing
+- [x] Replay each fixture through `execute` of the registered tools and compare each regression report
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `scenarios.test.ts`
+- [x] `npm test` passes, including `scenarios.test.ts`
 
 ## Verification
 
@@ -42,3 +42,13 @@ Run the commands of [Verification](../webmcp-story.md#verification) that this ph
 ```sh
 npm run typecheck && npm run lint && npm run depcruise && npm test && npm run format:check
 ```
+
+## Implementation notes
+
+- **Entry points:** `webmcp/__tests__/scenarios/scenario.ts` — `Scenario`, `ScenarioStep`, `RULESET_MODEL`,
+  `RULESET_TESTS`, `changeIdOf`. `scenarios/index.ts` — `SCENARIOS` (five fixtures, one file each).
+  `__tests__/scenarios.test.ts` — the replay through `openToolsFixture().call`.
+- **Contracts:** A step expects `{ok: true, regression, changed?}` or `{ok: false, code, diagnostics?}`. Case lists are
+  case names. `input` may be a function of the earlier results (used for the `changeId` of an undo).
+- **Deviations and open items:** `changed` of a rename lists the new name (`riskLevel`), not the old one. The ruleset
+  scenarios use a first-match `risk` ruleset with two rows. `npm run build` was not run.
