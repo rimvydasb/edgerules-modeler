@@ -303,7 +303,8 @@ Local generated data is outside the authored package or ignored:
 | Connector/repository/branch  | Connector record                  | Environment-specific and often sensitive       |
 | Head revision                | Repository/cloud envelope         | Mutable concurrency token                      |
 | Revision author/message/time | Revision envelope or Git commit   | History, not authored state                    |
-| Fork provenance              | Cloud/catalog relationship        | Must survive without polluting reusable source |
+| Library origin of a copy     | `edgerules.project.json` `origin` | Coordinates `id@version` of the example copy   |
+| Fork provenance (cloud)      | Cloud/catalog relationship        | Must survive without polluting reusable source |
 | Build compiler version       | Derived artifact manifest         | Reproducibility                                |
 
 Rules:
@@ -311,7 +312,9 @@ Rules:
 1. A copied directory remains a valid project without retaining another user's cloud identity.
 2. Forks retain internal model entity IDs so upstream comparison and merge remain possible.
 3. Cloud `projectId` and project manifest `name` are different concepts.
-4. Package format version, DSL language version, model execution version, release version, and compiler version are
+4. The manifest `origin` holds library coordinates only, never identity; see
+   [examples-library-story.md](stories/examples-library-story.md) and ADR-003 in `architecture-adr.md`.
+5. Package format version, DSL language version, model execution version, release version, and compiler version are
    independently named and independently evolved.
 
 ## 6. Stable model identity
@@ -560,7 +563,8 @@ flowchart LR
 > The repository layout, the publishing pipeline and the checks of this section are refined by
 > [examples-repository-story.md](stories/examples-repository-story.md). The story replaces the `.erproject` bundles and
 > `catalog.json` of §11.2 and §11.4 with per-file reads at a pinned commit and the index `library.json`; the story is
-> authoritative where the two differ.
+> authoritative where the two differ. The Library browser and the Local Workspace are defined by
+> [examples-library-story.md](stories/examples-library-story.md).
 
 ### 11.1 Source of truth
 
@@ -648,7 +652,9 @@ flowchart LR
 | Update linked example    | Move reference only after user accepts the new revision              |
 | Merge upstream into fork | Three-way merge from recorded fork base                              |
 
-Fork provenance belongs to the cloud/catalog relationship, not the authored project manifest.
+Cloud fork provenance belongs to the cloud/catalog relationship. The manifest keeps only the library `origin`
+(`id@version`) of a copy in the Local Workspace, as defined in
+[examples-library-story.md](stories/examples-library-story.md).
 
 ## 12. Agentic maintenance architecture
 

@@ -1,6 +1,7 @@
 import type {Unsubscribe} from '#lib/changeBatch';
 import type {
     DocumentationDocument,
+    ProjectOrigin,
     ModelMetadata,
     FlowMetadataDocument,
     ProjectBundle,
@@ -25,6 +26,8 @@ export interface ProjectSessionSnapshot {
     phase: ProjectSessionPhase;
     projectId: string;
     name: string;
+    origin?: ProjectOrigin; // the library example that the project is a copy of
+    savedAt?: string; // ISO time of the last save, when the repository reports it
     locator: ProjectLocator;
     revision: string; // the repository revision this working copy is based on
     localVersion: number; // increments with every change of any slice

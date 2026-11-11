@@ -1,6 +1,6 @@
 import {createTestCasesService, type TestSubjectId, type TestSuite} from '../../test-cases-service';
-import {matches} from '../model/values';
 import type {MutableDecisionService} from '../tests-manager-types';
+import {caseFailures} from './caseFailures';
 import {createTestRunner} from './createTestRunner';
 
 /** The outcome of one authored test case: it passes when the run succeeds and every asserted cell matches. */
@@ -37,21 +37,8 @@ export async function runTestSuite(
         const kind = subjectId === '*' ? 'model' : 'function';
         await createTestRunner(service, testCases, {id: subjectId, kind, name: subjectId}).runAll();
 
-        const rows = testCases.listRows().filter((row) => row.section === 'assertions');
         return created.map(({authored, id}) => {
-            const resultSet = testCases.getResultSet(id);
-            const failures: string[] = [];
-            if (resultSet === undefined) failures.push('the case did not run');
-            else if (resultSet.status !== 'ok') failures.push(resultSet.error ?? 'the run failed');
-            else {
-                for (const row of rows) {
-                    const expected = authored.assertions[row.path] ?? '';
-                    const actual = resultSet.results[row.path]?.value;
-                    if (!matches(expected, actual, row.type)) {
-                        failures.push(`${row.path || '(result)'}: expected ${expected}, got ${JSON.stringify(actual)}`);
-                    }
-                }
-            }
+            const failures = caseFailures(testCases, id);
             return {id: authored.id, name: authored.name, passed: failures.length === 0, failures};
         });
     } finally {

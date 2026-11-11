@@ -144,8 +144,6 @@ interface NodeMeta {
     target?: ProjectExplorerOpenTarget; // set on an entry
 }
 
-const CODE_KINDS = new Set<IconKind>(['function', 'service', 'ruleset', 'test']);
-
 /** Where an entry is in the tree: its section, its own item, and the item of its workbook for a node. */
 interface EntryLocation {
     section: ExplorerSection;
@@ -204,7 +202,7 @@ interface PendingCreate {
  */
 export function ProjectExplorer({
     service,
-    rootLabel = 'Project',
+    rootLabel = 'Project Explorer',
     collapsed = false,
     onCollapsedChange,
     revision,
@@ -453,15 +451,7 @@ export function ProjectExplorer({
                 />
                 <span className={classes.label}>
                     {meta.section ? null : <KindIcon kind={meta.kind} />}
-                    <span
-                        className={cx(
-                            classes.text,
-                            meta.section && classes.group,
-                            CODE_KINDS.has(meta.kind) && classes.textCode,
-                        )}
-                    >
-                        {meta.text}
-                    </span>
+                    <span className={cx(classes.text, meta.section && classes.group)}>{meta.text}</span>
                     {meta.count !== undefined ? <span className={classes.count}>{meta.count}</span> : null}
                 </span>
                 {meta.section ? addButton(meta.section, meta.text) : null}

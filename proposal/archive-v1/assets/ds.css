@@ -1,0 +1,768 @@
+/*
+ * EdgeRules "Sodas" design system - proposal.
+ * Mathbook structure (numbered sections, rules, figures, contents, margin notes)
+ * + Sodas ornament (straw diamonds, pendants, the star) used sparingly
+ * + the existing editor vocabulary (square corners, 1px rules, kind squares, cream descriptions, dot grid).
+ */
+@import url('https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    /* paper & ink */
+    --paper: #ffffff;
+    --canvas: #f8f9fa; /* = Flow Editor canvas */
+    --muted: #f1f3f5; /* panel header fill */
+    --cream: #fdf8ec; /* = editor description rows */
+    --cream-edge: #efe3c4;
+    --ink: #17191c; /* = KIND_COLORS.model */
+    --ink-2: #495057;
+    --ink-3: #868e96;
+    --rule: #dee2e6;
+    --rule-soft: #e9ecef;
+    --dot: #ced4da;
+
+    /* accents */
+    --straw: #b8892b; /* the only decorative colour: straw of the sodas */
+    --straw-soft: #f3e7c6;
+    --link: #1971c2;
+    --ok: #2f9e44;
+    --warn: #e8590c;
+    --warn-soft: #fff4e6;
+
+    /* kind colours (verbatim from src/ui/kindColors.ts) */
+    --k-model: #17191c;
+    --k-function: #1976d2;
+    --k-service: #d49b00;
+    --k-ruleset: #6a1b9a;
+    --k-type: #ed6c02;
+    --k-decision: #00897b;
+    --k-facts: #8d6e63;
+    --k-test: #2f9e44;
+
+    /* type */
+    --serif: 'STIX Two Text', 'Iowan Old Style', Georgia, serif;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+    --bar: 41px;
+    --row: 40px;
+}
+
+:root[data-theme='dark'] {
+    --paper: #1a1b1e;
+    --canvas: #141517;
+    --muted: #25262b;
+    --cream: #2a261c;
+    --cream-edge: #4a4130;
+    --ink: #e9ecef;
+    --ink-2: #adb5bd;
+    --ink-3: #737b83;
+    --rule: #373a40;
+    --rule-soft: #2c2e33;
+    --dot: #3a3d43;
+    --straw: #d7b25e;
+    --straw-soft: #3a3220;
+    --link: #74c0fc;
+    --warn-soft: #3a2a1a;
+}
+
+* {
+    box-sizing: border-box;
+}
+html,
+body {
+    margin: 0;
+}
+body {
+    background: var(--canvas);
+    color: var(--ink);
+    font: 14px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
+}
+a {
+    color: var(--link);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+code,
+.mono {
+    font-family: var(--mono);
+    font-size: 0.86em;
+}
+.serif {
+    font-family: var(--serif);
+}
+.muted {
+    color: var(--ink-3);
+}
+.ink2 {
+    color: var(--ink-2);
+}
+.sr {
+    position: absolute;
+    left: -9999px;
+}
+svg[aria-hidden] {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+.fig img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+:root[data-theme='dark'] .fig img,
+:root[data-theme='dark'] img.ink-img {
+    filter: invert(0.9) hue-rotate(180deg);
+}
+
+/* ───────────── backgrounds ───────────── */
+.graph {
+    background-color: var(--canvas);
+    background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
+    background-size: 16px 16px;
+}
+.squared {
+    /* exercise-book squares: the Lithuanian school "langeliai" */
+    background-color: var(--paper);
+    background-image:
+        linear-gradient(var(--rule-soft) 1px, transparent 1px),
+        linear-gradient(90deg, var(--rule-soft) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+/* ───────────── top bar ───────────── */
+.topbar {
+    height: var(--bar);
+    display: flex;
+    align-items: stretch;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.topbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px 0 0;
+    color: var(--ink);
+    text-decoration: none;
+    border-right: 1px solid var(--rule);
+}
+.topbar .brand .mark {
+    width: var(--bar);
+    height: calc(var(--bar) - 1px);
+    background: var(--ink);
+    display: grid;
+    place-items: center;
+}
+.topbar .brand .mark img {
+    width: 30px;
+    height: 30px;
+}
+:root[data-theme='dark'] .topbar .brand .mark img {
+    filter: invert(1);
+}
+.topbar .brand b {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+.topbar .cell {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    color: var(--ink-2);
+    border-right: 1px solid var(--rule);
+    font-size: 13px;
+    text-decoration: none;
+    position: relative;
+    white-space: nowrap;
+}
+.topbar .cell:hover {
+    background: var(--canvas);
+    text-decoration: none;
+}
+.topbar .cell.on {
+    color: var(--ink);
+    font-weight: 500;
+}
+.topbar .cell.on::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--ink);
+}
+.topbar .grow {
+    flex: 1;
+}
+.topbar .cell.r {
+    border-right: 0;
+    border-left: 1px solid var(--rule);
+}
+.topbar .crumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    font-size: 13px;
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+.topbar .crumbs b {
+    color: var(--ink);
+    font-weight: 500;
+}
+.topbar .crumbs .sep {
+    color: var(--rule);
+    font-size: 18px;
+}
+.seg {
+    display: flex;
+    align-items: stretch;
+    border-left: 1px solid var(--rule);
+}
+.seg a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    font-size: 13px;
+    color: var(--ink-3);
+    position: relative;
+    text-decoration: none;
+}
+.seg a.on {
+    color: var(--ink);
+    font-weight: 500;
+}
+.seg a.on::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--ink);
+}
+.kbd {
+    font: 11px var(--mono);
+    border: 1px solid var(--rule);
+    border-bottom-width: 2px;
+    padding: 0 5px;
+    color: var(--ink-3);
+    background: var(--paper);
+}
+
+/* ───────────── layout ───────────── */
+.page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px 96px;
+}
+.page.narrow {
+    max-width: 920px;
+}
+.cols {
+    display: grid;
+    gap: 32px;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+.sheet {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+}
+
+/* ───────────── section heading: "§2  Examples ────── 3 · See all →" ───────────── */
+.sec {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 48px 0 16px;
+}
+.sec:first-child {
+    margin-top: 0;
+}
+.sec .no {
+    font: italic 500 15px var(--serif);
+    color: var(--straw);
+    min-width: 22px;
+}
+.sec h2 {
+    font: 500 22px/1.2 var(--serif);
+    margin: 0;
+}
+.sec .line {
+    flex: 1;
+    border-bottom: 1px solid var(--rule);
+    transform: translateY(-5px);
+}
+.sec .count {
+    font-size: 12px;
+    color: var(--ink-3);
+}
+.sec .more {
+    font-size: 13px;
+}
+
+/* small caps label used inside panels: matches Project Explorer section labels */
+.label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+/* ───────────── kind square ───────────── */
+.kind {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: var(--k-model);
+}
+:root[data-theme='dark'] .kind {
+    outline: 1px solid var(--rule);
+    outline-offset: -1px;
+}
+.kind.sm {
+    width: 22px;
+    height: 22px;
+}
+.kind.lg {
+    width: 48px;
+    height: 48px;
+}
+.kind svg {
+    width: 18px;
+    height: 18px;
+}
+.kind.sm svg {
+    width: 13px;
+    height: 13px;
+}
+.kind.outline {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--ink);
+}
+
+/* ───────────── panel (cards) ───────────── */
+.panel {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.12s;
+}
+a.panel:hover,
+.panel.hover:hover {
+    border-color: var(--ink);
+    text-decoration: none;
+}
+.panel .ph {
+    display: flex;
+    align-items: center;
+    min-height: var(--row);
+    border-bottom: 1px solid var(--rule);
+}
+.panel .ph .t {
+    padding: 0 12px;
+    font-weight: 600;
+    font-size: 14px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.panel .pb {
+    padding: 12px;
+    flex: 1;
+}
+.panel .pf {
+    display: flex;
+    border-top: 1px solid var(--rule);
+    min-height: 36px;
+}
+.panel .pf > * {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    border-right: 1px solid var(--rule);
+}
+.panel .pf > *:last-child {
+    border-right: 0;
+}
+
+/* description: same cream italic row as the editors */
+.desc {
+    background: var(--cream);
+    font: italic 14px/1.45 var(--serif);
+    color: var(--ink-2);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--rule);
+}
+
+/* ───────────── chips, tokens, difficulty ───────────── */
+.tok {
+    display: inline-block;
+    font: 11.5px/18px var(--mono);
+    padding: 0 6px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink-2);
+    margin: 0 4px 4px 0;
+}
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 1px 7px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+}
+.chip.ok {
+    color: var(--ok);
+}
+.chip.warn {
+    color: var(--warn);
+}
+.chip.ink {
+    color: var(--ink-2);
+}
+.chip.straw {
+    color: var(--straw);
+}
+/* difficulty in sodas diamonds: ◆◇◇ beginner … ◆◆◆ advanced */
+.diff {
+    display: inline-flex;
+    gap: 3px;
+    vertical-align: middle;
+}
+.diff i {
+    width: 7px;
+    height: 7px;
+    border: 1.2px solid var(--ink-2);
+    transform: rotate(45deg);
+    display: inline-block;
+}
+.diff i.f {
+    background: var(--ink-2);
+}
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+    font-size: 12px;
+    color: var(--ink-3);
+}
+
+/* ───────────── buttons ───────────── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 14px;
+    font: 500 13px var(--sans);
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.btn:hover {
+    background: var(--canvas);
+    text-decoration: none;
+}
+.btn.primary {
+    background: var(--ink);
+    color: var(--paper);
+}
+.btn.primary:hover {
+    background: #000;
+}
+.btn.ghost {
+    border-color: transparent;
+    color: var(--ink-2);
+}
+.btn.ghost:hover {
+    border-color: var(--rule);
+}
+.btn.sm {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12.5px;
+}
+.btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* ───────────── search ───────────── */
+.search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 48px;
+    padding: 0 14px;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    font-size: 15px;
+    color: var(--ink-3);
+}
+.search svg {
+    width: 18px;
+    height: 18px;
+    color: var(--ink-2);
+}
+.search .ph {
+    flex: 1;
+}
+.search.sm {
+    height: 34px;
+    font-size: 13px;
+    border-color: var(--rule);
+}
+.select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    font-size: 13px;
+    color: var(--ink-2);
+    white-space: nowrap;
+}
+.select::after {
+    content: '▾';
+    color: var(--ink-3);
+    font-size: 11px;
+}
+
+/* ───────────── contents (TOC with dotted leaders) ───────────── */
+.toc {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.toc li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 0;
+}
+.toc .n {
+    font: 500 14px var(--serif);
+    color: var(--ink-3);
+    min-width: 34px;
+}
+.toc .ti {
+    font: 16px var(--serif);
+    color: var(--ink);
+}
+.toc .lead {
+    flex: 1;
+    border-bottom: 1.5px dotted var(--dot);
+    transform: translateY(-4px);
+    min-width: 24px;
+}
+.toc .pg {
+    font: 12px var(--mono);
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+.toc li.sub .n {
+    padding-left: 18px;
+    min-width: 52px;
+    font-size: 13px;
+}
+.toc li.sub .ti {
+    font: 14px var(--sans);
+}
+.toc a:hover {
+    text-decoration: none;
+}
+.toc li:hover .ti {
+    text-decoration: underline;
+    text-decoration-color: var(--straw);
+    text-underline-offset: 3px;
+}
+
+/* ───────────── ornaments ───────────── */
+.orn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--straw);
+    margin: 40px 0;
+}
+.orn::before,
+.orn::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--straw-soft);
+}
+.orn i {
+    width: 9px;
+    height: 9px;
+    border: 1.3px solid var(--straw);
+    transform: rotate(45deg);
+}
+.orn i.f {
+    background: var(--straw);
+}
+.band {
+    height: 24px;
+    background: url(band.svg) repeat-x left center;
+}
+.star {
+    color: var(--straw);
+    font-family: var(--serif);
+}
+
+/* ───────────── figure (mathbook) ───────────── */
+.fig {
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+}
+.fig svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.figcap {
+    font: italic 12.5px var(--serif);
+    color: var(--ink-3);
+    padding: 6px 12px 0;
+}
+.figcap b {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--ink-2);
+}
+
+/* ───────────── ledger table ───────────── */
+.ledger {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+}
+.ledger th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--muted);
+    border-bottom: 1px solid var(--rule);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+.ledger td {
+    padding: 0 12px;
+    height: 48px;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: middle;
+}
+.ledger tr:hover td {
+    background: var(--canvas);
+}
+.ledger td.k {
+    width: 40px;
+    padding: 0;
+}
+
+/* margin notes */
+.marg {
+    font: italic 13px/1.45 var(--serif);
+    color: var(--ink-2);
+    border-left: 2px solid var(--straw-soft);
+    padding: 2px 0 2px 12px;
+}
+
+/* skeleton loader: straw shimmer */
+.skel {
+    background: linear-gradient(90deg, var(--rule-soft), var(--muted), var(--rule-soft));
+    background-size: 200% 100%;
+    animation: sk 1.4s infinite linear;
+    height: 12px;
+}
+@keyframes sk {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+/* proposal chrome (not part of the design) */
+.proposal-note {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    max-width: 340px;
+    background: #fffbe6;
+    border: 1px solid #e9d27a;
+    color: #5c4a00;
+    font: 12.5px/1.5 var(--sans);
+    padding: 10px 12px;
+    z-index: 50;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+.proposal-note b {
+    display: block;
+    margin-bottom: 2px;
+}
+.proposal-note a {
+    color: #5c4a00;
+    text-decoration: underline;
+}
+.proposal-note .x {
+    float: right;
+    cursor: pointer;
+    margin-left: 8px;
+}
+.theme-toggle {
+    cursor: pointer;
+    background: none;
+    border: 0;
+    font: inherit;
+}
+
+@media (max-width: 720px) {
+    .page {
+        padding: 24px 16px 64px;
+    }
+    .topbar .cell .lbl {
+        display: none;
+    }
+}

@@ -16,5 +16,5 @@
     "noUnusedParameters": true,
     "noEmit": true
   },
-  "include": ["src", "models", "stories", "e2e", "scripts", ".storybook", "*.config.ts", "vitest.setup.ts"]
+  "include": ["app", "src", "models", "stories", "e2e", "scripts", ".storybook", "*.config.ts", "vitest.setup.ts"]
 }

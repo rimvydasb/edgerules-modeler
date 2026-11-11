@@ -219,8 +219,8 @@
   border: 1px solid var(--st-border);
   border-radius: 0;
   background-color: var(--st-glass);
-  backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 0.05),
     0 12px 32px rgb(0 0 0 / 0.14);
@@ -413,6 +413,32 @@
   overflow: auto;
 }
 
+/*
+ * Every page except the Flow canvas sits on the dotted canvas of the Flow Editor, inset by one margin step on each
+ * side so the canvas shows around the component. The Flow view fills the body edge to edge: it is the canvas itself.
+ * Dots: the Flow Editor tokens (`--fe-canvas`, `--fe-dot`), 20px gap, 1.2px size.
+ */
+.bodyPage {
+  --sh-step: 16px; /* one margin step: two 8px grid units */
+  --sh-canvas: var(--mantine-color-gray-0);
+  --sh-dot: #ced4da;
+  padding: var(--sh-step);
+  border: 1px solid var(--sh-border);
+  background-color: var(--sh-canvas);
+  background-image: radial-gradient(circle at 1px 1px, var(--sh-dot) 0.6px, transparent 0.9px);
+  background-size: 20px 20px;
+}
+
+:global([data-mantine-color-scheme='dark']) .bodyPage {
+  --sh-canvas: var(--mantine-color-dark-8);
+  --sh-dot: #3a3a3a;
+}
+
+/* The component of a page: a card on the canvas, in the full height of the page. */
+.bodyPage > * {
+  min-height: 100%;
+}
+
 .status {
   flex: none;
   margin-top: var(--mantine-spacing-xs);
@@ -466,90 +492,383 @@
   margin-left: -1px;
 }
 
-/* ---------------------------------------------------------------- workbook picker */
+/* ---------------------------------------------------------------- project overview */
 /*
- * The dotted canvas of the Flow Editor, with the panel groups in the very center. Like the Flow Editor, it has a frame
- * line: its top line lies on the bottom line of the header, its left line on the right line of the Project Explorer.
+ * The overview page of the project (the Flow view of the model root): a warm page with the project header, the README,
+ * the entry points and the workbooks in the main column and the project facts beside it. Tokens: `sheetClasses.tokens`.
+ * Like the editors, it has a frame line: its top line lies on the bottom line of the header, its left line on the
+ * right line of the Project Explorer.
  */
 .workbooks {
-  --wb-canvas: var(--mantine-color-gray-0);
-  --wb-dot: #ced4da;
+  min-height: 100%;
+  /* No fill and no frame of its own: the page lies on the dotted canvas of the Shell body. */
+  background-color: transparent;
+  font: 14px/1.5 var(--er-sans);
+}
+
+.overview {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 32px 80px;
+}
+
+.overviewHead {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.overviewTitles {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.overviewTitle {
+  margin: 0;
+  overflow: hidden;
+  font: 600 32px/1.1 var(--er-sans);
+  letter-spacing: -0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overviewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--er-text-3);
+  font-size: 12.5px;
+}
+
+.overviewOrigin {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--er-border);
+  border-radius: 5px;
+  background-color: var(--er-subtle);
+  color: var(--er-text-2);
+  font: 11.5px var(--er-mono);
+  cursor: pointer;
+}
+
+.overviewOrigin:disabled {
+  cursor: default;
+}
+
+span.overviewOrigin {
+  cursor: default;
+}
+
+.overviewUpdate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background-color: var(--er-accent-soft);
+  color: var(--er-accent);
+  font-weight: 500;
+}
+
+.overviewActions {
+  display: flex;
+  gap: 8px;
+}
+
+.overviewButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--er-border-strong);
+  border-radius: var(--er-r-sm);
+  background-color: var(--er-surface);
+  color: var(--er-text);
+  font: 500 13.5px var(--er-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.overviewButton:hover {
+  background-color: var(--er-hover);
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .overviewGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.overviewMain {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.overviewSide {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 12px;
+}
+
+.sideCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+}
+
+.countRow {
+  display: flex;
   align-items: center;
-  /* `safe`: a picker taller than the body scrolls from its top, not from its middle. */
-  justify-content: safe center;
-  height: 100%;
-  padding: 24px;
-  overflow: auto;
-  border: 1px solid var(--sh-border);
-  background-color: var(--wb-canvas);
-  background-image: radial-gradient(circle, var(--wb-dot) 0.7px, transparent 0.8px);
-  background-size: 20px 20px;
+  align-self: stretch;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 13.5px;
 }
 
-:global([data-mantine-color-scheme='dark']) .workbooks {
-  --wb-canvas: var(--mantine-color-dark-8);
-  --wb-dot: #3a3a3a;
+.countRow b {
+  margin-left: auto;
+  font: 500 13px var(--er-mono);
 }
 
-/* The workbooks, then the services: a title and a row of panels each. */
+.countIcon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 4px;
+}
+
+.sideBig b {
+  font: 600 22px var(--er-sans);
+  letter-spacing: -0.02em;
+}
+
+.sideOrigin {
+  font: 13px var(--er-mono);
+}
+
+.sideLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--er-accent);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.sideLink:hover {
+  text-decoration: underline;
+}
+
+.badgeOk,
+.badgeAccent {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badgeOk {
+  background-color: var(--er-ok-soft);
+  color: var(--er-ok);
+}
+
+.badgeAccent {
+  background-color: var(--er-accent-soft);
+  color: var(--er-accent);
+}
+
+/* The sections of the main column: a title with a hint or a count, then the content. */
 .workbookGroup {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  align-items: center;
-  width: 100%;
+  min-width: 0;
 }
 
 .workbookGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 600 16px var(--er-sans);
+  letter-spacing: -0.01em;
 }
 
-/* A grid of at most 3 panels per row; a narrow body shows fewer columns. The add panels are grid items too. */
-.workbookPanels {
-  --wb-panel: 340px;
-  --wb-gap: 24px;
+.workbookGroupHint {
+  color: var(--er-text-3);
+  font: 400 12.5px var(--er-sans);
+  letter-spacing: 0;
+}
+
+.workbookGroupCount {
+  padding: 1px 8px;
+  border: 1px solid var(--er-border);
+  border-radius: 999px;
+  background-color: var(--er-subtle);
+  color: var(--er-text-2);
+  font: 500 11.5px/1.5 var(--er-mono);
+}
+
+/* The entry points: one ruled list of service methods. */
+.services {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+}
+
+.serviceRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--er-border);
+  background: none;
+  color: var(--er-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.serviceRow:hover {
+  background-color: var(--er-bg);
+}
+
+.serviceRow:focus-visible,
+.serviceAdd:focus-visible,
+.workbookPanel:focus-visible,
+.workbookAdd:focus-visible {
+  outline: 2px solid var(--er-accent);
+  outline-offset: -2px;
+}
+
+.serviceIcon {
   display: grid;
-  grid-template-columns: repeat(auto-fit, var(--wb-panel));
-  gap: var(--wb-gap);
-  justify-content: center;
-  width: 100%;
-  max-width: calc(3 * var(--wb-panel) + 2 * var(--wb-gap));
+  width: 24px;
+  height: 24px;
+  flex: none;
+  place-items: center;
+  border-radius: 6px;
 }
 
-/*
- * The README panel above the workbooks: the width of 3 panels and 2 gaps, the height of its content, at most 2 panel
- * heights and 1 gap. Content above the maximum height is cut off with a fade.
- */
+.serviceText {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.serviceSignature {
+  overflow: hidden;
+  font: 13.5px var(--er-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serviceDescription,
+.serviceNoDescription {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--er-text-2);
+  font-size: 13px;
+}
+
+.serviceNoDescription {
+  color: var(--er-text-3);
+  font-style: italic;
+}
+
+.serviceMeta {
+  flex: none;
+  color: var(--er-text-3);
+  font-size: 12.5px;
+}
+
+.serviceChevron {
+  flex: none;
+  color: var(--er-text-3);
+}
+
+.serviceAdd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  background: none;
+  color: var(--er-text-3);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.serviceAdd:hover {
+  color: var(--er-text);
+}
+
+/* The workbook cards: a responsive grid; the add card is a grid item too. */
+.workbookPanels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+/* The README card: the rendered README cut off with a fade, then the footer with the link that opens it. */
 .readmePanel {
   display: flex;
   flex: none;
   flex-direction: column;
   gap: 12px;
-  width: 100%;
-  max-width: calc(3 * 340px + 2 * 24px);
-  max-height: calc(2 * 196px + 24px);
-  padding: 20px;
-  border: 1px solid var(--sh-border);
-  border-radius: var(--mantine-radius-md);
-  background-color: var(--mantine-color-body);
-  box-shadow: var(--mantine-shadow-xs);
-  color: var(--mantine-color-text);
-  transition:
-    border-color 120ms ease,
-    box-shadow 120ms ease;
+  max-height: 260px;
+  padding: 16px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+  color: var(--er-text);
+  font-size: 14px;
 }
 
 .readmePanel:hover {
-  border-color: var(--mantine-primary-color-filled);
-  box-shadow: var(--mantine-shadow-md);
+  border-color: var(--er-border-strong);
 }
 
 .readmeContent {
@@ -574,65 +893,59 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--mantine-primary-color-filled);
+  color: var(--er-accent);
   font: inherit;
-  font-weight: 600;
+  font-size: 13.5px;
   cursor: pointer;
 }
 
+.readmeOpen:hover {
+  text-decoration: underline;
+}
+
 .readmeOpen:focus-visible {
-  outline: 2px solid var(--mantine-primary-color-filled);
+  outline: 2px solid var(--er-accent);
   outline-offset: 2px;
 }
 
 .workbookPanel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 340px;
-  min-height: 196px;
-  padding: 20px;
-  border: 1px solid var(--sh-border);
-  border-radius: var(--mantine-radius-md);
-  background-color: var(--mantine-color-body);
-  box-shadow: var(--mantine-shadow-xs);
-  color: var(--mantine-color-text);
+  gap: 10px;
+  min-height: 130px;
+  padding: 16px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+  color: var(--er-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition:
     border-color 120ms ease,
-    box-shadow 120ms ease,
-    transform 120ms ease;
+    box-shadow 120ms ease;
 }
 
 .workbookPanel:hover {
-  border-color: var(--mantine-primary-color-filled);
-  box-shadow: var(--mantine-shadow-md);
-  transform: translateY(-2px);
-}
-
-.workbookPanel:focus-visible {
-  outline: 2px solid var(--mantine-primary-color-filled);
-  outline-offset: 2px;
+  border-color: var(--er-border-strong);
+  box-shadow: 0 2px 10px rgb(13 13 14 / 0.05);
 }
 
 .workbookHead {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
-/* The kind icon square of a workbook, as in the Shell header. */
+/* The kind icon square of a workbook. */
 .workbookIcon {
-  display: flex;
+  display: grid;
   flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--mantine-radius-sm);
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 7px;
 }
 
 .workbookTitles {
@@ -643,40 +956,35 @@
 
 .workbookTitle {
   overflow: hidden;
-  font-size: var(--mantine-font-size-lg);
-  font-weight: 600;
-  line-height: 1.3;
+  font: 600 15px/1.3 var(--er-sans);
+  letter-spacing: -0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .workbookField {
   overflow: hidden;
-  color: var(--mantine-color-dimmed);
-  font-family: var(--mantine-font-family-monospace);
-  font-size: var(--mantine-font-size-xs);
+  color: var(--er-text-3);
+  font: 12px var(--er-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Three lines at most; the panels of one row keep one height. */
+/* Two lines at most; the cards of one row keep one height. */
 .workbookDescription,
 .workbookNoDescription {
   display: -webkit-box;
   flex: 1;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  font-size: var(--mantine-font-size-sm);
+  -webkit-line-clamp: 2;
+  color: var(--er-text-2);
+  font-size: 13.5px;
   line-height: 1.5;
 }
 
-.workbookDescription {
-  color: var(--mantine-color-text);
-}
-
 .workbookNoDescription {
-  color: var(--mantine-color-dimmed);
+  color: var(--er-text-3);
   font-style: italic;
 }
 
@@ -684,68 +992,46 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 12px;
-  border-top: 1px solid var(--sh-border);
-  color: var(--mantine-color-dimmed);
-  font-size: var(--mantine-font-size-xs);
+  padding-top: 10px;
+  border-top: 1px solid var(--er-border);
+  color: var(--er-text-3);
+  font-size: 12.5px;
 }
 
 .workbookOpen {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--mantine-primary-color-filled);
-  font-weight: 600;
+  color: var(--er-text-2);
 }
 
-/* The panel that creates a new workbook: the size of a workbook panel, a dashed outline and a plus. */
+/* The card that creates a new workbook: a dashed outline and a plus. */
 .workbookAdd {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
   align-items: center;
   justify-content: center;
-  width: 340px;
-  min-height: 196px;
-  padding: 20px;
-  border: 1px dashed var(--sh-border);
-  border-radius: var(--mantine-radius-md);
+  gap: 8px;
+  min-height: 130px;
+  padding: 16px;
+  border: 1px dashed var(--er-border-strong);
+  border-radius: var(--er-r);
   background-color: transparent;
-  color: var(--mantine-color-dimmed);
+  color: var(--er-text-3);
   font: inherit;
-  font-weight: 600;
+  font-size: 13.5px;
   cursor: pointer;
-  transition:
-    border-color 120ms ease,
-    color 120ms ease,
-    background-color 120ms ease;
 }
 
 .workbookAdd:hover {
-  border-color: var(--mantine-primary-color-filled);
-  background-color: var(--mantine-color-body);
-  color: var(--mantine-primary-color-filled);
-}
-
-.workbookAdd:focus-visible {
-  outline: 2px solid var(--mantine-primary-color-filled);
-  outline-offset: 2px;
-}
-
-.workbookAddIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 1px dashed currentColor;
-  border-radius: 50%;
+  border-color: var(--er-text-3);
+  color: var(--er-text);
 }
 
 /* ---------------------------------------------------------------- document */
 /* The Preview view of a document: the rendered Markdown on a page, in a frame like the other views. */
 .document {
   height: 100%;
+  background: var(--mantine-color-body);
   overflow: auto;
   border: 1px solid var(--sh-border);
 }
@@ -759,4 +1045,36 @@
 .documentEmpty {
   color: var(--mantine-color-dimmed);
   font-style: italic;
+}
+
+/* ---------------------------------------------------------------- project menu */
+.projectMenu {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  max-width: 240px;
+  padding: 2px 4px 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+  font: inherit;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.projectMenuCurrent {
+  color: var(--mantine-color-text);
+  font-weight: 600;
+}
+
+.projectMenu:hover {
+  background-color: var(--sh-border);
+}
+
+.projectName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

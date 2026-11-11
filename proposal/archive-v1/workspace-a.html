@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workspace A · Ledger</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .hd {
+        display: flex;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .hd h1 {
+        font: 500 34px/1.1 var(--serif);
+        margin: 0;
+    }
+    .hd p {
+        font: italic 16px var(--serif);
+        color: var(--ink-2);
+        margin: 4px 0 0;
+    }
+    .hd .sp {
+        flex: 1;
+    }
+    .tools {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    .tools .search {
+        flex: 1;
+    }
+    .ledger .nm b {
+        font-weight: 500;
+        display: block;
+    }
+    .ledger .nm b em {
+        font: italic 13px var(--serif);
+        color: var(--ink-3);
+        font-weight: 400;
+    }
+    .ledger .nm span {
+        font: italic 13px var(--serif);
+        color: var(--ink-3);
+    }
+    .ledger td.r {
+        text-align: right;
+        white-space: nowrap;
+        color: var(--ink-3);
+        font-size: 12.5px;
+    }
+    .ledger .menu {
+        width: 40px;
+        text-align: center;
+        color: var(--ink-3);
+    }
+    .ledger tr.new td {
+        background: var(--paper);
+        height: 56px;
+    }
+    .ledger tr.new .kind {
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px dashed var(--ink-3);
+    }
+    .ledger tr.new a {
+        margin-right: 16px;
+    }
+    .note {
+        display: grid;
+        grid-template-columns: 24px 1fr auto;
+        gap: 10px;
+        align-items: start;
+        margin-top: 24px;
+        padding-top: 12px;
+        border-top: 1px solid var(--rule);
+        font-size: 13px;
+        color: var(--ink-2);
+    }
+    .note sup {
+        font: italic 14px var(--serif);
+        color: var(--warn);
+    }
+    .meterline {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font: 12px var(--mono);
+        color: var(--ink-3);
+        margin-top: 6px;
+    }
+    .meter {
+        width: 220px;
+        height: 4px;
+        background: var(--rule-soft);
+        position: relative;
+    }
+    .meter i {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3%;
+        background: var(--ink-2);
+    }
+    .popover {
+        position: absolute;
+        right: 44px;
+        top: 36px;
+        width: 200px;
+        background: var(--paper);
+        border: 1px solid var(--ink);
+        font-size: 13px;
+        z-index: 3;
+    }
+    .popover a {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        color: var(--ink);
+        border-bottom: 1px solid var(--rule-soft);
+    }
+    .popover a:hover {
+        background: var(--canvas);
+        text-decoration: none;
+    }
+    .popover a.del {
+        color: #c92a2a;
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="home-a.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <a class="cell" href="examples-a.html"><i data-i="library"></i><span class="lbl">Examples</span></a>
+    <a class="cell on" href="workspace-a.html"><i data-i="grid"></i><span class="lbl">Workspace</span></a>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+
+<main class="page">
+    <div class="hd">
+        <div>
+            <div class="label" style="color: var(--straw)">Your projects</div>
+            <h1>Workspace</h1>
+            <p>Three projects, kept in this browser.<sup style="color: var(--warn); font-style: italic">¹</sup></p>
+        </div>
+        <span class="sp"></span>
+        <a class="btn" href="examples-a.html"><i data-i="library"></i>Browse examples</a>
+        <a class="btn primary" href="#"><i data-i="plus"></i>New project</a>
+    </div>
+    <div class="tools">
+        <div class="search sm"><i data-i="search"></i><span class="ph">Search projects</span></div>
+        <span class="select">Source: All</span>
+        <span class="select">Sort: Last saved</span>
+    </div>
+    <div style="position: relative">
+        <table class="ledger">
+            <thead>
+                <tr><th></th><th>Project</th><th>Source</th><th>Saved</th><th>Size</th><th></th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="k"><span class="kind"><i data-i="book"></i></span></td>
+                    <td class="nm"><b>Loan origination <em>copy 3</em></b><span>Scores, checks, prices and decides a joint mortgage application</span></td>
+                    <td><span class="tok">loan-origination@2.0.0</span></td>
+                    <td class="r">8 h ago</td>
+                    <td class="r mono">52 KB</td>
+                    <td class="menu"><i data-i="dots"></i></td>
+                </tr>
+                <tr>
+                    <td class="k"><span class="kind" style="background: var(--k-decision)"><i data-i="book"></i></span></td>
+                    <td class="nm"><b>Loan origination <em>copy 2</em></b><span>Scores, checks, prices and decides a joint mortgage application</span></td>
+                    <td><span class="tok">loan-origination@2.0.0</span></td>
+                    <td class="r">8 h ago</td>
+                    <td class="r mono">50 KB</td>
+                    <td class="menu" style="color: var(--ink)"><i data-i="dots"></i></td>
+                </tr>
+                <tr>
+                    <td class="k"><span class="kind" style="background: var(--k-ruleset)"><i data-i="book"></i></span></td>
+                    <td class="nm"><b>Loan repayment</b><span>Prices a loan request and returns its monthly repayment schedule</span></td>
+                    <td><span class="tok">loan-repayment@1.1.0</span> <span class="chip straw"><i data-i="up"></i>1.2.0</span></td>
+                    <td class="r">2 d ago</td>
+                    <td class="r mono">31 KB</td>
+                    <td class="menu"><i data-i="dots"></i></td>
+                </tr>
+                <tr>
+                    <td class="k"><span class="kind" style="background: var(--k-function)"><i data-i="book"></i></span></td>
+                    <td class="nm"><b>My pricing</b><span>—</span></td>
+                    <td><span class="chip ink">Own project</span></td>
+                    <td class="r">3 d ago</td>
+                    <td class="r mono">17 KB</td>
+                    <td class="menu"><i data-i="dots"></i></td>
+                </tr>
+                <tr class="new">
+                    <td class="k"><span class="kind"><i data-i="plus"></i></span></td>
+                    <td colspan="5"><a href="#">Blank project</a><a href="examples-a.html">Copy an example →</a></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="popover" style="top: 92px">
+            <a href="#"><i data-i="open"></i>Open</a>
+            <a href="#"><i data-i="doc"></i>Rename…</a>
+            <a href="#"><i data-i="copy"></i>Duplicate</a>
+            <a href="#"><i data-i="library"></i>View original example</a>
+            <a class="del" href="#"><i data-i="close"></i>Delete…</a>
+        </div>
+    </div>
+
+    <div class="note">
+        <sup>¹</sup>
+        <div>
+            Projects live only in this browser profile. The browser may clear them when it runs low on space.
+            <div class="meterline"><i data-i="db"></i>150 KB<span class="meter"><i></i></span>of 10 GB</div>
+        </div>
+        <a class="btn sm" href="#">Keep them safe</a>
+    </div>
+</main>
+
+<div class="proposal-note"><span class="x">✕</span><b>Workspace A — “Ledger”</b>A table, because projects are rows you compare (source, age, size). The duplicate names <i>(2)</i>, <i>(3)</i> become a quiet italic “copy 2”. Kind squares get a colour per project so copies are told apart. The yellow banner becomes a footnote ¹ with one clear action. The ⋮ menu is shown open. <a href="index.html">← all proposals</a></div>
+<script src="assets/ds.js"></script>
+</body>
+</html>

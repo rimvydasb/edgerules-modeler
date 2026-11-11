@@ -116,8 +116,18 @@ module.exports = {
       'Project state architecture',
     ),
     componentAllowlist(
+      'example-library',
+      ['project-session', 'markdown-view'],
+      'Package placement of the page components',
+    ),
+    componentAllowlist(
       'local-workspace',
       ['project-session', 'example-library'],
+      'Package placement of the page components',
+    ),
+    componentAllowlist(
+      'modeler-home',
+      ['project-session', 'example-library', 'local-workspace'],
       'Package placement of the page components',
     ),
     componentAllowlist(
@@ -165,6 +175,17 @@ module.exports = {
       to: {path: '^node_modules/@edgerules/node/'},
     },
 
+    {
+      name: 'no-router-in-library',
+      comment:
+        'The library has no router: page-level components report navigation through callbacks and the host owns ' +
+        'the routes (docs/stories/examples-library-story.md, "Package placement of the page components"). ' +
+        '@tanstack/react-router is a dev dependency of the local Modeler host in app/ only.',
+      severity: 'error',
+      from: {path: '^src/'},
+      to: {path: '^node_modules/@tanstack/react-router'},
+    },
+
     // --- Optional peer dependencies stay inside their component ---------------------------------------------------
     packageOwner(
       'peer-xyflow-only-in-flow-editor',
@@ -193,6 +214,13 @@ module.exports = {
       ['src/components/code-editor/', 'src/components/code-editor-cell/'],
       'it is an optional peer dependency of the code-editor subpaths. Other components render ' +
         'CodeEditorCell or HighlightedCode instead of using CodeMirror directly.',
+    ),
+    packageOwner(
+      'peer-mantine-notifications-only-in-tests-manager',
+      '@mantine/notifications/',
+      ['src/components/tests-manager/'],
+      'it is an optional peer dependency of the tests-manager subpath; importing it elsewhere makes every ' +
+        'consumer of that other subpath install it.',
     ),
     packageOwner(
       'dnd-kit-only-in-grid-editors',

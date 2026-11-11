@@ -1,2 +1,2 @@
 export {Shell} from './Shell';
-export type {ShellProps, ShellView} from './shell-types';
+export type {ShellNavigation, ShellProps, ShellView} from './shell-types';

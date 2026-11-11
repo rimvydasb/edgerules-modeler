@@ -8,12 +8,13 @@ import {addWorkspaceProject} from '../../src/components/local-workspace';
 
 /**
  * A fresh workspace in its own IndexedDB database, seeded with `projects`. Every call gets a new database, so a story
- * always starts from its fixture and stories rendered side by side never share projects.
+ * always starts from its fixture and stories rendered side by side never share projects. A `dbName` reopens that
+ * database instead, so a reload keeps the projects (an e2e spec passes a fresh name per run).
  */
-export async function openStoryWorkspace(projects: ProjectBundleInput[] = []) {
+export async function openStoryWorkspace(projects: ProjectBundleInput[] = [], dbName?: string) {
     await init();
     const repository = createLocalProjectRepository({
-        dbName: `edgerules-storybook-workspace-${crypto.randomUUID()}`,
+        dbName: dbName ?? `edgerules-storybook-workspace-${crypto.randomUUID()}`,
     });
     const factory = createProjectFactory({engine: MutableDecisionService});
     for (const project of projects) await addWorkspaceProject({repository, factory}, project);

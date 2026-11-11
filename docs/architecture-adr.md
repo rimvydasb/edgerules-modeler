@@ -53,3 +53,29 @@ evaluates until the argument is bound.
 
 - A draft is lost when the editor closes. The model never contains an invalid invocation.
 - Hosts MUST NOT assume that every node on the canvas exists in the model.
+
+## ADR-003: The manifest keeps the library `origin` of a copy
+
+**Status:** accepted.
+
+### Context
+
+`global-project-management.md` §5.3 put fork provenance in the cloud or catalog relationship and kept it out of the
+project manifest. The Local Workspace has neither a cloud database nor a catalog: a copy of a library example lives only
+in IndexedDB. The Library needs the example coordinates of each copy for the "In workspace" and "Update available"
+badges, and the Shell needs them for the origin chip.
+
+### Decision
+
+- `ProjectManifest.origin` stores `{library, id, version}`: the `indexUrl` of the `LibrarySource` that resolved the
+  example, the example id and the released version.
+- A copy gets `origin` from `LoadedExample.project`. A duplicate keeps the same `origin`.
+- The field is optional. An own project has none.
+- `ProjectDescriptor` exposes `origin` and `savedAt` for the workspace list and the badges.
+
+### Consequences
+
+- A copied project directory carries the coordinates of its example. The field holds no user or tenant identity, so rule
+  1 of §5.3 still holds.
+- A cloud store MAY still keep its own fork relationship. `origin` is the merge base for a future three-way merge.
+- The `origin` of a copy never changes automatically: a newer example version is a new copy.

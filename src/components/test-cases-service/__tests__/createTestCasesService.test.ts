@@ -113,6 +113,19 @@ describe('createTestCasesService — rows', () => {
         service.dispose();
     });
 
+    it('a row discovered from a run result stays present when the schema rows are derived again', async () => {
+        const service = createTestCasesService('model', '*', {dbName: uniqueDbName()});
+        await waitForHydration(service);
+        service.syncRows([INPUT_ROW]);
+        service.syncRows([INPUT_ROW, {...VALIDATION_ROW, discovered: true}]);
+
+        // Opening the Tests view again derives the schema only; the call site's leaf is not in it.
+        service.syncRows([INPUT_ROW]);
+        expect(service.listRows().find((r) => r.path === 'score')?.present).toBe(true);
+
+        service.dispose();
+    });
+
     it('a row promoted to assertions survives a re-sync against freshly derived rows', async () => {
         const service = createTestCasesService('model', '*', {dbName: uniqueDbName()});
         await waitForHydration(service);

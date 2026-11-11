@@ -19,6 +19,7 @@ import {useTestCaseColumns} from '../hooks/useTestCaseColumns';
 import {useTestRows} from '../hooks/useTestRows';
 import {useKnownPaths} from '../hooks/useKnownPaths';
 import {useTestSubjects} from '../hooks/useTestSubjects';
+import {notifyAllPassed} from '../runner/notifyAllPassed';
 import type {TestSubjectId} from '../tests-manager-types';
 import {GridBody, GridCell, GridHead, GridRow, GridTable} from '#ui/grid';
 import {cx} from '#ui/cx';
@@ -168,7 +169,9 @@ export function TestsGrid({onSubjectChange}: {onSubjectChange: (id: TestSubjectI
                                         aria-label="Run all"
                                         aria-busy={anyRunning || undefined}
                                         className={cx(classes.iconButton, classes.runAll)}
-                                        onClick={() => void runner.runAll()}
+                                        onClick={() =>
+                                            void runner.runAll().then(() => notifyAllPassed(testCasesService))
+                                        }
                                     >
                                         {anyRunning ? (
                                             <IconLoader2 size={20} className={classes.spin} />

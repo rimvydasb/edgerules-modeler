@@ -1,45 +1,50 @@
 import type {ReactElement} from 'react';
-import {Anchor, Button, Card, Group, SimpleGrid, Text} from '@mantine/core';
+import {Text} from '@mantine/core';
+import {IconChevronRight} from '@tabler/icons-react';
+import {SheetGrid, SheetLinkButton, SheetSection} from '#ui/sheet';
+import type {LibraryClient} from '../example-library';
 import type {LocalProjectRepository, ProjectLocator} from '../project-session';
-import {DEFAULT_PROJECTS_LIMIT, recentProjects, savedAgo} from './workspaceModel';
+import {ProjectCard} from './ProjectCard';
+import {DEFAULT_PROJECTS_LIMIT, recentProjects} from './workspaceModel';
 import {useWorkspaceProjects} from './useWorkspaceProjects';
+import {isOutdated, useExampleIndustries, useNewestVersions} from './useNewestVersions';
 
 export interface RecentProjectsProps {
     repository: LocalProjectRepository; // the IndexedDB repository of the workspace
-    limit?: number; // number of panels, default 6
+    library?: LibraryClient; // the industry label and the "Update available" badge of a copy; without it neither shows
+    limit?: number; // number of project cards, default 3
     onOpen: (locator: ProjectLocator) => void; // the host opens the project in the Shell
-    onNewProject?: () => void; // shows the "New project" action
-    onShowAll?: () => void; // shows the "All" link to the Workspace page
+    onShowAll?: () => void; // the "All projects" link, shown only when more projects exist than `limit`
 }
 
-/** The newest saved projects as compact panels, for the Home page. */
+/** The newest saved projects as cards under a "Workspace" heading, for the Home page. */
 export function RecentProjects({
     repository,
+    library,
     limit = DEFAULT_PROJECTS_LIMIT,
     onOpen,
-    onNewProject,
     onShowAll,
 }: RecentProjectsProps): ReactElement {
     const {projects, error} = useWorkspaceProjects(repository);
+    const newest = useNewestVersions(library);
+    const industries = useExampleIndustries(library);
     const recent = projects ? recentProjects(projects, limit) : [];
 
     return (
-        <section aria-label="Recent projects">
-            <Group justify="space-between" mb="xs">
-                <Text fw={600}>Continue</Text>
-                <Group gap="sm">
-                    {onNewProject && (
-                        <Button size="compact-sm" variant="light" onClick={onNewProject}>
-                            + New project
-                        </Button>
-                    )}
-                    {onShowAll && (
-                        <Anchor component="button" type="button" size="sm" onClick={onShowAll}>
-                            All →
-                        </Anchor>
-                    )}
-                </Group>
-            </Group>
+        <SheetSection
+            label="Workspace"
+            aria-label="Recent projects"
+            count={projects?.length}
+            actions={
+                onShowAll &&
+                projects &&
+                projects.length > limit && (
+                    <SheetLinkButton onClick={onShowAll}>
+                        All projects <IconChevronRight size={14} aria-hidden="true" />
+                    </SheetLinkButton>
+                )
+            }
+        >
             {error && (
                 <Text c="red" size="sm" role="alert">
                     {error}
@@ -50,27 +55,17 @@ export function RecentProjects({
                     No projects yet.
                 </Text>
             )}
-            <SimpleGrid cols={{base: 1, sm: 2, lg: 3}}>
+            <SheetGrid fourUp={limit === 4}>
                 {recent.map((project) => (
-                    <Card
+                    <ProjectCard
                         key={project.locator.projectPath}
-                        component="button"
-                        type="button"
-                        withBorder
-                        padding="sm"
-                        style={{textAlign: 'left', cursor: 'pointer'}}
-                        aria-label={`Open ${project.name}`}
-                        onClick={() => onOpen(project.locator)}
-                    >
-                        <Text fw={500} truncate>
-                            {project.name}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                            {savedAgo(project.savedAt)}
-                        </Text>
-                    </Card>
+                        project={project}
+                        industry={project.origin ? industries.get(project.origin.id) : undefined}
+                        updateAvailable={project.origin ? isOutdated(project.origin, newest) : false}
+                        onOpen={() => onOpen(project.locator)}
+                    />
                 ))}
-            </SimpleGrid>
-        </section>
+            </SheetGrid>
+        </SheetSection>
     );
 }

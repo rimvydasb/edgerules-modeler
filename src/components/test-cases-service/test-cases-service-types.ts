@@ -16,6 +16,9 @@ export interface TestRow {
     // Such a row is never derived from the schema, so it is exempt from the `present: false` flagging
     // that removes derived rows; whether its path still addresses anything is shown in the Path cell.
     custom?: boolean;
+    // True for a row a test run found in a result — a leaf of an opaque invocation call site the schema never
+    // describes. Like a `custom` row it is never derived from the schema, so re-deriving the rows keeps it present.
+    discovered?: boolean;
 }
 
 // Raw cell text exactly as typed, keyed by subject-relative path. Parsed per the row's type at run time.

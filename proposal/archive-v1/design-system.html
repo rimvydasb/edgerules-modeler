@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sodas Design System</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .lead {
+        font: italic 18px/1.6 var(--serif);
+        color: var(--ink-2);
+        max-width: 760px;
+    }
+    .sw {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0;
+        border-left: 1px solid var(--rule);
+        border-top: 1px solid var(--rule);
+    }
+    .sw div {
+        border-right: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+        background: var(--paper);
+        font-size: 12px;
+    }
+    .sw div span {
+        display: block;
+        height: 56px;
+        border-bottom: 1px solid var(--rule);
+    }
+    .sw div b {
+        display: block;
+        padding: 6px 10px 0;
+        font-weight: 600;
+    }
+    .sw div code {
+        display: block;
+        padding: 0 10px 8px;
+        color: var(--ink-3);
+    }
+    .spec {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        border-top: 1px solid var(--rule);
+    }
+    .spec > div {
+        padding: 14px 0;
+        border-bottom: 1px solid var(--rule);
+    }
+    .spec > div:nth-child(odd) {
+        font-size: 12px;
+        color: var(--ink-3);
+        padding-right: 16px;
+    }
+    .rules {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+    .rules h3 {
+        font: 500 17px var(--serif);
+        margin: 0 0 8px;
+    }
+    .rules ul {
+        margin: 0;
+        padding-left: 18px;
+        line-height: 1.7;
+        color: var(--ink-2);
+    }
+    .demo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        padding: 18px;
+        background: var(--paper);
+        border: 1px solid var(--rule);
+    }
+    .marks {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+        border: 1px solid var(--rule);
+    }
+    .marks div {
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        border-right: 1px solid var(--rule);
+        position: relative;
+    }
+    .marks div:last-child {
+        border-right: 0;
+    }
+    .marks img {
+        width: 62%;
+    }
+    .marks small {
+        position: absolute;
+        bottom: 8px;
+        left: 10px;
+        font-size: 11px;
+        color: var(--ink-3);
+    }
+    .ind {
+        display: flex;
+        gap: 0;
+        border: 1px solid var(--rule);
+        background: var(--paper);
+        flex-wrap: wrap;
+    }
+    .ind div {
+        flex: 1;
+        min-width: 110px;
+        padding: 18px 8px 10px;
+        text-align: center;
+        border-right: 1px solid var(--rule);
+        font-size: 12px;
+        color: var(--ink-2);
+    }
+    .ind div:last-child {
+        border-right: 0;
+    }
+    .ind svg {
+        width: 32px;
+        height: 32px;
+        display: block;
+        margin: 0 auto 8px;
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="index.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <span class="cell on">Design system</span>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+<main class="page">
+    <div class="label" style="color: var(--straw)">Proposal · v0.1</div>
+    <h1 class="serif" style="font-size: 44px; font-weight: 500; margin: 6px 0 10px">Sodas — a mathbook with a straw ornament</h1>
+    <p class="lead">The editors already speak a clear language: square corners, 1px rules, white icons on colour squares, cream italic descriptions, a dotted canvas. The library pages should speak the same language, add the structure of a school textbook (numbered sections, chapters, exercises, figures, contents, margin notes) and carry one warm thread — the straw of the <i>sodas</i>.</p>
+
+    <div class="sec"><span class="no">§1</span><h2>Principles</h2><span class="line"></span></div>
+    <div class="rules">
+        <div>
+            <h3>1.1 Structure from the textbook</h3>
+            <ul>
+                <li>Sections are numbered: <span class="star">§1, §2</span>. Industries are <i>chapters</i> (I, II…), examples are <i>exercises</i> (I.2).</li>
+                <li>Every example has a <i>figure</i> with a caption, drawn in editor style.</li>
+                <li>A project opens with a title, an abstract and <i>Contents</i>.</li>
+                <li>Facts about a thing go in the margin, not in badges around the title.</li>
+            </ul>
+        </div>
+        <div>
+            <h3>1.2 Ornament from the sodas</h3>
+            <ul>
+                <li>One decorative colour: <b style="color: var(--straw)">straw</b>. Only for numerals, ornaments, the active marker.</li>
+                <li>Diamond ◇ is the unit: difficulty, dividers, list markers, hover hints.</li>
+                <li>The band (diamonds on a thread) appears at most once per page.</li>
+                <li>Never use the ornament on controls a user must read fast.</li>
+            </ul>
+        </div>
+        <div>
+            <h3>1.3 Same vocabulary as the editors</h3>
+            <ul>
+                <li>No border radius, no shadows; 1px <code>--rule</code> lines; hover = ink border.</li>
+                <li>Kind squares use <code>KIND_COLORS</code> verbatim.</li>
+                <li>Descriptions: cream fill, serif italic — like description rows.</li>
+                <li>Canvas: dot grid (flow) or squared paper (hero, empty states).</li>
+            </ul>
+        </div>
+        <div>
+            <h3>1.4 Fix what hurts today</h3>
+            <ul>
+                <li>Pages are a 700px column in a wide window → use 1200px.</li>
+                <li>10–11px text everywhere → 12px minimum, titles 17–22px serif.</li>
+                <li>Three action cells per card → one primary, card is the link.</li>
+                <li>Yellow banners → footnotes with one action.</li>
+                <li>All-black identical project icons → colour per project.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="sec"><span class="no">§2</span><h2>The mark</h2><span class="line"></span><span class="count">app/public</span></div>
+    <div class="marks">
+        <div style="background: var(--paper)"><img src="assets/marks/EdgeRules.001.png" alt="" /><small>001 solid · favicon, ≤ 24px</small></div>
+        <div style="background: #17191c"><img src="assets/marks/EdgeRules.002.png" alt="" /><small style="color: #adb5bd">002 inverse · top bar square</small></div>
+        <div style="background: var(--paper)"><img src="assets/marks/EdgeRules.003.png" alt="" /><small>003 outline · hero, empty states</small></div>
+        <div class="squared"><img src="assets/marks/EdgeRules.004.png" alt="" /><small>004 lattice · watermark, loading</small></div>
+    </div>
+    <p class="marg" style="margin-top: 14px">Suggestion: the lattice (004) is the most “mathbook” of the four — it is a diagram, a graph of nodes. Use it big; use the solid (001/002) small, where thin lines would vanish. The proposal ships SVG traces in <code>proposal/assets/</code> so the mark can change colour by theme.</p>
+
+    <div class="sec"><span class="no">§3</span><h2>Colour</h2><span class="line"></span></div>
+    <div class="sw">
+        <div><span style="background: var(--paper)"></span><b>Paper</b><code>--paper</code></div>
+        <div><span style="background: var(--canvas)"></span><b>Canvas</b><code>--canvas #f8f9fa</code></div>
+        <div><span style="background: var(--cream)"></span><b>Cream</b><code>--cream #fdf8ec</code></div>
+        <div><span style="background: var(--rule)"></span><b>Rule</b><code>--rule #dee2e6</code></div>
+        <div><span style="background: var(--ink)"></span><b>Ink</b><code>--ink #17191c</code></div>
+        <div><span style="background: var(--ink-3)"></span><b>Ink 3</b><code>--ink-3 #868e96</code></div>
+        <div><span style="background: var(--straw)"></span><b>Straw</b><code>--straw #b8892b</code></div>
+        <div><span style="background: var(--link)"></span><b>Link</b><code>--link #1971c2</code></div>
+    </div>
+    <div class="label" style="margin: 16px 0 8px">Kind colours — unchanged, from src/ui/kindColors.ts</div>
+    <div class="demo">
+        <span class="kind" style="background: var(--k-model)"><i data-i="book"></i></span>
+        <span class="kind" style="background: var(--k-function)"><i data-i="fx"></i></span>
+        <span class="kind" style="background: var(--k-service)"><i data-i="fx"></i></span>
+        <span class="kind" style="background: var(--k-ruleset)"><i data-i="boxed"></i></span>
+        <span class="kind" style="background: var(--k-type)"><i data-i="type"></i></span>
+        <span class="kind" style="background: var(--k-decision)"><i data-i="decision"></i></span>
+        <span class="kind" style="background: var(--k-facts)"><i data-i="facts"></i></span>
+        <span class="kind" style="background: var(--k-test)"><i data-i="tests"></i></span>
+    </div>
+
+    <div class="sec"><span class="no">§4</span><h2>Type</h2><span class="line"></span></div>
+    <div class="spec">
+        <div>Display · STIX Two Text 500<br />44 / 34 / 22 / 17</div>
+        <div><span class="serif" style="font-size: 34px; font-weight: 500">Mortgage Origination</span></div>
+        <div>Prose · STIX Two Text italic<br />14–18</div>
+        <div><span class="serif" style="font-size: 17px; font-style: italic; color: var(--ink-2)">Scores, checks, prices and decides a joint mortgage application.</span></div>
+        <div>UI · Inter 400/500/600<br />12 / 13 / 14</div>
+        <div style="font-size: 14px">Copy and open · saved 8 h ago · 38 tests</div>
+        <div>Label · Inter 600 caps<br />10.5, +0.08em</div>
+        <div><span class="label">Workbooks · 2</span></div>
+        <div>Code · JetBrains Mono<br />11.5–13.5</div>
+        <div><code style="font-size: 13.5px">loanOriginationDecision(application: Application) → Decision</code></div>
+    </div>
+    <p class="marg" style="margin-top: 14px">STIX Two was drawn for scientific and mathematical publishing; it pairs with the formula-like code and gives the “school mathbook” feel without looking old. Fallbacks: Iowan Old Style, Georgia.</p>
+
+    <div class="sec"><span class="no">§5</span><h2>Components</h2><span class="line"></span></div>
+    <div class="label" style="margin-bottom: 8px">5.1 Buttons, chips, tokens, difficulty</div>
+    <div class="demo">
+        <a class="btn primary" href="#"><i data-i="copy"></i>Copy and open</a>
+        <a class="btn" href="#">Details</a>
+        <a class="btn ghost" href="#">Cancel</a>
+        <span class="chip ok"><i data-i="check"></i>In workspace · 3</span>
+        <span class="chip straw"><i data-i="up"></i>Update 1.2.0</span>
+        <span class="chip warn">needs engine ≥ 0.2.7</span>
+        <span class="chip ink">Own project</span>
+        <span class="tok">decision-table</span><span class="tok">loan-origination@2.0.0</span>
+        <span class="meta"><span class="diff"><i class="f"></i><i></i><i></i></span>Beginner</span>
+        <span class="meta"><span class="diff"><i class="f"></i><i class="f"></i><i></i></span>Intermediate</span>
+        <span class="meta"><span class="diff"><i class="f"></i><i class="f"></i><i class="f"></i></span>Advanced</span>
+    </div>
+    <div class="label" style="margin: 24px 0 8px">5.2 Section heading</div>
+    <div class="demo" style="display: block">
+        <div class="sec" style="margin: 0"><span class="no">§3</span><h2>Featured examples</h2><span class="line"></span><span class="count">12</span><a class="more" href="#">See all →</a></div>
+    </div>
+    <div class="label" style="margin: 24px 0 8px">5.3 Search</div>
+    <div class="demo" style="display: block">
+        <div class="search"><i data-i="search"></i><span class="ph">Search 240 examples — loan, scorecard, optimise…</span><span class="kbd">/</span></div>
+    </div>
+    <div class="label" style="margin: 24px 0 8px">5.4 Contents (project home, example details)</div>
+    <div class="demo" style="display: block">
+        <ul class="toc" style="max-width: 560px">
+            <li><span class="n">1</span><span class="ti">Workbooks</span><span class="lead"></span><span class="pg">2</span></li>
+            <li class="sub"><span class="n">1.1</span><a class="ti" href="#">Joint mortgage application</a><span class="lead"></span><span class="pg">3 in · 4 ƒ</span></li>
+            <li><span class="n">2</span><span class="ti">Services</span><span class="lead"></span><span class="pg">1</span></li>
+        </ul>
+    </div>
+    <div class="label" style="margin: 24px 0 8px">5.5 Panel with figure and description</div>
+    <div style="max-width: 360px">
+        <a class="panel" href="#">
+            <div class="ph"><span class="kind" style="background: var(--k-function)"><i data-i="financial"></i></span><span class="t serif" style="font-weight: 500; font-size: 17px">Loan origination</span></div>
+            <div class="fig graph" style="padding: 4px 0 8px"><img src="assets/fig-origination.svg" alt="" /><div class="figcap"><b>Fig. I.2</b> From two applicants to one decision.</div></div>
+            <div class="desc">Scores, checks, prices and decides a joint mortgage application.</div>
+            <div class="pb"><span class="tok">facts</span><span class="tok">decision</span></div>
+        </a>
+    </div>
+    <div class="label" style="margin: 24px 0 8px">5.6 Loading skeleton</div>
+    <div class="demo" style="display: grid; gap: 8px; max-width: 360px">
+        <div class="skel" style="width: 60%; height: 16px"></div>
+        <div class="skel"></div>
+        <div class="skel" style="width: 80%"></div>
+    </div>
+
+    <div class="sec"><span class="no">§6</span><h2>Ornament</h2><span class="line"></span></div>
+    <div class="label" style="margin-bottom: 8px">6.1 Divider — end of a section or chapter</div>
+    <div class="orn" style="margin: 8px 0 24px"><i></i><i class="f"></i><i></i></div>
+    <div class="label" style="margin-bottom: 8px">6.2 Band — once per page, footer or masthead</div>
+    <div class="band"></div>
+    <div class="label" style="margin: 24px 0 8px">6.3 Industry icons in sodas geometry (diamonds, threads, pendants)</div>
+    <div class="ind">
+        <div><i data-i="financial" data-w="1.2"></i>Financial</div>
+        <div><i data-i="insurance" data-w="1.2"></i>Insurance</div>
+        <div><i data-i="health" data-w="1.2"></i>Healthcare</div>
+        <div><i data-i="logistics" data-w="1.2"></i>Logistics</div>
+        <div><i data-i="retail" data-w="1.2"></i>Retail</div>
+        <div><i data-i="telco" data-w="1.2"></i>Telco</div>
+        <div><i data-i="public" data-w="1.2"></i>Public</div>
+    </div>
+
+    <div class="sec"><span class="no">§7</span><h2>Mapping to src/ui/sheet</h2><span class="line"></span></div>
+    <table class="ledger">
+        <thead><tr><th>Primitive today</th><th>Change</th></tr></thead>
+        <tbody>
+            <tr><td><code>SheetPageHeader</code></td><td>Serif title 34px, italic lead, straw kicker label; drop the 48px black square on library pages (keep it in the Shell)</td></tr>
+            <tr><td><code>SheetPanel</code></td><td>Whole panel is the link; optional <code>figure</code> + caption; description row in cream italic; at most one primary action</td></tr>
+            <tr><td><code>SheetSection</code></td><td>Numbered: <code>§n</code> in straw italic, serif 22px title, hairline to the right, count + link</td></tr>
+            <tr><td><code>SheetChip</code></td><td>Outline only (currentColor border), no fills; tones ok / straw / warn / ink</td></tr>
+            <tr><td><code>SheetTokens</code></td><td>Unchanged</td></tr>
+            <tr><td>new <code>SheetContents</code></td><td>Contents list with numbers and dotted leaders</td></tr>
+            <tr><td>new <code>Difficulty</code></td><td>Three diamonds, filled by level; replaces level colours on icon squares</td></tr>
+            <tr><td>new <code>Ornament</code></td><td><code>divider</code> | <code>band</code>; theme-aware straw</td></tr>
+        </tbody>
+    </table>
+</main>
+<script src="assets/ds.js"></script>
+</body>
+</html>

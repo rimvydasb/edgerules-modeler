@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Examples B · Chapter gallery</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .opener {
+        background: var(--paper);
+        border-bottom: 1px solid var(--rule);
+    }
+    .opener .in {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 32px 0;
+        display: grid;
+        grid-template-columns: 1fr 260px;
+        gap: 32px;
+    }
+    .opener .rn {
+        font: italic 15px var(--serif);
+        color: var(--straw);
+    }
+    .opener h1 {
+        font: 500 40px/1.1 var(--serif);
+        margin: 4px 0 8px;
+    }
+    .opener p {
+        font: italic 17px/1.55 var(--serif);
+        color: var(--ink-2);
+        margin: 0 0 24px;
+        max-width: 620px;
+    }
+    .opener .big {
+        border: 1px solid var(--ink);
+        width: 120px;
+        height: 120px;
+        display: grid;
+        place-items: center;
+        justify-self: end;
+        align-self: start;
+    }
+    .opener .big svg {
+        width: 64px;
+        height: 64px;
+    }
+    .chapter-tabs {
+        display: flex;
+        overflow-x: auto;
+        scrollbar-width: none;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 32px;
+    }
+    .chapter-tabs a {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        color: var(--ink-3);
+        border: 1px solid transparent;
+        border-bottom: 0;
+        white-space: nowrap;
+        margin-bottom: -1px;
+    }
+    .chapter-tabs a .r {
+        font: italic 12px var(--serif);
+        color: var(--straw);
+    }
+    .chapter-tabs a.on {
+        background: var(--canvas);
+        border-color: var(--rule);
+        color: var(--ink);
+        font-weight: 500;
+    }
+    .chapter-tabs a:hover {
+        text-decoration: none;
+        color: var(--ink);
+    }
+    .filters {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .filters .search {
+        flex: 1;
+        min-width: 240px;
+    }
+    .card .fig {
+        padding: 4px 0 10px;
+    }
+    .card .figcap {
+        padding: 0 12px;
+    }
+    .card .bd {
+        padding: 12px 14px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+    }
+    .card .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: var(--ink-3);
+    }
+    .card h3 {
+        margin: 0;
+        font: 500 20px/1.2 var(--serif);
+    }
+    .card p {
+        margin: 0;
+        font: italic 14.5px/1.45 var(--serif);
+        color: var(--ink-2);
+    }
+    .card .ft {
+        display: flex;
+        align-items: center;
+        border-top: 1px solid var(--rule);
+        height: 40px;
+    }
+    .card .ft .m {
+        flex: 1;
+        padding: 0 14px;
+        font-size: 12px;
+        color: var(--ink-3);
+    }
+    .card .ft .go {
+        height: 100%;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-left: 1px solid var(--rule);
+        font-weight: 500;
+        font-size: 13px;
+        color: var(--ink);
+    }
+    .card .ft .go:hover {
+        background: var(--ink);
+        color: var(--paper);
+        text-decoration: none;
+    }
+    .card .ft .go.has {
+        color: var(--ok);
+    }
+    .card .ft .go.has:hover {
+        background: var(--ok);
+        color: #fff;
+    }
+    .card.soon {
+        border-style: dashed;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px;
+        color: var(--ink-3);
+        background: transparent;
+    }
+    .card.soon img {
+        width: 64px;
+        opacity: 0.35;
+        margin-bottom: 8px;
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="home-a.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <a class="cell on" href="examples-b.html"><i data-i="library"></i><span class="lbl">Examples</span></a>
+    <a class="cell" href="workspace-b.html"><i data-i="grid"></i><span class="lbl">Workspace</span></a>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+
+<section class="opener">
+    <div class="in">
+        <div>
+            <span class="rn">Chapter I</span>
+            <h1>Financial</h1>
+            <p>Lending, pricing and customer contact: scorecards, affordability tests, repayment schedules and the choice of the best next action.</p>
+        </div>
+        <span class="big"><i data-i="financial" data-w="1.1"></i></span>
+    </div>
+    <nav class="chapter-tabs">
+        <a href="#">All <span class="muted">3</span></a>
+        <a class="on" href="#"><span class="r">I</span>Financial <span class="muted">3</span></a>
+        <a href="#"><span class="r">II</span>Insurance <span class="muted">0</span></a>
+        <a href="#"><span class="r">III</span>Healthcare <span class="muted">0</span></a>
+        <a href="#"><span class="r">IV</span>Logistics <span class="muted">0</span></a>
+        <a href="#"><span class="r">V</span>Retail <span class="muted">0</span></a>
+    </nav>
+</section>
+
+<main class="page">
+    <div class="filters">
+        <div class="search sm"><i data-i="search"></i><span class="ph">Search in Financial</span><span class="kbd">/</span></div>
+        <span class="select">Level</span>
+        <span class="select">Uses</span>
+        <span class="select">Sort: Name</span>
+    </div>
+
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(330px, 1fr))">
+        <a class="panel card" href="#">
+            <div class="fig graph"><img src="assets/fig-repayment.svg" alt="" /><div class="figcap"><b>Fig. I.1</b> Repayment schedule and remaining balance.</div></div>
+            <div class="bd">
+                <div class="top"><span><span class="diff"><i class="f"></i><i></i><i></i></span>&nbsp; Beginner</span><span class="mono">v1.2.0</span></div>
+                <h3>Loan repayment</h3>
+                <p>Prices a loan request and returns its monthly repayment schedule.</p>
+                <div style="margin-top: auto"><span class="tok">decision-table</span><span class="tok">function</span><span class="tok">service</span><span class="tok">+2</span></div>
+            </div>
+            <div class="ft"><span class="m">13 tests · 88 lines</span><span class="go"><i data-i="copy"></i>Copy and open</span></div>
+        </a>
+        <a class="panel card" href="#">
+            <div class="fig graph"><img src="assets/fig-origination.svg" alt="" /><div class="figcap"><b>Fig. I.2</b> From two applicants to one decision.</div></div>
+            <div class="bd">
+                <div class="top"><span><span class="diff"><i class="f"></i><i class="f"></i><i></i></span>&nbsp; Intermediate</span><span class="mono">v2.0.0</span></div>
+                <h3>Loan origination</h3>
+                <p>Scores, checks, prices and decides a joint mortgage application.</p>
+                <div style="margin-top: auto"><span class="tok">facts</span><span class="tok">decision-table</span><span class="tok">decision</span><span class="tok">+4</span></div>
+            </div>
+            <div class="ft"><span class="m">38 tests · <span style="color: var(--ok)">✓ 3 copies</span></span><span class="go has"><i data-i="open"></i>Open copy</span></div>
+        </a>
+        <a class="panel card" href="#">
+            <div class="fig graph"><img src="assets/fig-outreach.svg" alt="" /><div class="figcap"><b>Fig. I.3</b> Expected value per contact plan.</div></div>
+            <div class="bd">
+                <div class="top"><span><span class="diff"><i class="f"></i><i class="f"></i><i class="f"></i></span>&nbsp; Advanced</span><span class="mono">v1.0.0</span></div>
+                <h3>Client outreach</h3>
+                <p>Decides whom to call, email or text in one working day for the largest expected value.</p>
+                <div style="margin-top: auto"><span class="tok">optimise</span><span class="tok">decision-table</span><span class="tok">loop</span><span class="tok">+3</span></div>
+            </div>
+            <div class="ft"><span class="m">22 tests · 140 lines</span><span class="go"><i data-i="copy"></i>Copy and open</span></div>
+        </a>
+        <div class="panel card soon">
+            <img class="ink-img" src="assets/sodas.svg" alt="" />
+            <div class="serif" style="font-size: 16px; color: var(--ink-2)">More exercises grow here</div>
+            <div style="font-size: 12px">Examples come from <code>rimvydasb/edgerules-examples</code></div>
+        </div>
+    </div>
+</main>
+
+<div class="proposal-note"><span class="x">✕</span><b>Examples B — “Chapter gallery”</b>Each industry tab opens like a book chapter (numeral, serif title, italic intro). Cards lead with a <i>figure</i> — a tiny drawing of the model in editor style — with a caption. The whole card opens details; one primary action sits at the bottom right. <a href="index.html">← all proposals</a></div>
+<script src="assets/ds.js"></script>
+</body>
+</html>

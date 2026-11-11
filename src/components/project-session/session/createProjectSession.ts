@@ -77,6 +77,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
     const {format, source, ...loadedMetadata} = manifest.model;
     let metadata: ModelMetadata = cleanMetadata(loadedMetadata);
     const locator: ProjectLocator = {...loaded.locator};
+    let savedAt = loaded.savedAt;
 
     const batch = createChangeBatch();
     const listenerSets: ListenerSet[] = [];
@@ -259,6 +260,8 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
                 phase,
                 projectId: manifest.projectId,
                 name: manifest.name,
+                ...(manifest.origin !== undefined && {origin: manifest.origin}),
+                ...(savedAt !== undefined && {savedAt}),
                 locator,
                 revision,
                 localVersion,
@@ -322,6 +325,7 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
                 const result = await repository.save(locator, exported, revision);
                 if (isClosed()) return result;
                 revision = result.revision;
+                savedAt = result.descriptor.savedAt;
                 // Changes made while the save was in flight are not in the saved revision and stay dirty.
                 if (localVersion === savedVersion) dirty.clear();
                 phase = 'ready';
