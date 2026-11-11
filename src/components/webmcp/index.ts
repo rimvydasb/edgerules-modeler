@@ -1,7 +1,13 @@
 export {registerProjectTools} from './registerProjectTools';
 export {getModelContext} from './platform/modelContext';
 export type {ModelContextLike, ModelContextToolLike} from './platform/modelContext';
-export type {ProjectToolsHandle, ProjectToolsNavigation, ProjectToolsOptions, ProjectToolsView} from './webmcp-types';
+export type {
+    ProjectToolsActivity,
+    ProjectToolsHandle,
+    ProjectToolsNavigation,
+    ProjectToolsOptions,
+    ProjectToolsView,
+} from './webmcp-types';
 export type {ModelDiagnostic, SourcePath, ToolError, ToolErrorCode, ToolResult} from './core/toolResult';
 export type {ModelPath, ModelSection, TestSubject} from './core/paths';
 export type {AssertionFailure, CaseFailure, CaseRef, RegressionReport} from './project/regression/regressionReport';
@@ -11,3 +17,5 @@ export type {ChangeResult, EditModelInput, ModelOperation} from './tools/change/
 export type {EditTestsInput, TestOperation, TestsChangeResult, TestValues} from './tools/change/editTests';
 export type {DocumentationChangeResult, SetDocumentationInput} from './tools/change/setDocumentation';
 export type {UndoAgentChangeInput} from './tools/change/undoAgentChange';
+export type {OpenInEditorInput, OpenResult} from './tools/host/openInEditor';
+export type {SaveProjectInput, SaveResultView} from './tools/host/saveProject';

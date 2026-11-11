@@ -19,9 +19,17 @@ export interface ProjectToolsOptions {
     allowSave?: boolean; // registers `save-project`; default false
 }
 
+/**
+ * The agent changes, their undo and the running tool, for the Shell `agentActivity` prop. `undo` waits for the
+ * running tool call, as a tool call does.
+ */
+export interface ProjectToolsActivity extends AgentActivityLog {
+    running(): string | undefined; // the name of the tool that runs now; `subscribe` reports each change
+}
+
 export interface ProjectToolsHandle {
     readonly active: boolean; // false when `modelContext` is undefined
-    readonly activity?: AgentActivityLog; // the agent changes and their undo; absent when not active
+    readonly activity?: ProjectToolsActivity; // the agent changes and their undo; absent when not active
     setReadOnly(readOnly: boolean): void; // re-registers the write tools
     setAllowSave(allowSave: boolean): void; // registers or unregisters `save-project`
     dispose(): void; // unregisters every tool and aborts every running call

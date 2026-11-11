@@ -9,6 +9,8 @@ export interface ToolRegistryOptions<C> {
     context: C; // passed to every `run`
     queue: ToolQueue;
     onRegisterError?: (name: string, error: unknown) => void; // `registerTool` rejected, for example a duplicate name
+    // A call starts to run (`running` true), or returns or is aborted (`running` false); once each per call.
+    onRunning?: (name: string, running: boolean) => void;
 }
 
 export interface ToolRegistry {
@@ -46,15 +48,34 @@ export function createToolRegistry<C>(options: ToolRegistryOptions<C>): ToolRegi
                 const signal = AbortSignal.any(signals);
                 return queue.run(async () => {
                     if (signal.aborted) return abortedResult();
+                    const ended = running(tool.name, signal);
                     try {
                         return await tool.run(input ?? {}, context, signal);
                     } catch (thrown) {
                         if (isAbortError(thrown) && signal.aborted) return abortedResult();
                         return fail('InternalError', `${tool.name} failed unexpectedly: ${messageOf(thrown)}`);
+                    } finally {
+                        ended();
                     }
                 });
             },
         };
+    }
+
+    // Reports the start of a call, and its end when it returns or when the agent cancels it.
+    function running(name: string, signal: AbortSignal): () => void {
+        const {onRunning} = options;
+        if (!onRunning) return () => {};
+        let done = false;
+        const end = () => {
+            if (done) return;
+            done = true;
+            signal.removeEventListener('abort', end);
+            onRunning(name, false);
+        };
+        signal.addEventListener('abort', end, {once: true});
+        onRunning(name, true);
+        return end;
     }
 
     function register(tool: AnyToolDefinition<C>): void {

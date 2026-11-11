@@ -87,6 +87,7 @@ export interface ProjectSession {
 
     getDslDraft(): string; // the uncommitted DSL text, or the committed model
     setDslDraft(text: string): void; // keeps text in memory only; `commitDsl` validates it
+    discardDslDraft(): void; // drops the uncommitted DSL text; the committed model is valid again
 
     // The whole project as one bundle. Throws while the DSL is invalid or a transaction is open.
     exportBundle(): ProjectBundle;

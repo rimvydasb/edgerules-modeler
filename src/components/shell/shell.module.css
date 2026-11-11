@@ -1078,3 +1078,31 @@ span.overviewOrigin {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------------------------------------------------------------- agent activity */
+/* "Companion is working" while a WebMCP tool of the agent runs: a header cell left of the view switch. */
+.agentWorking {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 12px;
+  border-left: 1px solid var(--sh-border);
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Code view */
+.codeView {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* "The model changed while you edited.": a bar above the editor until the user picks an action. */
+.codeConflict {
+  flex: none;
+  border-radius: 0;
+}

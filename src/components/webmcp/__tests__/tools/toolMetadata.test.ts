@@ -26,7 +26,7 @@ describe('tool metadata', () => {
         },
     );
 
-    it('the catalog holds the change, feedback, orient and inspect tools in catalog order', () => {
+    it('the catalog holds every tool in catalog order', () => {
         expect(TOOL_CATALOG.map((definition) => definition.name)).toEqual([
             'edit-model',
             'edit-tests',
@@ -40,6 +40,8 @@ describe('tool metadata', () => {
             'search-model',
             'list-tests',
             'evaluate-model',
+            'open-in-editor',
+            'save-project',
         ]);
     });
 

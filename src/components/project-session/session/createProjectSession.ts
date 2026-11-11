@@ -298,6 +298,14 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
             publish();
         },
 
+        discardDslDraft() {
+            assertOpen();
+            if (dslDraft === undefined && dslValidity.status === 'valid') return;
+            dslDraft = undefined;
+            dslValidity = {status: 'valid'};
+            publish();
+        },
+
         exportBundle(): ProjectBundle {
             assertOpen();
             if (inTransaction) throw new ProjectError('invalid-state', 'Cannot export while a transaction is open');
