@@ -158,30 +158,30 @@ interface RunTestsResult {
 
 ## Tasks
 
-- [ ] Ensure project compiles and existing tests are passing
-- [ ] Create the folder layout of [Component folder layout](../webmcp-story.md#component-folder-layout)
-- [ ] Add the subpath export `edgerules-react/webmcp` to `package.json` and `tsdown.config.ts`
-- [ ] Add the component allowlist and the five `webmcp-layer-*` dependency-cruiser rules
-- [ ] Implement `core/`: `ToolResult`, `ToolError`, the `PortableError` mapping and the diagnostic line, column and
+- [x] Ensure project compiles and existing tests are passing
+- [x] Create the folder layout of [Component folder layout](../webmcp-story.md#component-folder-layout)
+- [x] Add the subpath export `edgerules-react/webmcp` to `package.json` and `tsdown.config.ts`
+- [x] Add the component allowlist and the five `webmcp-layer-*` dependency-cruiser rules
+- [x] Implement `core/`: `ToolResult`, `ToolError`, the `PortableError` mapping and the diagnostic line, column and
       excerpt
-- [ ] Implement `protocol/`: `ToolDefinition`, schemas, `fitOutput` and the metadata limits
-- [ ] Implement `platform/`: `getModelContext`, `ToolRegistry` and `ToolQueue`
-- [ ] Implement `registerProjectTools`, the handle and `ProjectToolsContext`
-- [ ] Add `tests-manager/internal.ts` and the `AssertionFailure` extraction next to `caseFailures`
-- [ ] Implement `RegressionMonitor` with `runAll`, `runSubject`, the baseline and `RegressionReport`
-- [ ] Implement `run-tests`
-- [ ] Add `testing/recordingModelContext.ts` and `testing/toolsFixture.ts`
-- [ ] Add tests for the code of this phase, with a real `@edgerules/node` session
+- [x] Implement `protocol/`: `ToolDefinition`, schemas, `fitOutput` and the metadata limits
+- [x] Implement `platform/`: `getModelContext`, `ToolRegistry` and `ToolQueue`
+- [x] Implement `registerProjectTools`, the handle and `ProjectToolsContext`
+- [x] Add `tests-manager/internal.ts` and the `AssertionFailure` extraction next to `caseFailures`
+- [x] Implement `RegressionMonitor` with `runAll`, `runSubject`, the baseline and `RegressionReport`
+- [x] Implement `run-tests`
+- [x] Add `testing/recordingModelContext.ts` and `testing/toolsFixture.ts`
+- [x] Add tests for the code of this phase, with a real `@edgerules/node` session
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `registerProjectTools.test.ts` and `regressionMonitor.test.ts`
-- [ ] `regressionMonitor.test.ts` shows `newlyFailing` with `expected` and `actual` after a model change breaks a case
-- [ ] `regressionMonitor.test.ts` shows `newlyPassing` after the fix, and `stillFailing` for an unrelated failing case
-- [ ] `registerProjectTools.test.ts` shows that `dispose` aborts the signal of every tool
-- [ ] `toolQueue.test.ts` shows that a second call starts after the first call and its regression run end
-- [ ] `toolRegistry.test.ts` shows that a tool that throws returns `InternalError` and does not reject
-- [ ] `npm run depcruise` passes, and a test import from `platform/` to `project/` fails the `webmcp-layer-platform`
+- [x] `npm test` passes, including `registerProjectTools.test.ts` and `regressionMonitor.test.ts`
+- [x] `regressionMonitor.test.ts` shows `newlyFailing` with `expected` and `actual` after a model change breaks a case
+- [x] `regressionMonitor.test.ts` shows `newlyPassing` after the fix, and `stillFailing` for an unrelated failing case
+- [x] `registerProjectTools.test.ts` shows that `dispose` aborts the signal of every tool
+- [x] `toolQueue.test.ts` shows that a second call starts after the first call and its regression run end
+- [x] `toolRegistry.test.ts` shows that a tool that throws returns `InternalError` and does not reject
+- [x] `npm run depcruise` passes, and a test import from `platform/` to `project/` fails the `webmcp-layer-platform`
       rule
 
 ## Verification
@@ -191,3 +191,29 @@ Run the commands of [Verification](../webmcp-story.md#verification) that this ph
 ```sh
 npm run typecheck && npm run lint && npm run depcruise && npm test && npm run format:check
 ```
+
+## Implementation notes
+
+- **Entry points:** `webmcp/registerProjectTools.ts` — `registerProjectTools`: composition root (context, `ToolQueue`,
+  `ToolRegistry`, first `runAll` queued with `registry.signal`). `webmcp/tools/toolCatalog.ts` — `TOOL_CATALOG`: append
+  each new tool in catalog order. `webmcp/tools/projectTool.ts` — `ProjectTool<I, O>`: the type every tool uses.
+  `webmcp/project/projectToolsContext.ts` — `ProjectToolsContext`, `createProjectToolsContext(session)`: add `changes`
+  (Phase 2), `inspector`/`guide` (Phase 3), `host` (Phase 4) here. `webmcp/project/regression/regressionMonitor.ts` —
+  `createRegressionMonitor`, plus `subjectsWithCases()` (`'*'` first). `webmcp/core/` — `ok`, `fail`, `toToolError`
+  (`phase: 'link'` after a write), `validate*Path`, `validateInputMembers`. `webmcp/protocol/schemas.ts` —
+  `inputSchema`, `resultSchema`, `regressionReportSchema`. `tests-manager/internal.ts` — `caseOutcome`,
+  `createTestRunner`. Tests: `testing/toolsFixture.ts` — `openToolsFixture`, `LOAN_TESTS` (`risk`: 2 passing cases;
+  `'*'`: `unused-is-two` always fails).
+- **Contracts:** `ToolDefinition<I, O, C>` is generic over its context, so `protocol/` and `platform/` never import
+  `project/`. The registry turns a thrown `AbortError` (signal aborted) into `Aborted` and any other throw into
+  `InternalError`; `execute` never rejects. A call queued behind another call waits; `dispose` aborts queued and running
+  calls. The engine has no `Linking` error type: a link failure is `Execution` with "linker error" in the message, so
+  `toolErrorCodeOf` maps it to `LinkError` (also when `phase: 'link'`). `WrongFieldPath` → `InvalidInput`, `WrongFilter`
+  → `InternalError`. `RegressionReport` is fitted to 1,500 characters of `{ok: true, regression}`; each `CaseFailure`
+  keeps 5 assertions and clips values to 200 characters. `lastTotals()` counts the whole baseline.
+- **Deviations and open items:** `ProjectToolsHandle.activity` is not there yet; Phase 2 adds it with
+  `AgentActivityLog`. `ProjectToolsNavigation` uses the local `ProjectToolsView` (same values as `ShellView`), since
+  `webmcp` may not import `shell`. A minimal `stories/components/webmcp/ToolInspector.stories.tsx` exists, because
+  `component-has-story` requires one; Phase 4 extends it. `internal.ts` is empty and gives a `no-orphans` warning.
+  `npm run build` fails before and after this phase in `src/ui/sheet/sheet.module.css` (`tokens-row` becomes an invalid
+  export name in the tsdown CSS-module plugin).

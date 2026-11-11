@@ -80,6 +80,7 @@ export default defineConfig({
         'components/example-library/index': 'src/components/example-library/index.ts',
         'components/local-workspace/index': 'src/components/local-workspace/index.ts',
         'components/modeler-home/index': 'src/components/modeler-home/index.ts',
+        'components/webmcp/index': 'src/components/webmcp/index.ts',
     },
     format: ['esm', 'cjs'],
     platform: 'neutral',
