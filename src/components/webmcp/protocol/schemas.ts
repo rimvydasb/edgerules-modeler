@@ -132,3 +132,24 @@ export function resultSchema(properties: Schema, required: string[] = []): Schem
         ],
     };
 }
+
+export const baseVersionSchema: Schema = {
+    type: 'integer',
+    description: '`version` from a previous result. The change fails with VersionConflict when the project changed.',
+};
+
+/** The members of a change result: `version`, `changeId`, `changed` and `regression`. */
+export const changeResultProperties: Schema = {
+    version: {type: 'integer'},
+    changeId: {type: 'string'},
+    changed: {type: 'array', items: {type: 'string'}},
+    regression: regressionReportSchema,
+};
+
+export const changeResultRequired = ['version', 'changeId', 'changed', 'regression'];
+
+/** A map of EdgeRules literal text by subject-relative path. */
+export const testValuesSchema: Schema = {
+    type: 'object',
+    additionalProperties: {type: 'string'},
+};

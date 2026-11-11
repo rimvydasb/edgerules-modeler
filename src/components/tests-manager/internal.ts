@@ -6,3 +6,5 @@ export type {AssertionMismatch, CaseOutcome} from './runner/caseFailures';
 export {createTestRunner} from './runner/createTestRunner';
 export {formatValue, matches} from './model/values';
 export type {MutableDecisionService, TestRunner, TestSubject, TestSubjectKind} from './tests-manager-types';
+// `edit-tests` syncs a subject's rows before it validates the paths, so they exist without a mounted Tests view.
+export {deriveRows} from './model/rows';

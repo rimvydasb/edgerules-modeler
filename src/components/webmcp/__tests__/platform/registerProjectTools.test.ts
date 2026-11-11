@@ -25,9 +25,10 @@ describe('registerProjectTools', () => {
         handle.dispose();
     });
 
-    it('registers run-tests, also when the project is read-only', async () => {
+    it('registers run-tests, also when the project is read-only, and the change tools when it is not', async () => {
         const {modelContext, handle} = await openToolsFixture(undefined, {readOnly: true});
         expect(handle.active).toBe(true);
+        expect(handle.activity?.list()).toEqual([]);
         expect(modelContext.names()).toEqual(['run-tests']);
         expect(modelContext.tool('run-tests')?.annotations).toEqual({
             readOnlyHint: true,
@@ -35,6 +36,19 @@ describe('registerProjectTools', () => {
             consequentialHint: false,
         });
         handle.setReadOnly(false);
+        expect(modelContext.names()).toEqual([
+            'run-tests',
+            'edit-model',
+            'edit-tests',
+            'set-documentation',
+            'undo-agent-change',
+        ]);
+        expect(modelContext.tool('edit-model')?.annotations).toEqual({
+            readOnlyHint: false,
+            untrustedContentHint: false,
+            consequentialHint: false,
+        });
+        handle.setReadOnly(true);
         expect(modelContext.names()).toEqual(['run-tests']);
     });
 

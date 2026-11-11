@@ -279,28 +279,28 @@ interface EngineService {
 
 ## Tasks
 
-- [ ] Add `restoreTestCase(testCase: TestCase): void` to `TestCasesService`
-- [ ] Implement the operation appliers of `project/changes/operations/` with their inverse operations
-- [ ] Implement `ProjectChangeService`: version check, transaction, activity record and regression run
-- [ ] Implement `AgentActivityLog` with target checks and a limit of 50 changes
-- [ ] Implement `edit-model`, `edit-tests`, `set-documentation` and `undo-agent-change`
+- [x] Add `restoreTestCase(testCase: TestCase): void` to `TestCasesService`
+- [x] Implement the operation appliers of `project/changes/operations/` with their inverse operations
+- [x] Implement `ProjectChangeService`: version check, transaction, activity record and regression run
+- [x] Implement `AgentActivityLog` with target checks and a limit of 50 changes
+- [x] Implement `edit-model`, `edit-tests`, `set-documentation` and `undo-agent-change`
 - [x] File the engine feature request: [rimvydasb/edgerules#68](https://github.com/rimvydasb/edgerules/issues/68)
 - [ ] Update `EngineService`, `renamePath` and `CommandResult` when the engine ships rimvydasb/edgerules#68
-- [ ] Add tests for the code of this phase
+- [x] Add tests for the code of this phase
 
 Acceptance criteria:
 
-- [ ] `npm test` passes, including `editModel.test.ts`, `editTests.test.ts` and `undoAgentChange.test.ts`
-- [ ] `editModel.test.ts` shows that a batch with a link error leaves the DSL and every slice unchanged
-- [ ] `editModel.test.ts` shows that a successful change returns a regression report of every subject
-- [ ] `editModel.test.ts` shows `VersionConflict` for a stale `baseVersion` and success without `baseVersion`
-- [ ] `editModel.test.ts` shows that a write with a DSL draft succeeds and keeps the draft
-- [ ] `undoAgentChange.test.ts` shows that undo of `set`, `rename` and `remove` restores the code, references and
+- [x] `npm test` passes, including `editModel.test.ts`, `editTests.test.ts` and `undoAgentChange.test.ts`
+- [x] `editModel.test.ts` shows that a batch with a link error leaves the DSL and every slice unchanged
+- [x] `editModel.test.ts` shows that a successful change returns a regression report of every subject
+- [x] `editModel.test.ts` shows `VersionConflict` for a stale `baseVersion` and success without `baseVersion`
+- [x] `editModel.test.ts` shows that a write with a DSL draft succeeds and keeps the draft
+- [x] `undoAgentChange.test.ts` shows that undo of `set`, `rename` and `remove` restores the code, references and
       documentation
-- [ ] `undoAgentChange.test.ts` shows `UndoBlocked` with `conflicts` after a user edit of the same entry
-- [ ] `undoAgentChange.test.ts` shows a successful undo after a user edit of another entry
-- [ ] `undoAgentChange.test.ts` shows that an undo of an undo restores the change
-- [ ] `editTests.test.ts` shows that the undo of a case removal restores the case id and order
+- [x] `undoAgentChange.test.ts` shows `UndoBlocked` with `conflicts` after a user edit of the same entry
+- [x] `undoAgentChange.test.ts` shows a successful undo after a user edit of another entry
+- [x] `undoAgentChange.test.ts` shows that an undo of an undo restores the change
+- [x] `editTests.test.ts` shows that the undo of a case removal restores the case id and order
 
 ## Verification
 
@@ -309,3 +309,25 @@ Run the commands of [Verification](../webmcp-story.md#verification) that this ph
 ```sh
 npm run typecheck && npm run lint && npm run depcruise && npm test && npm run format:check
 ```
+
+## Implementation notes
+
+- **Entry points:** `project/changes/projectChangeService.ts` — `createProjectChangeService(session, regression)`, the
+  input and result types; `context.changes` holds it. `project/changes/agentActivityLog.ts` — `AgentActivityLog`,
+  `AgentChange`, `UndoResult`; the handle exposes it as `ProjectToolsHandle.activity` (absent when inactive), the
+  Shell's `ShellAgentActivity` (Phase 4) should match it. `project/changes/operations/` — the appliers. `tools/change/`
+  — the four tools; `changeInput.ts` holds the shared batch/`baseVersion`/text validators. `protocol/schemas.ts` —
+  `baseVersionSchema`, `changeResultProperties`, `changeResultRequired`, `testValuesSchema`.
+- **Contracts:** `AppliedOperation` also has `readState()` and `summary`; `stateAfter` is re-read when the transaction
+  commits. `AgentActivityLog.undo(changeId, signal?)` takes an optional signal; the Shell undo does not go through
+  `ToolQueue` yet (Phase 4). `version` in a change result is read after the regression run, because a run can add
+  `discovered` rows (a tests-slice change). Every change, including a `set-documentation` undo, runs `runAll`.
+  `edit-tests` `add` clears the inputs that `addTestCase` copies from the previous case. Removing a value (`''`) skips
+  the row check. New derived rows of a computed path land in `validations`, which counts as an assertion path.
+  `set-documentation` rejects `'*'`. `tests-manager/internal.ts` now exports `deriveRows`.
+- **Deviations and open items:** rimvydasb/edgerules#68 is still open on `0.2.7-alpha.202611081915`, so `rename` derives
+  the rewritten paths by comparing `getCode` of every non-context entry before and after (`codeIndex` in
+  `modelOperations.ts`); replace it when the engine ships. A field rename still fails with `LinkError` when other
+  entries reference the field (the engine moves references only for callables) — set the referencing entries first in
+  the same batch. Undoing a `remove` appends the entry at the end of its context, so the DSL order can change. A link
+  error has one diagnostic and no `path`: the engine throws only the first error and names a node id.

@@ -1,5 +1,6 @@
 import type {ProjectSession} from '../project-session';
 import type {ModelContextLike} from './platform/modelContext';
+import type {AgentActivityLog} from './project/changes/agentActivityLog';
 
 /** A Shell view. The same values as `ShellView` of `edgerules-react/shell`, which this component does not import. */
 export type ProjectToolsView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview';
@@ -20,6 +21,7 @@ export interface ProjectToolsOptions {
 
 export interface ProjectToolsHandle {
     readonly active: boolean; // false when `modelContext` is undefined
+    readonly activity?: AgentActivityLog; // the agent changes and their undo; absent when not active
     setReadOnly(readOnly: boolean): void; // re-registers the write tools
     setAllowSave(allowSave: boolean): void; // registers or unregisters `save-project`
     dispose(): void; // unregisters every tool and aborts every running call

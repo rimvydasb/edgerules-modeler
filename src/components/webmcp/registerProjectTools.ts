@@ -35,6 +35,7 @@ export function registerProjectTools(options: ProjectToolsOptions): ProjectTools
 
     return {
         active: true,
+        activity: context.changes.activity,
         setReadOnly(readOnly) {
             flags.readOnly = readOnly;
             registry.sync(flags);

@@ -55,6 +55,24 @@ rewrote nothing. `edit-model` of the WebMCP story reports these paths in `change
 
 **Issue:** https://github.com/rimvydasb/edgerules/issues/68
 
+## [VALID] `rename()` accepts a new name that is not an identifier
+
+**What is wrong:** `rename(path, newName)` does not validate `newName`. A name with a space or a dot is accepted, and
+`getCode('*')` then returns DSL that does not parse. The model can no longer be saved and loaded again.
+
+```ts
+const service = MutableDecisionService.fromCode('{ a: 1 \n b: a + 1 }');
+service.rename('a', 'x y'); // undefined: no error
+service.getCode('*'); // "{\n    x y: 1\n    b: a + 1\n}"
+MutableDecisionService.fromCode(service.getCode('*')); // throws: "parse error: Parse errors: UnexpectedToken at 6"
+```
+
+Found on `0.2.7-alpha.202611081915` (2026-11-11). The `edit-model` WebMCP tool validates `newName` itself, so it does
+not reach this path.
+
+**Expected behaviour:** `rename` returns a `PortableError` and changes nothing when `newName` is not one identifier
+segment (`[A-Za-z_][A-Za-z0-9_]*`).
+
 ## [NOT A BUG] `getCode('*')` drops source comments
 
 **What happens:** `fromCode` followed by `getCode('*')` returns the code without its comments. (Output formatting is
