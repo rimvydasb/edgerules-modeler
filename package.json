@@ -205,6 +205,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "vite --config app/vite.config.ts",
+    "app:build": "vite build --config app/vite.config.ts",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "e2e": "playwright test",

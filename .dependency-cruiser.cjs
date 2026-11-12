@@ -365,7 +365,7 @@ module.exports = {
     extraExtensionsToScan: ['.md'],
     exclude: {
       // Anchored to the repo root: packages ship from node_modules/*/dist/, which must stay in the graph.
-      path: '^(dist|storybook-static|coverage|test-results|playwright-report|\\.git|\\.idea)/',
+      path: '^(dist|app/dist|storybook-static|coverage|test-results|playwright-report|\\.git|\\.idea)/',
     },
     // Not `exclude`: excluding node_modules would drop every npm import from the graph, so the package
     // rules could never fire. doNotFollow keeps the edges but does not descend into the packages.

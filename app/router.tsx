@@ -95,7 +95,15 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export function createModelerRouter(workspace: ModelerWorkspace, history?: RouterHistory) {
-    return createRouter({routeTree, context: workspace, history, defaultPreload: false, scrollRestoration: true});
+    return createRouter({
+        routeTree,
+        context: workspace,
+        history,
+        // The app may be served from a sub-path (Vite `base`); route URLs stay relative to it.
+        basepath: import.meta.env.BASE_URL,
+        defaultPreload: false,
+        scrollRestoration: true,
+    });
 }
 
 declare module '@tanstack/react-router' {
@@ -160,7 +168,11 @@ function Root(): ReactElement {
             void router.navigate({href: routePath(next), replace: options?.replace}),
         [router],
     );
-    const shareUrl = useCallback((next: ModelerRoute) => new URL(routePath(next), window.location.origin).href, []);
+    const shareUrl = useCallback(
+        (next: ModelerRoute) =>
+            new URL(import.meta.env.BASE_URL.replace(/\/$/, '') + routePath(next), window.location.origin).href,
+        [],
+    );
     return (
         <ModelerProvider
             {...router.options.context}
