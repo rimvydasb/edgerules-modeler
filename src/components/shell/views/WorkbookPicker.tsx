@@ -1,12 +1,4 @@
-import {
-    IconArrowRight,
-    IconArrowUp,
-    IconBook2,
-    IconLibrary,
-    IconMathFunction,
-    IconPlayerPlay,
-    IconPlus,
-} from '@tabler/icons-react';
+import {IconArrowRight, IconArrowUp, IconBook2, IconLibrary, IconMathFunction, IconPlus} from '@tabler/icons-react';
 import {useLayoutEffect, useRef, useState, type MouseEvent, type ReactElement, type ReactNode} from 'react';
 import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
@@ -16,6 +8,8 @@ import {MarkdownView} from '../../markdown-view';
 import {CREATE_OPTIONS, CreateDialog} from '../../project-explorer/internal';
 import type {ProjectOrigin} from '../../project-session';
 import {README_FILE} from '../shell-path';
+import type {TestsRunState, TestsSummary} from '../testsStatus';
+import {RunAllButton, TestsBar, TestsCounts} from './TestsOverview';
 import * as classes from '../shell.module.css';
 
 /** One workbook of the model, as its panel shows it. */
@@ -51,7 +45,10 @@ export interface ProjectOverview {
     onShowOrigin?: (origin: ProjectOrigin) => void;
     counts: readonly OverviewCount[]; // the entities of the model by kind
     testSuites: number; // the test subjects that have tests
-    onOpenTests?: () => void; // "Run all" of the Tests card: the Tests view of the model
+    tests?: TestsSummary; // the results of every test case, from the last run of each
+    testsRun?: TestsRunState; // the run of all tests in progress
+    onRunAllTests?: () => void; // "Run all" of the Tests card: runs every case of every subject in place
+    onOpenTests?: () => void; // "All Tests" of the Tests card: the Tests Overview
 }
 
 export interface WorkbookPickerProps {
@@ -317,20 +314,33 @@ export function WorkbookPicker({
                     </div>
                     {overview && (
                         <aside className={classes.overviewSide} aria-label="Project facts">
-                            <section className={classes.sideCard}>
+                            <section className={classes.sideCard} aria-label="Tests" data-testid="shell-tests-card">
                                 <div className={sheetClasses.eyebrow}>Tests</div>
                                 <div className={classes.sideBig}>
                                     <b>{count(overview.testSuites, 'suite')}</b>
                                 </div>
-                                {overview.onOpenTests && overview.testSuites > 0 && (
-                                    <button
-                                        type="button"
-                                        className={classes.overviewButton}
-                                        onClick={overview.onOpenTests}
-                                    >
-                                        <IconPlayerPlay aria-hidden="true" size={14} />
-                                        Run all
-                                    </button>
+                                {overview.tests && overview.testsRun && overview.tests.total > 0 && (
+                                    <>
+                                        <TestsBar totals={overview.tests} run={overview.testsRun} />
+                                        <TestsCounts totals={overview.tests} run={overview.testsRun} />
+                                    </>
+                                )}
+                                {overview.testSuites > 0 && (overview.onRunAllTests || overview.onOpenTests) && (
+                                    <div className={classes.sideActions}>
+                                        {overview.onRunAllTests && overview.testsRun && (
+                                            <RunAllButton run={overview.testsRun} onRunAll={overview.onRunAllTests} />
+                                        )}
+                                        {overview.onOpenTests && (
+                                            <button
+                                                type="button"
+                                                className={classes.sideLink}
+                                                onClick={overview.onOpenTests}
+                                            >
+                                                All Tests
+                                                <IconArrowRight aria-hidden="true" size={13} />
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
                             </section>
                             {overview.origin && (

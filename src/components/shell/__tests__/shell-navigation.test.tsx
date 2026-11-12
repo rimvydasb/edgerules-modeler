@@ -46,7 +46,7 @@ describe('Shell navigation', () => {
         const nav = screen.getByRole('navigation', {name: 'Model path'});
         expect(within(nav).queryByRole('button', {name: 'Workspace'})).toBeNull();
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-        await screen.findByRole('menuitem', {name: 'Overview'});
+        await screen.findByRole('menuitem', {name: 'Project Overview'});
         expect(screen.queryByRole('menuitem', {name: /workspace/i})).toBeNull();
     });
 
@@ -63,7 +63,7 @@ describe('Shell navigation', () => {
         const user = userEvent.setup();
         await renderNavigated();
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
-        await screen.findByRole('menuitem', {name: 'Overview'});
+        await screen.findByRole('menuitem', {name: 'Project Overview'});
         expect(screen.queryByRole('menuitem', {name: 'View original example'})).toBeNull();
     });
 
@@ -84,7 +84,7 @@ describe('Shell navigation', () => {
         );
         await user.click(screen.getByRole('button', {name: 'Project menu: Loan repayment'}));
         const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent);
-        expect(items).toEqual(['Overview', 'README.md', 'View original example']);
+        expect(items).toEqual(['Project Overview', 'Tests Overview', 'README.md', 'View original example']);
         expect(screen.queryByText(/saved/i)).toBeNull();
     });
 

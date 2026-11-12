@@ -23,7 +23,7 @@ export interface ShellBreadcrumbsProps {
     segments: ShellPathSegment[]; // the root path, one segment per field
     rootLabel?: string; // the model name; defaults to 'Model'
     origin?: {path: string; label: string}; // the Flow view that opened the root path: a crumb after the model name
-    document?: {path: string; label: string}; // a document root path: its file name is the last crumb
+    document?: {path: string; label: string}; // a document root path or a project page: its name is the last crumb
     onNavigate: (path: string) => void; // a crumb click; '*' is the model name
     primaryView: PrimaryView; // the view the kind icon opens: Flow when the root path has it, otherwise Boxed
     onOpenPrimary: () => void;
@@ -32,7 +32,7 @@ export interface ShellBreadcrumbsProps {
 }
 
 /** The main view of a root path: Preview for a document, Flow when the root path has it, otherwise Boxed. */
-export type PrimaryView = 'flow' | 'boxed' | 'preview';
+export type PrimaryView = 'flow' | 'boxed' | 'preview' | 'tests';
 
 type GlyphKind = 'model' | 'tests' | 'document' | ShellPathKind;
 
@@ -95,6 +95,7 @@ const PRIMARY_LABEL: Record<PrimaryView, string> = {
     flow: 'Open in the Flow view',
     boxed: 'Open in the Boxed view',
     preview: 'Open in the Preview view',
+    tests: 'Open the Tests Overview',
 };
 
 function KindButton({kind, view, onOpen}: {kind: GlyphKind; view: PrimaryView; onOpen: () => void}): ReactElement {

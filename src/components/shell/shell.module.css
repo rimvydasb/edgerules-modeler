@@ -1003,3 +1003,270 @@ span.overviewOrigin {
   flex: none;
   border-radius: 0;
 }
+
+/* ---------------------------------------------------------------- Tests view and Tests Overview */
+/*
+ * The Tests view: the body does not scroll. The Tests Manager shrinks to the height of the body and its grid scrolls
+ * inside it, so the page has one scrollbar; the dotted canvas shows right of the grid columns.
+ */
+.bodyTests {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bodyPage > .testsView {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  --tm-max-height: none;
+}
+
+.overviewActions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.overviewButton:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.overviewButtonPrimary {
+  border-color: var(--er-accent);
+  background-color: var(--er-accent);
+  color: #fff;
+}
+
+.overviewButtonPrimary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--er-accent) 88%, #000);
+}
+
+.overviewButtonPrimary:disabled {
+  background-color: var(--er-accent);
+}
+
+.sideActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.spin {
+  animation: shSpin 0.8s linear infinite;
+}
+
+@keyframes shSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.badgeDanger,
+.badgeMuted {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badgeDanger {
+  background-color: var(--er-danger-soft);
+  color: var(--er-danger);
+}
+
+.badgeMuted {
+  background-color: var(--er-subtle);
+  color: var(--er-text-2);
+}
+
+/* Passed, failed and not run as one stacked bar; the grey track is the not-run share. */
+.testsBar {
+  display: flex;
+  align-self: stretch;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--er-subtle);
+  box-shadow: inset 0 0 0 1px var(--er-border);
+}
+
+.testsBarPart {
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.testsBarPassed {
+  background-color: var(--er-ok);
+}
+
+.testsBarFailed {
+  background-color: var(--er-danger);
+}
+
+.testsBarRunning {
+  background-color: var(--er-accent);
+}
+
+.testsCounts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  color: var(--er-text-2);
+  font-size: 13px;
+}
+
+.testsCountPassed {
+  color: var(--er-ok);
+  font-weight: 500;
+}
+
+.testsCountFailed {
+  color: var(--er-danger);
+  font-weight: 500;
+}
+
+.testsCountMuted {
+  color: var(--er-text-3);
+}
+
+.testsSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+}
+
+.testsSubjects {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.testsSubject {
+  overflow: hidden;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+}
+
+.testsSubjectHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--er-border);
+  background-color: var(--er-subtle);
+}
+
+.testsSubjectIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background-color: #2f9e44;
+}
+
+.testsSubjectName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font: 500 13.5px var(--er-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.testsCases {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.testsCase {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13.5px;
+}
+
+.testsCase + .testsCase {
+  border-top: 1px solid var(--er-border);
+}
+
+.testsCase > svg {
+  flex: none;
+}
+
+.testsCaseName {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.testsCaseDetail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--er-text-3);
+  font: 12px var(--er-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.testsStale {
+  flex: none;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 4px;
+  background-color: var(--er-warn-soft);
+  color: var(--er-warn);
+  font-size: 11.5px;
+}
+
+.testsStatusPassed {
+  color: var(--er-ok);
+}
+
+.testsStatusFailed {
+  color: var(--er-danger);
+}
+
+.testsStatusMuted {
+  color: var(--er-text-3);
+}
+
+.testsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  border: 1px dashed var(--er-border-strong);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+  color: var(--er-text-3);
+  text-align: center;
+}
+
+.testsEmpty b {
+  color: var(--er-text);
+}

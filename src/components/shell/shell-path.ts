@@ -11,6 +11,9 @@ export const README_PATH = documentPath(README_FILE);
 /** The document files the Project Explorer lists. */
 export const DOCUMENTS: readonly string[] = [README_FILE];
 
+/** The root path of the Tests Overview page: the results of every test of the project. Not a model path. */
+export const TESTS_OVERVIEW_PATH = 'tests:overview';
+
 /** True for a document path (`doc:` prefix). A model path never contains `:`. */
 export function isDocumentPath(path: string): boolean {
     return path.startsWith(DOCUMENT_PATH_PREFIX);

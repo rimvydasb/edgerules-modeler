@@ -12,12 +12,14 @@ export interface ShellProjectMenuProps {
     origin?: ProjectOrigin; // the library example that the project is a copy of
     navigation: ShellNavigation;
     current?: boolean; // the root path is the model: the name reads as the current item
-    onOpenOverview?: () => void; // "Overview": the model root in its main view
+    onOpenOverview?: () => void; // "Project Overview": the model root in its main view
+    onOpenTestsOverview?: () => void; // "Tests Overview": the results of every test of the project
     onOpenReadme?: () => void; // "README.md": left out when the project has no README
 }
 
 /**
- * The project name in the middle of the Shell bar: a menu to the overview, the README and the source example.
+ * The project name in the middle of the Shell bar: a menu to the project overview, the tests overview, the README and
+ * the source example.
  * The Shell bar already links to the Workspace and the Library, so the menu does not repeat them.
  * It has no way back to the Workspace: the host navigation owns that, so a click in the Shell never leaves the project
  * by accident.
@@ -28,6 +30,7 @@ export function ShellProjectMenu({
     navigation,
     current,
     onOpenOverview,
+    onOpenTestsOverview,
     onOpenReadme,
 }: ShellProjectMenuProps): ReactElement {
     const {onShowOrigin} = navigation;
@@ -46,7 +49,8 @@ export function ShellProjectMenu({
                 </button>
             </Menu.Target>
             <Menu.Dropdown>
-                {onOpenOverview && <Menu.Item onClick={onOpenOverview}>Overview</Menu.Item>}
+                {onOpenOverview && <Menu.Item onClick={onOpenOverview}>Project Overview</Menu.Item>}
+                {onOpenTestsOverview && <Menu.Item onClick={onOpenTestsOverview}>Tests Overview</Menu.Item>}
                 {onOpenReadme && <Menu.Item onClick={onOpenReadme}>README.md</Menu.Item>}
                 {origin && onShowOrigin && (
                     <>

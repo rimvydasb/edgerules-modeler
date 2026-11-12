@@ -6,14 +6,16 @@ export interface TestsViewProps {
     subjectId: string; // '*' or the path of a function or a ruleset
     readOnly?: boolean;
     onSubjectChange: (subjectId: string) => void;
+    className?: string;
 }
 
 /** The tests of one subject, kept in the tests store of the session. */
-export function TestsView({subjectId, readOnly, onSubjectChange}: TestsViewProps): ReactElement {
+export function TestsView({subjectId, readOnly, onSubjectChange, className}: TestsViewProps): ReactElement {
     const session = useProjectSession();
     const {version} = useProjectSlice('model');
     return (
         <TestsManager
+            className={className}
             service={session.engine}
             testCases={session.tests}
             documentationService={session.documentation}
