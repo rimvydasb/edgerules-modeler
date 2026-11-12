@@ -150,7 +150,7 @@ test('the facts of a type open as their own root, not as the type', async ({page
 test('the rows a run discovers stay valid when the Tests view is left and opened again', async ({page}) => {
     await openStory(page, 'models-loan-origination--model-tests');
     // A workbook is an opaque invocation call site: its rows are not in the schema, the first run finds them.
-    const discovered = page.getByTestId('row-capacityBook.capacity');
+    const discovered = page.getByTestId('row-capacityBook.capacity.result');
     await expect(discovered).toBeVisible(SLOW);
     await expect(page.locator('[data-invalid="true"]')).toHaveCount(0);
 

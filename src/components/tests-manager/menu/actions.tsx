@@ -9,7 +9,7 @@ import {
 } from '@tabler/icons-react';
 import type {TestCase, TestCasesService, TestRow} from '../../test-cases-service';
 import {hasIndex, nextDuplicatePath} from '../model/paths';
-import {formatValue} from '../model/values';
+import {toCellText} from '../model/values';
 import type {TestRunner} from '../tests-manager-types';
 
 export interface TestsMenuAction {
@@ -25,7 +25,7 @@ function copyActualToExpected(row: TestRow, testCasesService: TestCasesService):
     for (const testCase of testCasesService.listTestCases()) {
         const value = testCasesService.getResultSet(testCase.id)?.results[row.path]?.value;
         if (value !== undefined) {
-            testCasesService.setCell(testCase.id, row.path, 'assertion', formatValue(value));
+            testCasesService.setCell(testCase.id, row.path, 'assertion', toCellText(value));
         }
     }
 }
@@ -67,8 +67,13 @@ export function testCaseActionsFor(
     ];
 }
 
-// The row menu (three-dots revealed on hover in the Path cell).
-export function rowActionsFor(row: TestRow, testCasesService: TestCasesService): TestsMenuAction[] {
+// The row menu (three-dots revealed on hover in the Path cell). `rerun` runs the cases again after an action adds a path
+// the last run did not read, so the new row shows its actual value at once.
+export function rowActionsFor(
+    row: TestRow,
+    testCasesService: TestCasesService,
+    rerun?: () => void,
+): TestsMenuAction[] {
     const actions: TestsMenuAction[] = [];
 
     // Only an indexed path can be duplicated: a duplicate is one more element of a list the model
@@ -84,7 +89,9 @@ export function rowActionsFor(row: TestRow, testCasesService: TestCasesService):
             icon: IconCopy,
             disabled: target === undefined,
             onSelect: () => {
-                if (target) testCasesService.duplicateRow(row.path, target);
+                if (!target) return;
+                testCasesService.duplicateRow(row.path, target);
+                rerun?.();
             },
         });
     }

@@ -75,7 +75,7 @@ export function PathCell({
     columnWidth: number;
     knownPaths: ReadonlySet<string>;
 }): ReactElement {
-    const {testCasesService, readOnly} = useTestsManagerContext();
+    const {testCasesService, readOnly, runner, autoRun} = useTestsManagerContext();
     const [draft, setDraft] = useState<string | undefined>(undefined);
 
     // `listRows()` returns a snapshot that only changes on mutation, so this memo re-runs when the
@@ -116,6 +116,8 @@ export function PathCell({
         setDraft(undefined);
         if (next === '' || next === row.path) return;
         testCasesService.setRowPath(row.path, next);
+        // The last run did not read the new path: run again, so the row shows its actual value.
+        if (autoRun) void runner.runAll();
     };
 
     if (editing) {

@@ -1,4 +1,4 @@
-import {describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {render, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {currentCompletions, startCompletion} from '@codemirror/autocomplete';
@@ -83,6 +83,53 @@ describe('CodeEditorCell', () => {
 
         await waitFor(() => {
             expect(onCommit).toHaveBeenCalledWith('42');
+        });
+    });
+
+    // Chrome fires `blur` on a focused element that is removed from the DOM; jsdom does not. React StrictMode (the
+    // `npm run dev` app) mounts, unmounts and mounts the editor again: the removal of the first, focused view must not
+    // commit, or the host closes the cell the moment it opened.
+    describe('when a focused editor is removed, as Chrome does', () => {
+        const removeChild = Node.prototype.removeChild;
+        const remove = Element.prototype.remove;
+        const blurIfFocusedInside = (node: Node): void => {
+            const active = document.activeElement;
+            if (active && active !== document.body && node.contains(active)) {
+                active.dispatchEvent(new FocusEvent('blur'));
+                active.dispatchEvent(new FocusEvent('focusout', {bubbles: true}));
+            }
+        };
+        beforeEach(() => {
+            Node.prototype.removeChild = function <T extends Node>(this: Node, child: T): T {
+                blurIfFocusedInside(child);
+                return removeChild.call(this, child) as T;
+            };
+            Element.prototype.remove = function (this: Element): void {
+                blurIfFocusedInside(this);
+                remove.call(this);
+            };
+        });
+        afterEach(() => {
+            Node.prototype.removeChild = removeChild;
+            Element.prototype.remove = remove;
+        });
+
+        it('does not commit when StrictMode mounts the autofocused editor twice', async () => {
+            const onCommit = vi.fn();
+            // `reactStrictMode` wraps the root: a `<StrictMode>` nested in the test wrapper does not double the effects.
+            const {container} = render(<CodeEditorCell value="42" onCommit={onCommit} service={service} autoFocus />, {
+                reactStrictMode: true,
+            });
+            await waitFor(() => expect(container.querySelectorAll('.cm-editor')).toHaveLength(1));
+            expect(container.querySelector('.cm-editor')?.contains(document.activeElement)).toBe(true);
+            expect(onCommit).not.toHaveBeenCalled();
+        });
+
+        it('does not commit when the host unmounts the focused editor', () => {
+            const onCommit = vi.fn();
+            const {unmount} = render(<CodeEditorCell value="42" onCommit={onCommit} service={service} autoFocus />);
+            unmount();
+            expect(onCommit).not.toHaveBeenCalled();
         });
     });
 

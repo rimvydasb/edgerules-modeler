@@ -38,7 +38,7 @@ export function TestRowLine({
     pathColumnWidth: number;
     knownPaths: ReadonlySet<string>;
 }): ReactElement {
-    const {testCasesService, documentationService, subject, readOnly} = useTestsManagerContext();
+    const {testCasesService, documentationService, subject, readOnly, runner, autoRun} = useTestsManagerContext();
     const sortable = useSortable({id: row.path, disabled: readOnly});
     const deleted = !row.present;
 
@@ -58,7 +58,7 @@ export function TestRowLine({
         height: rowHeight,
     };
 
-    const menuActions = rowActionsFor(row, testCasesService);
+    const menuActions = rowActionsFor(row, testCasesService, autoRun ? () => void runner.runAll() : undefined);
     const hasMenuActions = menuActions.length > 0;
     const sticky = cx(classes.sticky, deleted && classes.deleted);
     const iconCell: CSSProperties = {width: ICON_CELL_WIDTH, maxWidth: ICON_CELL_WIDTH};
