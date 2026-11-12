@@ -97,6 +97,7 @@ You do not need to read the model back to check the change.
 interface EditModelInput {
   operations: ModelOperation[];
   baseVersion?: number; // `version` from a previous result; omit to apply on the current state
+  dryRun?: boolean; // check and test the change on `session.fork()`; the project does not change
 }
 
 type ModelOperation =
@@ -113,11 +114,18 @@ interface ChangeResult {
   changed: ModelPath[]; // the target paths, and each path whose references a rename rewrote
   regression: RegressionReport;
 }
+
+// The result of a dry run: nothing was recorded, so there is no `changeId`; `version` is the current one.
+type DryRunResult<R extends ChangeResult = ChangeResult> = Omit<R, 'changeId'> & {dryRun: true};
 ```
 
 - `path: '*'` is `InvalidInput` for every operation. Set each top-level entry with its own operation.
 - The tool runs all operations in one `session.transaction` and calls `engine.link()` at the end. A throw rolls back.
 - A failed operation returns its index in `error.operation`. A link failure returns up to 20 `diagnostics`.
+- With `dryRun: true`, the operations run in one transaction of `session.fork()`, a detached copy with its own engine. A
+  parse or link error returns as without `dryRun`. Otherwise `RegressionMonitor.preview(fork)` runs every test case of
+  the fork against the current baseline. The session, the activity log and the baseline do not change, and the fork is
+  disposed. `edit-tests` takes `dryRun` the same way.
 - `changed` of a rename comes from the rewritten paths that the engine returns. See
   [Engine prerequisite](#engine-prerequisite).
 

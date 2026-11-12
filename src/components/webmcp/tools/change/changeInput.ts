@@ -12,6 +12,12 @@ export function validateBaseVersion(value: unknown): ToolError | undefined {
     return invalid(`'baseVersion' must be a non-negative integer; got ${JSON.stringify(value)}.`);
 }
 
+/** `undefined` when `value` is absent or a boolean. */
+export function validateDryRun(value: unknown): ToolError | undefined {
+    if (value === undefined || typeof value === 'boolean') return undefined;
+    return invalid(`'dryRun' must be a boolean; got ${JSON.stringify(value)}.`);
+}
+
 /** `undefined` when `value` is an array of 1 to 50 objects. */
 export function validateBatch(value: unknown, member: string): ToolError | undefined {
     if (!Array.isArray(value) || value.length < LIMITS.batchMin || value.length > LIMITS.batchMax) {

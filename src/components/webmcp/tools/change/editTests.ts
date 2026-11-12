@@ -1,10 +1,11 @@
 import {LIMITS} from '../../core/limits';
 import {validateInputMembers, validateTestSubject} from '../../core/paths';
 import {fail, type ToolError} from '../../core/toolResult';
-import type {EditTestsInput, TestsChangeResult} from '../../project/changes/projectChangeService';
+import type {DryRunResult, EditTestsInput, TestsChangeResult} from '../../project/changes/projectChangeService';
 import {
     baseVersionSchema,
     changeResultProperties,
+    dryRunSchema,
     changeResultRequired,
     inputSchema,
     resultSchema,
@@ -12,7 +13,7 @@ import {
     testValuesSchema,
 } from '../../protocol/schemas';
 import type {ProjectTool} from '../projectTool';
-import {validateBaseVersion, validateBatch, validateEntryMembers, validateText} from './changeInput';
+import {validateBaseVersion, validateBatch, validateDryRun, validateEntryMembers, validateText} from './changeInput';
 
 export type {EditTestsInput, TestsChangeResult};
 export type {TestOperation, TestValues} from '../../project/changes/operations/testOperations';
@@ -56,13 +57,13 @@ function validateOperation(entry: Record<string, unknown>, index: number): ToolE
     );
 }
 
-export const editTests: ProjectTool<EditTestsInput, TestsChangeResult> = {
+export const editTests: ProjectTool<EditTestsInput, TestsChangeResult | DryRunResult<TestsChangeResult>> = {
     name: 'edit-tests',
     title: 'Edit tests',
     description:
         'Adds, updates or removes test cases of one subject in one atomic step. Values are cell texts by ' +
-        "subject-relative path: strings and dates without quotes, lists and objects as JSON; '' clears a " +
-        'value. Every test runs after it.',
+        "path: strings and dates without quotes, lists and objects as JSON; '' clears. Every test runs after " +
+        'it. dryRun only checks.',
     summary: 'Add, update or remove test cases; runs all tests',
     inputSchema: inputSchema(
         {
@@ -86,6 +87,7 @@ export const editTests: ProjectTool<EditTestsInput, TestsChangeResult> = {
                 },
             },
             baseVersion: baseVersionSchema,
+            dryRun: dryRunSchema,
         },
         ['subject', 'operations'],
     ),
@@ -98,9 +100,10 @@ export const editTests: ProjectTool<EditTestsInput, TestsChangeResult> = {
 
     async run(input, context, signal) {
         const invalid =
-            validateInputMembers(input, ['subject', 'operations', 'baseVersion']) ??
+            validateInputMembers(input, ['subject', 'operations', 'baseVersion', 'dryRun']) ??
             validateTestSubject(input.subject) ??
             validateBaseVersion(input.baseVersion) ??
+            validateDryRun(input.dryRun) ??
             validateBatch(input.operations, 'operations');
         if (invalid) return {ok: false, error: invalid};
         for (const [index, entry] of input.operations.entries()) {

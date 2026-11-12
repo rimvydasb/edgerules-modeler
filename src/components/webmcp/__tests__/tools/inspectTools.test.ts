@@ -3,7 +3,7 @@ import {describe, expect, it} from 'vitest';
 import type {ModelEntriesPage} from '../../project/inspection/modelOutline';
 import type {EvaluationResult} from '../../project/inspection/modelEvaluator';
 import type {SearchResult} from '../../project/inspection/modelSearch';
-import type {SourcePage} from '../../project/inspection/sourceReader';
+import {SOURCE_BATCH_BUDGET, type SourceBatch, type SourcePage} from '../../project/inspection/sourceReader';
 import type {TestSuiteView} from '../../project/inspection/testSuiteView';
 import {LOAN_TESTS, openToolsFixture} from '../../testing/toolsFixture';
 
@@ -125,6 +125,69 @@ describe('read-source', () => {
             ok: false,
             error: {code: 'InvalidInput'},
         });
+    });
+});
+
+describe('read-source with paths', () => {
+    it('reads several entries in one call, in order, with their documentation', async () => {
+        const {call, session} = await openToolsFixture();
+        session.documentation.setDescription('risk', 'Risk class.');
+        const result = await call<SourceBatch>('read-source', {paths: ['unused', 'risk', 'doc:README.md']});
+        expect(result).toEqual({
+            ok: true,
+            pages: [
+                {path: 'unused', language: 'edgerules', text: '1', offset: 0, totalChars: 1},
+                expect.objectContaining({path: 'risk', offset: 0, totalChars: 73, documentation: 'Risk class.'}),
+                {path: 'doc:README.md', language: 'markdown', text: '# Loans\n', offset: 0, totalChars: 8},
+            ],
+        });
+    });
+
+    it('shares one budget and continues with next until every text is read', async () => {
+        const {call, session} = await openToolsFixture();
+        const long = Array.from({length: 1_000}, (_, index) => `line ${index} of the readme`).join('\n');
+        session.readme.setMarkdown(long);
+        const read: Record<string, string> = {};
+        let input: {paths: string[]; offsets?: Record<string, number>} | undefined = {
+            paths: ['doc:README.md', 'risk', 'unused'],
+        };
+        let calls = 0;
+        while (input) {
+            const result: Awaited<ReturnType<typeof call<SourceBatch>>> = await call<SourceBatch>('read-source', input);
+            if (!result.ok) throw new Error(result.error.message);
+            const chars = result.pages.reduce((total, page) => total + page.text.length, 0);
+            expect(chars).toBeLessThanOrEqual(SOURCE_BATCH_BUDGET);
+            for (const page of result.pages) read[page.path] = (read[page.path] ?? '') + page.text;
+            input = result.next;
+            calls += 1;
+        }
+        expect(calls).toBeGreaterThan(1);
+        expect(read['doc:README.md']).toBe(session.readme.exportDocument());
+        expect(read.risk).toBe(session.engine.getCode('risk'));
+        expect(read.unused).toBe('1');
+    });
+
+    it('reports a path that cannot be read and returns the others', async () => {
+        const {call} = await openToolsFixture();
+        expect(await call<SourceBatch>('read-source', {paths: ['nope', 'unused']})).toEqual({
+            ok: true,
+            pages: [{path: 'unused', language: 'edgerules', text: '1', offset: 0, totalChars: 1}],
+            errors: [{path: 'nope', code: 'NotFound', message: expect.any(String)}],
+        });
+    });
+
+    it.each([
+        ['both path and paths', {path: 'risk', paths: ['risk']}],
+        ['neither path nor paths', {}],
+        ['an empty paths', {paths: []}],
+        ['a bad path in paths', {paths: ['a:b']}],
+        ['offset with paths', {paths: ['risk'], offset: 1}],
+        ['offsets with path', {path: 'risk', offsets: {risk: 1}}],
+        ['an offset of a path not in paths', {paths: ['risk'], offsets: {unused: 1}}],
+        ['a negative offset', {paths: ['risk'], offsets: {risk: -1}}],
+    ])('rejects %s', async (_label, input) => {
+        const {call} = await openToolsFixture();
+        expect(await call('read-source', input)).toMatchObject({ok: false, error: {code: 'InvalidInput'}});
     });
 });
 

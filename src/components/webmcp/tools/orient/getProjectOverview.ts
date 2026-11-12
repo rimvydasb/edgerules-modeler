@@ -11,8 +11,8 @@ export const getProjectOverview: ProjectTool<GetProjectOverviewInput, ProjectOve
     title: 'Get project overview',
     description:
         'Call it first. Returns the state of the open project: names, save state, DSL validity, entry counts, ' +
-        "the totals of the last test run, the user's focus, the version, and a one-line index of every tool " +
-        'of this page.',
+        "the totals of the last test run, the user's focus, the version, a one-line index of every tool " +
+        'of this page, and how the tools work together.',
     summary: 'Project state, last test totals and this tool index',
     inputSchema: inputSchema({}),
     outputSchema: resultSchema(
@@ -32,6 +32,7 @@ export const getProjectOverview: ProjectTool<GetProjectOverviewInput, ProjectOve
             readOnly: {type: 'boolean'},
             canSave: {type: 'boolean'},
             tools: {type: 'object', additionalProperties: {type: 'string'}},
+            workflow: {type: 'array', items: {type: 'string'}},
         },
         [
             'project',
@@ -45,6 +46,7 @@ export const getProjectOverview: ProjectTool<GetProjectOverviewInput, ProjectOve
             'tests',
             'readOnly',
             'canSave',
+            'workflow',
         ],
     ),
     annotations: {readOnlyHint: true, untrustedContentHint: true, consequentialHint: false},

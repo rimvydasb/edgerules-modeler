@@ -22,6 +22,7 @@ import {createTestOperations, type TestOperation} from './operations/testOperati
 export interface EditModelInput {
     operations: ModelOperation[];
     baseVersion?: number; // `version` from a previous result; omit to apply on the current state
+    dryRun?: boolean; // check and test the change on a fork of the session; the project does not change
 }
 
 export interface ChangeResult {
@@ -31,10 +32,14 @@ export interface ChangeResult {
     regression: RegressionReport;
 }
 
+/** The result of a dry run: no change was recorded, so there is no `changeId`; `version` is the current one. */
+export type DryRunResult<R extends ChangeResult = ChangeResult> = Omit<R, 'changeId'> & {dryRun: true};
+
 export interface EditTestsInput {
     subject: TestSubject;
     operations: TestOperation[];
     baseVersion?: number;
+    dryRun?: boolean;
 }
 
 export interface TestsChangeResult extends ChangeResult {
@@ -56,8 +61,11 @@ export interface DocumentationChangeResult {
  * the inverse operations in the activity log and runs the regression. Expects input whose shape the tool validated.
  */
 export interface ProjectChangeService {
-    editModel(input: EditModelInput, signal: AbortSignal): Promise<ToolResult<ChangeResult>>;
-    editTests(input: EditTestsInput, signal: AbortSignal): Promise<ToolResult<TestsChangeResult>>;
+    editModel(input: EditModelInput, signal: AbortSignal): Promise<ToolResult<ChangeResult | DryRunResult>>;
+    editTests(
+        input: EditTestsInput,
+        signal: AbortSignal,
+    ): Promise<ToolResult<TestsChangeResult | DryRunResult<TestsChangeResult>>>;
     setDocumentation(input: SetDocumentationInput): ToolResult<DocumentationChangeResult>;
     undo(changeId: string, signal: AbortSignal): Promise<ToolResult<UndoResult>>;
     readonly activity: AgentActivityLog;
@@ -89,29 +97,38 @@ export function createProjectChangeService(
     }
 
     /**
-     * Runs `work` in one session transaction and records it as one agent change. `work` applies the operations and
-     * pushes each record; an `OperationFailure` or an engine error rolls every slice back. With `link`, the model
-     * MUST link at the end. Returns the error, or the recorded change.
+     * Runs `work` in one transaction of `target`. `work` applies the operations and pushes each record; an
+     * `OperationFailure` or an engine error rolls every slice back. With `link`, the model MUST link at the end.
      */
-    function commit(
-        tool: AgentChangeTool,
+    function applyIn(
+        target: ProjectSession,
         work: (applied: AppliedOperation[]) => void,
-        options: {link: boolean; summary?: (applied: AppliedOperation[]) => string; reverts?: string},
-    ): {ok: false; error: ToolError} | {ok: true; applied: Applied} {
+        link: boolean,
+    ): {ok: false; error: ToolError} | {ok: true; operations: AppliedOperation[]} {
         const operations: AppliedOperation[] = [];
         let failure: ToolError | undefined;
-        const result = session.transaction(() => {
+        const result = target.transaction(() => {
             try {
                 work(operations);
-                if (options.link) session.engine.link();
+                if (link) target.engine.link();
             } catch (thrown) {
                 failure = thrown instanceof OperationFailure ? thrown.error : toToolError(thrown, {phase: 'link'});
                 throw thrown;
             }
         });
-        if (!result.ok) {
-            return {ok: false, error: failure ?? toToolError(result.error)};
-        }
+        if (!result.ok) return {ok: false, error: failure ?? toToolError(result.error)};
+        return {ok: true, operations};
+    }
+
+    /** Applies `work` in one session transaction and records it as one agent change. */
+    function commit(
+        tool: AgentChangeTool,
+        work: (applied: AppliedOperation[]) => void,
+        options: {link: boolean; summary?: (applied: AppliedOperation[]) => string; reverts?: string},
+    ): {ok: false; error: ToolError} | {ok: true; applied: Applied} {
+        const result = applyIn(session, work, options.link);
+        if (!result.ok) return result;
+        const {operations} = result;
         // The undo compares with the state after the whole change, not after each operation.
         for (const operation of operations) operation.stateAfter = operation.readState();
         const summary = options.summary?.(operations) ?? changeSummary(operations.map((op) => op.summary));
@@ -145,6 +162,50 @@ export function createProjectChangeService(
         };
     }
 
+    /**
+     * The dry run of a change: applies `work` to a fork of the session and runs every test case of the fork against
+     * the current baseline. The session, the activity log and the baseline do not change.
+     */
+    async function preview<T extends object>(
+        work: (target: ProjectSession) => (applied: AppliedOperation[]) => void,
+        link: boolean,
+        signal: AbortSignal,
+        extra: () => T,
+    ): Promise<ToolResult<DryRunResult & T>> {
+        signal.throwIfAborted();
+        const fork = session.fork();
+        try {
+            const result = applyIn(fork, work(fork), link);
+            if (!result.ok) return result;
+            const report = await regression.preview(fork, signal);
+            return ok({
+                dryRun: true as const,
+                version: localVersion(),
+                changed: unique(result.operations.flatMap((operation) => operation.changed)),
+                regression: report,
+                ...extra(),
+            });
+        } finally {
+            fork.dispose();
+        }
+    }
+
+    // Applies the test operations of `input` to `target`: syncs the rows of the subject first.
+    function testWork(input: EditTestsInput, target: ProjectSession) {
+        const {subject} = input;
+        const service = target.tests.forSubject(subject);
+        const tests = createTestOperations(service, subject);
+        const work = (applied: AppliedOperation[]) => {
+            const kind =
+                subject === '*'
+                    ? 'model'
+                    : (listCallables(target.engine).find((c) => c.path === subject)?.kind ?? 'function');
+            service.syncRows(deriveRows(target.engine, {id: subject, kind, name: subject}));
+            applyEach(input.operations, tests.apply)(applied);
+        };
+        return {work, addedCaseIds: () => [...tests.addedCaseIds]};
+    }
+
     function subjectExists(subject: TestSubject): boolean {
         return subject === '*' || listCallables(session.engine).some((callable) => callable.path === subject);
     }
@@ -169,6 +230,11 @@ export function createProjectChangeService(
         async editModel(input, signal) {
             const conflict = versionConflict(input.baseVersion);
             if (conflict) return conflict;
+            if (input.dryRun) {
+                const work = (target: ProjectSession) =>
+                    applyEach(input.operations, createModelOperations(target).apply);
+                return preview(work, true, signal, () => ({}));
+            }
             signal.throwIfAborted();
             const model = createModelOperations(session);
             const committed = commit('edit-model', applyEach(input.operations, model.apply), {link: true});
@@ -186,24 +252,21 @@ export function createProjectChangeService(
                     hint: 'Call list-tests to see the test subjects.',
                 });
             }
+            if (input.dryRun) {
+                let addedCaseIds: () => string[] = () => [];
+                const work = (target: ProjectSession) => {
+                    const planned = testWork(input, target);
+                    addedCaseIds = planned.addedCaseIds;
+                    return planned.work;
+                };
+                return preview(work, false, signal, () => ({addedCaseIds: addedCaseIds()}));
+            }
             signal.throwIfAborted();
-            const service = session.tests.forSubject(subject);
-            const tests = createTestOperations(service, subject);
-            const committed = commit(
-                'edit-tests',
-                (applied) => {
-                    const kind =
-                        subject === '*'
-                            ? 'model'
-                            : (listCallables(session.engine).find((c) => c.path === subject)?.kind ?? 'function');
-                    service.syncRows(deriveRows(session.engine, {id: subject, kind, name: subject}));
-                    applyEach(input.operations, tests.apply)(applied);
-                },
-                {link: false},
-            );
+            const planned = testWork(input, session);
+            const committed = commit('edit-tests', planned.work, {link: false});
             if (!committed.ok) return {ok: false, error: committed.error};
             const result = await finish(committed.applied, signal);
-            return ok({...result, addedCaseIds: [...tests.addedCaseIds]});
+            return ok({...result, addedCaseIds: planned.addedCaseIds()});
         },
 
         setDocumentation(input) {

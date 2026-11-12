@@ -1,19 +1,27 @@
 import {LIMITS} from '../../core/limits';
 import {validateInputMembers, validateModelPath} from '../../core/paths';
 import {fail, type ToolError} from '../../core/toolResult';
-import type {ChangeResult, EditModelInput} from '../../project/changes/projectChangeService';
+import type {ChangeResult, DryRunResult, EditModelInput} from '../../project/changes/projectChangeService';
 import {
     baseVersionSchema,
     changeResultProperties,
+    dryRunSchema,
     changeResultRequired,
     inputSchema,
     modelPathSchema,
     resultSchema,
 } from '../../protocol/schemas';
 import type {ProjectTool} from '../projectTool';
-import {atOperation, validateBaseVersion, validateBatch, validateEntryMembers, validateText} from './changeInput';
+import {
+    atOperation,
+    validateBaseVersion,
+    validateBatch,
+    validateDryRun,
+    validateEntryMembers,
+    validateText,
+} from './changeInput';
 
-export type {ChangeResult, EditModelInput};
+export type {ChangeResult, DryRunResult, EditModelInput};
 export type {ModelOperation} from '../../project/changes/operations/modelOperations';
 
 const NAME_SEGMENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -51,13 +59,13 @@ function validateOperation(entry: Record<string, unknown>, index: number): ToolE
     return undefined;
 }
 
-export const editModel: ProjectTool<EditModelInput, ChangeResult> = {
+export const editModel: ProjectTool<EditModelInput, ChangeResult | DryRunResult> = {
     name: 'edit-model',
     title: 'Edit model',
     description:
         'Changes the model in one atomic step: set the DSL of an entry (creates it when new), rename or ' +
-        'remove. On a parse or link error nothing changes and the errors return. Otherwise every test runs ' +
-        'and the cases that now fail return.',
+        'remove. On a parse or link error nothing changes. Otherwise every test runs and the newly failing ' +
+        'cases return. dryRun only checks.',
     summary: 'Change model DSL: set, rename, remove; runs all tests',
     inputSchema: inputSchema(
         {
@@ -79,6 +87,7 @@ export const editModel: ProjectTool<EditModelInput, ChangeResult> = {
                 },
             },
             baseVersion: baseVersionSchema,
+            dryRun: dryRunSchema,
         },
         ['operations'],
     ),
@@ -88,8 +97,9 @@ export const editModel: ProjectTool<EditModelInput, ChangeResult> = {
 
     async run(input, context, signal) {
         const invalid =
-            validateInputMembers(input, ['operations', 'baseVersion']) ??
+            validateInputMembers(input, ['operations', 'baseVersion', 'dryRun']) ??
             validateBaseVersion(input.baseVersion) ??
+            validateDryRun(input.dryRun) ??
             validateBatch(input.operations, 'operations');
         if (invalid) return {ok: false, error: invalid};
         for (const [index, entry] of input.operations.entries()) {

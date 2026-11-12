@@ -53,6 +53,22 @@ describe('get-project-overview', () => {
         expect(readOnly.tools).toHaveProperty('run-tests');
     });
 
+    it('explains how the registered tools work together and what version means', async () => {
+        const {call, handle} = await openToolsFixture();
+        const result = await call<ProjectOverview>('get-project-overview');
+        if (!result.ok) throw new Error('overview failed');
+        const text = result.workflow.join('\n');
+        for (const tool of ['run-tests', 'search-model', 'read-source', 'edit-model', 'dryRun', 'evaluate-model']) {
+            expect(text).toContain(tool);
+        }
+        expect(text).toContain('baseVersion');
+
+        handle.setReadOnly(true);
+        const readOnly = await call<ProjectOverview>('get-project-overview');
+        if (!readOnly.ok) throw new Error('overview failed');
+        expect(readOnly.workflow.join('\n')).not.toContain('edit-model');
+    });
+
     it('adds the host tools to the index when the host allows them', async () => {
         const navigation = {getFocus: () => ({path: '*', view: 'flow' as const}), open: () => {}};
         const {call} = await openToolsFixture(undefined, {navigation, allowSave: true});

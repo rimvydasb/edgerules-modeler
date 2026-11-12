@@ -18,7 +18,7 @@ export interface InspectionHostState {
 export interface ProjectOverview {
     project: {name: string; description?: string; origin?: string}; // `origin` as `<id>@<version>`
     model: {name?: string; version?: string};
-    version: number; // `ProjectSessionSnapshot.localVersion`
+    version: number; // `ProjectSessionSnapshot.localVersion`: a token to pass back as `baseVersion`
     phase: ProjectSessionPhase;
     unsavedSlices: ProjectSlice[]; // empty when everything is saved
     savedAt?: string; // ISO time of the last save
@@ -31,6 +31,32 @@ export interface ProjectOverview {
     readOnly: boolean;
     canSave: boolean;
     tools?: Record<string, string>; // the tool index: what each tool of this page does, in one line
+    workflow: string[]; // how the registered tools work together, one short line each
+}
+
+// Each line names the tools it needs; a line shows only when all of them are registered.
+const WORKFLOW: readonly {tools: readonly string[]; line: string}[] = [
+    {tools: ['run-tests'], line: 'Verify: run-tests runs every test now; the tests totals above are the last run.'},
+    {
+        tools: ['search-model', 'read-source'],
+        line: 'Find: search-model for each place that uses a name, then read-source with paths for several entries.',
+    },
+    {
+        tools: ['edit-model', 'edit-tests'],
+        line: 'Change: edit-model or edit-tests run every test; add dryRun: true to see the result with no change.',
+    },
+    {tools: ['evaluate-model'], line: 'Probe: evaluate-model runs a workbook, decision or function with an input.'},
+    {
+        tools: [],
+        line: 'version counts every change of any slice, so it can jump by many. Use it only as baseVersion.',
+    },
+];
+
+/** The workflow lines of the registered tools; every line when the host gives no tool index. */
+export function workflowOf(tools: Record<string, string> | undefined): string[] {
+    return WORKFLOW.filter((step) => tools === undefined || step.tools.every((name) => name in tools)).map(
+        (step) => step.line,
+    );
 }
 
 export function projectOverview(
@@ -67,5 +93,6 @@ export function projectOverview(
         readOnly: host.readOnly,
         canSave: host.canSave,
         ...(host.tools && {tools: host.tools}),
+        workflow: workflowOf(host.tools),
     };
 }

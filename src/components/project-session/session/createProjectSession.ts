@@ -60,6 +60,13 @@ function toProjectError(error: unknown): ProjectError {
     return new ProjectError('command-failed', messageOf(error), {cause: error});
 }
 
+// The repository of a fork: a fork is never loaded or saved.
+const DETACHED_REPOSITORY: ProjectRepository = {
+    load: () => Promise.reject(new ProjectError('invalid-state', 'A forked session has no repository')),
+    create: () => Promise.reject(new ProjectError('invalid-state', 'A forked session has no repository')),
+    save: () => Promise.reject(new ProjectError('invalid-state', 'A forked session cannot be saved')),
+};
+
 // Engine writes report failure as a returned `PortableError`; inside a transaction it must throw to roll back.
 function check(result: unknown): void {
     if (typeof result === 'object' && result !== null && (result as {'@kind'?: unknown})['@kind'] === 'error') {
@@ -196,6 +203,17 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
         }
     }
 
+    function committedBundle(): ProjectBundle {
+        return structuredClone({
+            manifest: {...manifest, model: {format, source, ...metadata}},
+            model: engineHandle.facade.exportDsl(),
+            documentation: documentation.exportDocument(),
+            tests: tests.exportDocument(),
+            flow: flow.exportDocument(),
+            readme: readme.exportDocument(),
+        });
+    }
+
     function commitDsl(source: string): CommandResult {
         return batch.run(() => {
             try {
@@ -312,14 +330,20 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
             if (dslValidity.status === 'invalid') {
                 throw new ProjectError('invalid-state', `The model DSL is invalid: ${dslValidity.message}`);
             }
-            return structuredClone({
-                manifest: {...manifest, model: {format, source, ...metadata}},
-                model: engineHandle.facade.exportDsl(),
-                documentation: documentation.exportDocument(),
-                tests: tests.exportDocument(),
-                flow: flow.exportDocument(),
-                readme: readme.exportDocument(),
+            return committedBundle();
+        },
+
+        // The committed model is always valid, so an invalid DSL draft does not block a fork.
+        fork(): ProjectSession {
+            assertOpen();
+            if (inTransaction) throw new ProjectError('invalid-state', 'Cannot fork while a transaction is open');
+            const forked = createProjectSession({
+                loaded: {locator, revision, bundle: committedBundle(), ...(savedAt !== undefined && {savedAt})},
+                repository: DETACHED_REPOSITORY,
+                engine: engineClass,
             });
+            for (const {handler, info} of engineHandle.solvers()) forked.engine.registerSolver(handler, info);
+            return forked;
         },
 
         async save() {

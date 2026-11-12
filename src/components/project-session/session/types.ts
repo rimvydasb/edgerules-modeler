@@ -91,6 +91,9 @@ export interface ProjectSession {
 
     // The whole project as one bundle. Throws while the DSL is invalid or a transaction is open.
     exportBundle(): ProjectBundle;
+    // A detached in-memory copy of the committed state, with its own engine. Its changes never reach this session,
+    // and its `save` fails with 'invalid-state'. The caller disposes it. Throws while a transaction is open.
+    fork(): ProjectSession;
     // Saves the bundle against the revision it was loaded from. On `conflict` the phase becomes 'conflict'.
     save(): Promise<SaveResult>;
     // Frees the engine and drops every subscriber. Called by `ProjectSessionManager.close`.

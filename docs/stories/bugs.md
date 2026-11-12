@@ -29,3 +29,6 @@
   loading icon) and then I should see how many passed. Ensure it is well-designed.
 - [ ] In project overview page, `Tests` I should be able to see a button "All Tests" that will bring me to
   `Tests Overview`
+- [ ] Fix single test GUI: ![img_1.png](img_1.png)
+  - [ ] There are two vertical scrollbars instead of one
+  - [ ] There should be no white space on the right - I should see React Flow like background.

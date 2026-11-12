@@ -24,6 +24,7 @@ export const undoAgentChange: ProjectTool<UndoAgentChangeInput, UndoResult> = {
     ),
     outputSchema: resultSchema({...changeResultProperties, reverted: {type: 'string'}}, [
         ...changeResultRequired,
+        'changeId',
         'reverted',
     ]),
     annotations: {readOnlyHint: false, untrustedContentHint: false, consequentialHint: false},

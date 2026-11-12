@@ -61,8 +61,13 @@ interface ProjectOverview {
   focus?: {path: SourcePath; view: ShellView}; // only with `navigation`
   readOnly: boolean;
   canSave: boolean; // `save-project` is registered
+  tools?: Record<string, string>; // the summary of each registered tool
+  workflow: string[]; // how the registered tools work together, one short line each
 }
 ```
+
+- `workflow` has a line only when all the tools that it names are registered. The last line says that `version` counts
+  every change of any slice, so it can jump by many, and that it is only a token for `baseVersion`.
 
 ### 7. `get-language-guide`
 
@@ -156,9 +161,19 @@ Use it to troubleshoot, or before you change an entry you have not seen.
 ```
 
 ```typescript
+// One path with `path` and `offset`, or several with `paths` and `offsets`.
 interface ReadSourceInput {
-  path: SourcePath;
+  path?: SourcePath;
   offset?: number; // character offset; default 0
+  paths?: SourcePath[]; // 1 to 50 paths, read in order within one shared budget of 12,000 characters
+  offsets?: Record<SourcePath, number>; // the start of each path; default 0
+}
+
+// The result with `paths`.
+interface SourceBatch {
+  pages: SourcePage[]; // in input order; a page cut by the budget has `nextOffset`
+  errors?: {path: SourcePath; code: ToolErrorCode; message: string}[]; // the paths that could not be read
+  next?: {paths: SourcePath[]; offsets: Record<SourcePath, number>}; // the input that reads the rest
 }
 
 interface SourcePage {
@@ -174,6 +189,8 @@ interface SourcePage {
 
 - A page ends at a line break when one exists in the last 20% of the page.
 - The text is the committed model, also while `draftPending` is true.
+- With `paths`, text and documentation of all pages share 12,000 characters. A path is deferred to `next` when less than
+  500 characters are left. A path that fails is in `errors`; the other paths still return.
 
 ### 10. `search-model`
 

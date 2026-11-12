@@ -14,6 +14,8 @@ export interface RegressionTotals {
 export interface RegressionMonitor {
     runAll(signal: AbortSignal): Promise<RegressionReport>; // every subject with cases; replaces the baseline
     runSubject(subject: TestSubject, signal: AbortSignal): Promise<RegressionReport>; // replaces its baseline entries
+    // Runs every subject of `fork`, a fork of the session, against this baseline; the baseline stays as it is.
+    preview(fork: ProjectSession, signal: AbortSignal): Promise<RegressionReport>;
     lastTotals(): RegressionTotals; // over the whole baseline, for `get-project-overview`
     subjectsWithCases(): TestSubject[]; // '*' first, then in document order
 }
@@ -22,31 +24,32 @@ export function createRegressionMonitor(session: ProjectSession): RegressionMoni
     let baseline: Baseline = new Map();
     let ranAt: number | undefined;
 
-    function subjectsWithCases(): TestSubject[] {
-        const subjects = Object.entries(session.tests.exportDocument().subjects)
+    function subjectsWithCases(target: ProjectSession = session): TestSubject[] {
+        const subjects = Object.entries(target.tests.exportDocument().subjects)
             .filter(([, suite]) => suite.cases.length > 0)
             .map(([subject]) => subject);
         return [...subjects.filter((s) => s === '*'), ...subjects.filter((s) => s !== '*')];
     }
 
     // The kind decides only the message of a missing solver; a subject that is no longer a callable fails to run.
-    function runnerSubject(subject: TestSubject): RunnerSubject {
+    function runnerSubject(target: ProjectSession, subject: TestSubject): RunnerSubject {
         if (subject === '*') return {id: '*', kind: 'model', name: '*'};
-        const callable = listCallables(session.engine).find((candidate) => candidate.path === subject);
+        const callable = listCallables(target.engine).find((candidate) => candidate.path === subject);
         return {id: subject, kind: callable?.kind ?? 'function', name: subject};
     }
 
     // Runs the cases of `subjects` one by one, through `session.tests.forSubject`, so a mounted Tests view shows the
-    // same results. Checks `signal` between cases.
+    // same results. Checks `signal` between cases. `target` is the session, or a fork of it for a preview.
     async function run(
         subjects: readonly TestSubject[],
         signal: AbortSignal,
+        target: ProjectSession = session,
     ): Promise<{runs: CaseRun[]; aborted: boolean}> {
         const runs: CaseRun[] = [];
-        const modelRevision = String(session.getSlice('model').version);
+        const modelRevision = String(target.getSlice('model').version);
         for (const subject of subjects) {
-            const testCases = session.tests.forSubject(subject);
-            const runner = createTestRunner(session.engine, testCases, runnerSubject(subject), {modelRevision});
+            const testCases = target.tests.forSubject(subject);
+            const runner = createTestRunner(target.engine, testCases, runnerSubject(target, subject), {modelRevision});
             for (const testCase of testCases.listTestCases()) {
                 if (signal.aborted) return {runs, aborted: true};
                 await runner.run(testCase.id);
@@ -94,6 +97,11 @@ export function createRegressionMonitor(session: ProjectSession): RegressionMoni
             return report;
         },
 
+        async preview(fork, signal) {
+            const {runs, aborted} = await run(subjectsWithCases(fork), signal, fork);
+            return classifyRun(runs, baseline, aborted ? 'aborted' : 'complete');
+        },
+
         lastTotals() {
             let passed = 0;
             let failed = 0;
@@ -106,6 +114,6 @@ export function createRegressionMonitor(session: ProjectSession): RegressionMoni
             return ranAt === undefined ? {passed, failed} : {passed, failed, ranAt};
         },
 
-        subjectsWithCases,
+        subjectsWithCases: () => subjectsWithCases(),
     };
 }

@@ -135,18 +135,25 @@ export function resultSchema(properties: Schema, required: string[] = []): Schem
 
 export const baseVersionSchema: Schema = {
     type: 'integer',
-    description: '`version` from a previous result. The change fails with VersionConflict when the project changed.',
+    description:
+        '`version` from a previous result, an opaque token. Fails with VersionConflict when the project changed.',
 };
 
-/** The members of a change result: `version`, `changeId`, `changed` and `regression`. */
+export const dryRunSchema: Schema = {
+    type: 'boolean',
+    description: 'true: check and run every test on a copy; nothing changes and no changeId returns.',
+};
+
+/** The members of a change result: `version`, `changeId` (not for a dry run), `changed` and `regression`. */
 export const changeResultProperties: Schema = {
     version: {type: 'integer'},
     changeId: {type: 'string'},
+    dryRun: {const: true},
     changed: {type: 'array', items: {type: 'string'}},
     regression: regressionReportSchema,
 };
 
-export const changeResultRequired = ['version', 'changeId', 'changed', 'regression'];
+export const changeResultRequired = ['version', 'changed', 'regression'];
 
 /** A map of test cell text by subject-relative path: strings without quotes, lists and objects as JSON. */
 export const testValuesSchema: Schema = {

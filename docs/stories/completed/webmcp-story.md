@@ -484,6 +484,7 @@ The `text` block of each tool in its phase file is its exact `description` strin
 - The language guide is a copy. A change of `../edgerules/docs/reference/` needs a new sync run.
 - Chrome recommends 1,500 characters per output. `read-source` pages have 4,000 characters, because a DSL declaration is
   often longer than 1,500.
+- `read-source` with `paths` returns up to 12,000 characters, so that one call replaces a read of each entry.
 - A tool works only while the project is open in the page.
 
 ## Future Improvements
