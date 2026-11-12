@@ -23,8 +23,18 @@ const OVERSCAN = 2;
 const FALLBACK_COLUMNS = 3; // before the first measurement, and where nothing is laid out
 const FALLBACK_HEIGHT = 900;
 
+/** The nearest ancestor that scrolls, or null when the page (window) does. */
+function scrollParent(element: HTMLElement): HTMLElement | null {
+    for (let node = element.parentElement; node; node = node.parentElement) {
+        const {overflowY} = getComputedStyle(node);
+        if (overflowY === 'auto' || overflowY === 'scroll') return node;
+    }
+    return null;
+}
+
 /**
- * A grid that renders the visible rows only, so 5 000 panels do not slow the page. Arrow keys move the focus between
+ * A grid that renders the visible rows only, so 5 000 panels do not slow the page. It has no scroll area of its own: it grows to its full height
+ * and the page scrolls. Arrow keys move the focus between
  * items: left and right by one, up and down by one row.
  */
 export function VirtualGrid<T>({
@@ -42,15 +52,28 @@ export function VirtualGrid<T>({
     const [active, setActive] = useState(0);
     const pendingFocus = useRef<number | undefined>(undefined);
 
+    // The grid scrolls with the page: the offset is how far its top edge is above the scroll viewport's top edge.
     useLayoutEffect(() => {
         const element = container.current;
         if (!element) return;
-        const measure = () => setSize({width: element.clientWidth, height: element.clientHeight});
+        const parent = scrollParent(element);
+        const measure = () => {
+            const viewportTop = parent ? parent.getBoundingClientRect().top : 0;
+            const viewportHeight = parent ? parent.clientHeight : window.innerHeight;
+            setSize({width: element.clientWidth, height: viewportHeight});
+            setScrollTop(Math.max(0, viewportTop - element.getBoundingClientRect().top));
+        };
         measure();
-        if (typeof ResizeObserver === 'undefined') return;
-        const observer = new ResizeObserver(measure);
-        observer.observe(element);
-        return () => observer.disconnect();
+        const target: HTMLElement | Window = parent ?? window;
+        target.addEventListener('scroll', measure, {passive: true});
+        window.addEventListener('resize', measure);
+        const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
+        observer?.observe(element);
+        return () => {
+            target.removeEventListener('scroll', measure);
+            window.removeEventListener('resize', measure);
+            observer?.disconnect();
+        };
     }, []);
 
     const columns =
@@ -78,17 +101,22 @@ export function VirtualGrid<T>({
             if (step === undefined || !from || items.length === 0) return;
             event.preventDefault();
             const target = Math.min(items.length - 1, Math.max(0, Number(from.dataset.index) + step));
+            // Scroll the page so the target row is mounted; the focus then moves to it.
             const element = container.current;
             if (element) {
-                const top = Math.floor(target / columns) * rowHeight;
-                if (top < element.scrollTop) element.scrollTop = top;
-                else if (top + rowHeight > element.scrollTop + viewport) element.scrollTop = top + rowHeight - viewport;
-                setScrollTop(element.scrollTop);
+                const parent = scrollParent(element);
+                const viewportTop = parent ? parent.getBoundingClientRect().top : 0;
+                const viewportHeight = parent ? parent.clientHeight : window.innerHeight;
+                const rowTop =
+                    element.getBoundingClientRect().top - viewportTop + Math.floor(target / columns) * rowHeight;
+                const delta =
+                    rowTop < 0 ? rowTop : rowTop + rowHeight > viewportHeight ? rowTop + rowHeight - viewportHeight : 0;
+                if (delta !== 0) (parent ?? window).scrollBy({top: delta});
             }
             pendingFocus.current = target;
             setActive(target);
         },
-        [columns, items.length, rowHeight, viewport],
+        [columns, items.length, rowHeight],
     );
 
     const rows: ReactElement[] = [];
@@ -122,14 +150,7 @@ export function VirtualGrid<T>({
     }
 
     return (
-        <div
-            ref={container}
-            role="list"
-            aria-label={label}
-            style={{position: 'relative', overflowY: 'auto', maxHeight: '70vh', minHeight: 0}}
-            onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-            onKeyDown={move}
-        >
+        <div ref={container} role="list" aria-label={label} style={{position: 'relative'}} onKeyDown={move}>
             <div style={{position: 'relative', height: rowCount * rowHeight, minHeight: 1}}>{rows}</div>
         </div>
     );
