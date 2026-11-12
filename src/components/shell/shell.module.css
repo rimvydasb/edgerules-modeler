@@ -495,7 +495,7 @@
 /* ---------------------------------------------------------------- project overview */
 /*
  * The overview page of the project (the Flow view of the model root): a warm page with the project header, the README,
- * the entry points and the workbooks in the main column and the project facts beside it. Tokens: `sheetClasses.tokens`.
+ * the service methods and the workbooks in the main column and the project facts beside it. Tokens: `sheetClasses.tokens`.
  * Like the editors, it has a frame line: its top line lies on the bottom line of the header, its left line on the
  * right line of the Project Explorer.
  */
@@ -577,11 +577,6 @@ span.overviewOrigin {
   background-color: var(--er-accent-soft);
   color: var(--er-accent);
   font-weight: 500;
-}
-
-.overviewActions {
-  display: flex;
-  gap: 8px;
 }
 
 .overviewButton {
@@ -741,108 +736,10 @@ span.overviewOrigin {
   font: 500 11.5px/1.5 var(--er-mono);
 }
 
-/* The entry points: one ruled list of service methods. */
-.services {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--er-border);
-  border-radius: var(--er-r);
-  background-color: var(--er-surface);
-}
-
-.serviceRow {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border: 0;
-  border-bottom: 1px solid var(--er-border);
-  background: none;
-  color: var(--er-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.serviceRow:hover {
-  background-color: var(--er-bg);
-}
-
-.serviceRow:focus-visible,
-.serviceAdd:focus-visible,
 .workbookPanel:focus-visible,
 .workbookAdd:focus-visible {
   outline: 2px solid var(--er-accent);
   outline-offset: -2px;
-}
-
-.serviceIcon {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  flex: none;
-  place-items: center;
-  border-radius: 6px;
-}
-
-.serviceText {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.serviceSignature {
-  overflow: hidden;
-  font: 13.5px var(--er-mono);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.serviceDescription,
-.serviceNoDescription {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: var(--er-text-2);
-  font-size: 13px;
-}
-
-.serviceNoDescription {
-  color: var(--er-text-3);
-  font-style: italic;
-}
-
-.serviceMeta {
-  flex: none;
-  color: var(--er-text-3);
-  font-size: 12.5px;
-}
-
-.serviceChevron {
-  flex: none;
-  color: var(--er-text-3);
-}
-
-.serviceAdd {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 0;
-  background: none;
-  color: var(--er-text-3);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.serviceAdd:hover {
-  color: var(--er-text);
 }
 
 /* The workbook cards: a responsive grid; the add card is a grid item too. */

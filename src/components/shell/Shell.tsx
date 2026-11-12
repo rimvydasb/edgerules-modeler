@@ -359,7 +359,6 @@ export function Shell({
         counts,
         testSuites: testSubjects.length,
         onOpenTests: testSubjects.length > 0 ? () => navigate({path: '*', view: 'tests'}) : undefined,
-        onOpenModel: () => navigate({path: '*', view: 'boxed'}),
     };
 
     const projectMenu = navigation && (

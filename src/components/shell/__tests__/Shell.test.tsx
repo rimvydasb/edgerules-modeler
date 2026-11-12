@@ -236,7 +236,7 @@ describe('Shell project explorer', () => {
             within(services)
                 .getAllByRole('button')
                 .map((panel) => panel.getAttribute('aria-label')),
-        ).toEqual(['quote(...)', 'New service']);
+        ).toEqual(['quote(...)', 'New service method']);
         expect(within(services).getByText('1 argument')).toBeInTheDocument();
         await user.click(within(services).getByRole('button', {name: 'quote(...)'}));
         expect(breadcrumbItems()).toEqual(['Model', 'quote(...)']);
@@ -272,7 +272,7 @@ describe('Shell project explorer', () => {
         await renderShell({defaultPath: '*', defaultView: 'flow'}, session);
 
         const services = screen.getByRole('region', {name: 'Service Methods'});
-        await user.click(within(services).getByRole('button', {name: 'New service'}));
+        await user.click(within(services).getByRole('button', {name: 'New service method'}));
         const name = await screen.findByRole('textbox', {name: 'Name'});
         await user.clear(name);
         await user.type(name, 'pricing');
@@ -287,7 +287,7 @@ describe('Shell project explorer', () => {
         await renderShell({defaultPath: '*', defaultView: 'flow', readOnly: true}, session);
         expect(screen.getByTestId('shell-workbook-picker')).toBeInTheDocument();
         expect(screen.queryByRole('button', {name: 'New workbook'})).toBeNull();
-        expect(screen.queryByRole('button', {name: 'New service'})).toBeNull();
+        expect(screen.queryByRole('button', {name: 'New service method'})).toBeNull();
     });
 
     it('lists no workbook for a model that declares none', async () => {

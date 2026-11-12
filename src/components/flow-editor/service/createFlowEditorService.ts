@@ -1,5 +1,6 @@
 import type {Kind, PortableContext, PortableError, PortableNode, PortableSetValue} from '@edgerules/portable';
 import {listCallables, type CallableSource} from '#lib/callables';
+import {readPaths} from '#lib/expressionReads';
 import {setWithLinkCheck, type LinkCheckService} from '#lib/linkCheck';
 import {argumentMismatchOf, isPortableError} from '#lib/portable';
 import {
@@ -240,8 +241,8 @@ export function createFlowEditorService(
         ensureLinked();
         const schemas: CalleeSchema[] = [];
         for (const callable of listCallables(engine)) {
-            if (callable.kind !== 'function' && callable.kind !== 'ruleset') continue;
-            const schema = readSchema({path: callable.path, kind: callable.kind});
+            // A loop and an optimisation are called like a function: named arguments, a typed result.
+            const schema = readSchema({path: callable.path, kind: callable.kind === 'ruleset' ? 'ruleset' : 'function'});
             if (schema) schemas.push(schema);
         }
         return schemas;
@@ -265,20 +266,62 @@ export function createFlowEditorService(
     // True when `field` is a direct field of the flow context.
     const isFlowField = (field: string): boolean => (parentPath(field) ?? '*') === root;
 
-    // A record of the flow is an object input node, annotated or not, unless it is a namespace of declarations.
-    const isInputRecord = (field: string, node: Record<string, unknown>): boolean =>
-        isFlowField(field) && !isNamespace(node);
-
-    // A list literal of the flow is a list input node, annotated or not.
+    // A list literal of the flow is a list input node, annotated or not, unless it reads other nodes.
     const isListLiteral = (node: Record<string, unknown>): boolean =>
         node['@kind'] === 'expression' && String(node.expression).trim().startsWith('[');
+
+    // The nodes a value of the flow context can read: the other value fields of the context (not its functions, types
+    // or namespaces) and the parameters of its function or service.
+    const flowNames = (field: string): string[] => {
+        const own = field.split('.').at(-1);
+        const owner: unknown =
+            root === '*' ? undefined : portableAtPath(engine.toPortable() as unknown as PortableNode, root);
+        const parameters = callableParameters(owner);
+        const values = Object.entries(contextAt(root) ?? {})
+            .filter(
+                ([, child]) =>
+                    declarationKind(child) === undefined &&
+                    !isFunctionDefinition(child) &&
+                    !isNamespaceChild(child) &&
+                    !(isRecord(child) && CALLABLE_KINDS.has(String(child['@kind']))),
+            )
+            .map(([name]) => name);
+        return [...values, ...(isRecord(parameters) ? Object.keys(parameters) : [])].filter((name) => name !== own);
+    };
+
+    // The paths of the flow that a record or a list literal reads, such as `mix.status`: a value computed from other
+    // nodes. The keys of a record are names, not reads; only its values are read.
+    const flowReads = (field: string, node: unknown): string[] => {
+        // A field of the record itself shadows a node of the same name.
+        const own = new Set(isRecord(node) && node['@kind'] === 'context' ? Object.keys(fieldsOf(node) ?? {}) : []);
+        const names = new Set(flowNames(field).filter((name) => !own.has(name)));
+        const reads = new Set<string>();
+        for (const text of valueTexts(node)) {
+            for (const path of readPaths(text)) if (names.has(path.split('.')[0]!)) reads.add(path);
+        }
+        return [...reads];
+    };
+
+    // A record or a list literal that reads other nodes of the flow, without an `@InputNode` annotation: a computed
+    // value, drawn as an expression node.
+    const isComputedValue = (field: string, node: Record<string, unknown>): boolean =>
+        isFlowField(field) &&
+        node['@node'] !== 'InputNode' &&
+        (node['@kind'] === 'context' || isListLiteral(node)) &&
+        flowReads(field, node).length > 0;
+
+    // A record of the flow is an object input node, annotated or not, unless it is a namespace of declarations or it
+    // computes its fields from other nodes.
+    const isInputRecord = (field: string, node: Record<string, unknown>): boolean =>
+        isFlowField(field) && !isNamespace(node) && !isComputedValue(field, node);
 
     // The input node kind of a direct field of the flow: a record, a list literal, or an `@InputNode` expression.
     const inputNodeKind = (field: string, node: Record<string, unknown>): InputKind | undefined => {
         if (!isFlowField(field)) return undefined;
         if (node['@kind'] === 'context') return isInputRecord(field, node) ? 'object-input' : undefined;
         if (node['@node'] === 'InputNode') return inputKindOf(field, node);
-        return isListLiteral(node) && inputKindOf(field, node) === 'list-input' ? 'list-input' : undefined;
+        if (!isListLiteral(node) || isComputedValue(field, node)) return undefined;
+        return inputKindOf(field, node) === 'list-input' ? 'list-input' : undefined;
     };
 
     // The record, the list or the value at `field` when it is an input node.
@@ -451,6 +494,7 @@ export function createFlowEditorService(
         const scope = parentPath(field) ?? '*';
         if (scope !== root) return undefined;
         const node = contextAt(root)?.[field.slice(root === '*' ? 0 : root.length + 1)];
+        if (isRecord(node) && node['@kind'] === 'context') return isComputedValue(field, node) ? node : undefined;
         if (!isExpression(node) && !isInvocation(node)) return undefined;
         return nodeKindOf(field, field.split('.').at(-1)!, node) ? undefined : node;
     };
@@ -587,7 +631,8 @@ export function createFlowEditorService(
                 const field = childPath(root, key);
                 const kind = nodeKindOf(field, key, child);
                 if (kind) nodes.push({field, kind});
-                else if (isExpression(child) || isInvocation(child)) nodes.push({field, kind: 'expression'});
+                else if (isExpression(child) || isInvocation(child) || expressionAt(field) !== undefined)
+                    nodes.push({field, kind: 'expression'});
             }
             const listed = new Set(nodes.map((node) => node.field));
             for (const field of drafts.keys()) {
@@ -896,12 +941,19 @@ export function createFlowEditorService(
             } catch {
                 schema = undefined;
             }
-            const variables = isRecord(schema) && Array.isArray(schema.variables) ? schema.variables : [];
+            // A computed record has no expression of its own: it reads what its fields read.
+            const computedRecord = isRecord(authored) && authored['@kind'] === 'context';
+            const variables = computedRecord
+                ? flowReads(field, authored)
+                : isRecord(schema) && Array.isArray(schema.variables)
+                  ? schema.variables
+                  : [];
             return {
                 field,
                 // A built-in call is an invocation: its linked view names the type in `type` too.
-                type:
-                    (isRecord(schema) &&
+                type: computedRecord
+                    ? 'object'
+                    : (isRecord(schema) &&
                         (schema['@kind'] === 'expression'
                             ? typeText(schema)
                             : typeof schema.type === 'string'
@@ -909,9 +961,9 @@ export function createFlowEditorService(
                               : undefined)) ||
                     'any',
                 expression:
-                    isRecord(schema) && typeof schema.expression === 'string'
+                    !computedRecord && isRecord(schema) && typeof schema.expression === 'string'
                         ? schema.expression
-                        : (valueText(authored) ?? ''),
+                        : formatPortableValue(authored),
                 variables: variables.filter((variable): variable is string => typeof variable === 'string'),
             };
         },
@@ -1339,6 +1391,12 @@ function valueType(value: unknown): string {
     if (Array.isArray(value)) return `${value.length ? valueType(value[0]) : 'any'}[]`;
     if (value === null) return 'any';
     return typeof value === 'object' ? 'object' : typeof value;
+}
+
+// The expression texts of a value: of each field of a record, at any depth, or of the value itself.
+function valueTexts(node: unknown): string[] {
+    if (isRecord(node) && node['@kind'] === 'context') return entriesOf(node).flatMap(([, child]) => valueTexts(child));
+    return [formatPortableValue(node)];
 }
 
 // True when an expression anywhere in `node` reads `path`.

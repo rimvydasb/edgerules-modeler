@@ -256,6 +256,36 @@ describe('ProjectExplorer create', () => {
         expect(await screen.findByText(label)).toBeInTheDocument();
     });
 
+    it('creates a fact for a record type picked in the dialog, named after the type', async () => {
+        const service = buildService('{ type Person: { age: <number> }\n type Loan: { amount: <number> }\n type Names: <string[]> }');
+        const onOpen = vi.fn();
+        const user = userEvent.setup();
+        render(<ProjectExplorer service={service} onOpen={onOpen} />);
+
+        await user.click(screen.getByRole('button', {name: 'Add to Facts Library'}));
+        // Record types only, by name: the alias `Names` has no fields to derive from. The first one is picked.
+        const typeSelect = (await screen.findAllByDisplayValue<HTMLInputElement>('Loan')).find((input) => input.type !== 'hidden')!;
+        expect(screen.getByRole('textbox', {name: 'Name'})).toHaveValue('LoanFacts');
+        await user.click(typeSelect);
+        expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual(['Loan', 'Person']);
+        await user.click(screen.getByRole('option', {name: 'Person'}));
+        expect(screen.getByRole('textbox', {name: 'Name'})).toHaveValue('PersonFacts');
+        await user.click(screen.getByRole('button', {name: 'Create'}));
+
+        expect(service.get('PersonFacts')).toMatchObject({'@kind': 'facts', context: {person: 'Person'}});
+        expect(() => service.link()).not.toThrow();
+        expect(onOpen).toHaveBeenCalledWith({kind: 'facts', path: 'PersonFacts'});
+    });
+
+    it('cannot create a fact without a record type', async () => {
+        const user = userEvent.setup();
+        render(<ProjectExplorer service={buildService('{ a: 1 }')} />);
+
+        await user.click(screen.getByRole('button', {name: 'Add to Facts Library'}));
+        expect(await screen.findByTestId('create-no-types')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Create'})).toBeDisabled();
+    });
+
     it('offers no input, output or chart node as a method', async () => {
         const user = userEvent.setup();
         render(<ProjectExplorer service={buildService()} />);

@@ -31,6 +31,8 @@ function pathKind(node: unknown): RootPathKind {
             return 'decision';
         case 'method':
         case 'external-method':
+        case 'loop':
+        case 'optimise':
             return 'function';
         case 'ruleset':
             return 'ruleset';

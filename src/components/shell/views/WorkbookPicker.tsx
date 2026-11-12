@@ -2,8 +2,6 @@ import {
     IconArrowRight,
     IconArrowUp,
     IconBook2,
-    IconChevronRight,
-    IconLayoutGrid,
     IconLibrary,
     IconMathFunction,
     IconPlayerPlay,
@@ -53,8 +51,7 @@ export interface ProjectOverview {
     onShowOrigin?: (origin: ProjectOrigin) => void;
     counts: readonly OverviewCount[]; // the entities of the model by kind
     testSuites: number; // the test subjects that have tests
-    onOpenTests?: () => void; // "Run tests" and "Run all": the Tests view of the model
-    onOpenModel?: () => void; // "Whole model": the Boxed view of the model
+    onOpenTests?: () => void; // "Run all" of the Tests card: the Tests view of the model
 }
 
 export interface WorkbookPickerProps {
@@ -102,7 +99,7 @@ interface PanelProps {
     testId: string;
 }
 
-/** A workbook as a card: kind square, name, field name, description, and the node counts in the footer. */
+/** A workbook or a service method as a card: kind square, name, field name, description, and its counts in the footer. */
 function Panel({
     title,
     field,
@@ -142,32 +139,6 @@ function Panel({
                     <IconArrowRight aria-hidden="true" size={14} />
                 </span>
             </span>
-        </button>
-    );
-}
-
-/** A service method as a row of the entry points list: kind square, signature, description, chevron. */
-function ServiceRow({service, onClick}: {service: ServiceSummary; onClick: () => void}): ReactElement {
-    return (
-        <button
-            type="button"
-            className={classes.serviceRow}
-            onClick={onClick}
-            aria-label={service.label}
-            aria-description={service.description}
-            data-testid={`shell-service-${service.path}`}
-        >
-            <span className={classes.serviceIcon} style={{backgroundColor: KIND_COLORS.service}}>
-                <IconMathFunction aria-hidden="true" size={14} color="#fff" />
-            </span>
-            <span className={classes.serviceText}>
-                <span className={classes.serviceSignature}>{service.label}</span>
-                <span className={service.description ? classes.serviceDescription : classes.serviceNoDescription}>
-                    {service.description || 'No description'}
-                </span>
-            </span>
-            <span className={classes.serviceMeta}>{count(service.arguments, 'argument')}</span>
-            <IconChevronRight aria-hidden="true" size={16} className={classes.serviceChevron} />
         </button>
     );
 }
@@ -228,8 +199,7 @@ function ReadmePanel({
 
 /**
  * The overview page of the project, the Flow view of the model root: the project header, the README panel when the
- * model has a README, the service methods as the entry points, one card per workbook and a card that creates a new
- * workbook; the side column holds the model counts, the tests and the origin. A click on a card opens its flow.
+ * model has a README, one card per service method and per workbook, each group with a card that creates a new one; the side column holds the model counts, the tests and the origin. A click on a card opens its flow.
  */
 export function WorkbookPicker({
     overview,
@@ -276,20 +246,6 @@ export function WorkbookPicker({
                                 {overview.savedAt && <span>{savedAgo(overview.savedAt)}</span>}
                             </div>
                         </div>
-                        <div className={classes.overviewActions}>
-                            {overview.onOpenTests && (
-                                <button type="button" className={classes.overviewButton} onClick={overview.onOpenTests}>
-                                    <IconPlayerPlay aria-hidden="true" size={14} />
-                                    Run tests
-                                </button>
-                            )}
-                            {overview.onOpenModel && (
-                                <button type="button" className={classes.overviewButton} onClick={overview.onOpenModel}>
-                                    <IconLayoutGrid aria-hidden="true" size={14} />
-                                    Whole model
-                                </button>
-                            )}
-                        </div>
                     </header>
                 )}
                 <div className={overview ? classes.overviewGrid : undefined}>
@@ -300,28 +256,29 @@ export function WorkbookPicker({
                         {(services.length > 0 || onCreateService) && (
                             <section className={classes.workbookGroup} aria-label="Service Methods">
                                 <h2 className={classes.workbookGroupTitle}>
-                                    Entry points
-                                    <span className={classes.workbookGroupHint}>service methods</span>
+                                    Service Methods
+                                    <span className={classes.workbookGroupCount}>{services.length}</span>
                                 </h2>
-                                <div className={classes.services}>
+                                <div className={classes.workbookPanels}>
                                     {services.map((service) => (
-                                        <ServiceRow
+                                        <Panel
                                             key={service.path}
-                                            service={service}
+                                            title={service.label}
+                                            description={service.description}
+                                            icon={<IconMathFunction aria-hidden="true" size={18} color="#fff" />}
+                                            iconColor={KIND_COLORS.service}
+                                            footer={count(service.arguments, 'argument')}
+                                            action="Open flow"
                                             onClick={() => onSelectService(service.path)}
+                                            testId={`shell-service-${service.path}`}
                                         />
                                     ))}
                                     {onCreateService && (
-                                        <button
-                                            type="button"
-                                            className={classes.serviceAdd}
+                                        <AddPanel
+                                            label="New service method"
                                             onClick={() => setCreating('service')}
-                                            aria-label="New service"
-                                            data-testid="shell-service-add"
-                                        >
-                                            <IconPlus aria-hidden="true" size={14} />
-                                            New service method
-                                        </button>
+                                            testId="shell-service-add"
+                                        />
                                     )}
                                 </div>
                             </section>

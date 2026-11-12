@@ -21,8 +21,17 @@ import {RowSwitch} from './rows/RowSwitch';
 // context keeps its name row (with its menu), and an opened field has no children. An opened function keeps its
 // header row, so its arguments stay editable. A ruleset and an optimisation lay out the columns of their child rows in
 // their own header row, so their children cannot render without it; so does a relation, and a list keeps its name row
-// like a context.
-const OWN_ROW_ROOT_KINDS = new Set(['context', 'field', 'list', 'relation', 'function', 'ruleset', 'optimisation']);
+// like a context. An opened type keeps its name row too, under the `Type` header.
+const OWN_ROW_ROOT_KINDS = new Set([
+    'context',
+    'field',
+    'list',
+    'relation',
+    'function',
+    'ruleset',
+    'optimisation',
+    'complexType',
+]);
 
 interface BoxedEditorGridProps {
     path: string;
