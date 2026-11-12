@@ -1,0 +1,10 @@
+{
+    func risk(age: number): { level: if age < 25 then "high" else "low" }
+    applicant: { age: 30 }
+    decision: risk(applicant.age)
+    @Name("Risk check")
+    workbook riskBook: {
+        person: { age: 22 }
+        check: risk(person.age)
+    }
+}

@@ -79,10 +79,18 @@ export function createTestRunner(
         for (const [path, value] of Object.entries(flattened)) {
             if (knownPaths.has(path)) continue;
             if (normalizeIndexes(path) !== path) continue;
-            discovered.push({path, section: 'validations', order: 0, type: inferRuntimeType(value), present: true});
+            discovered.push({
+                path,
+                section: 'validations',
+                order: 0,
+                type: inferRuntimeType(value),
+                present: true,
+                discovered: true,
+            });
         }
         if (discovered.length === 0) return knownRows;
-        testCasesService.syncRows([...knownRows, ...discovered]);
+        // Only the present rows go back: a row the model dropped must stay dropped, not be revived by a run.
+        testCasesService.syncRows([...knownRows.filter((row) => row.present), ...discovered]);
         return testCasesService.listRows();
     }
 

@@ -1,6 +1,9 @@
 import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 import type {Preview} from '@storybook/react-vite';
 import {MantineProvider} from '@mantine/core';
+import {Notifications} from '@mantine/notifications';
+import {modelerTheme} from '../app/theme';
 
 const preview: Preview = {
     parameters: {
@@ -9,6 +12,8 @@ const preview: Preview = {
                 // Sort the stories of a component by `order` too, not only the groups and the components.
                 includeNames: true,
                 order: [
+                    'Modeler',
+                    ['Home', 'Home With Projects', 'Examples', 'Example details', 'Workspace', 'Project'],
                     'Models',
                     ['Loan Repayment', 'Loan Origination', 'Client Outreach'],
                     'Components',
@@ -31,7 +36,8 @@ const preview: Preview = {
     },
     decorators: [
         (Story) => (
-            <MantineProvider>
+            <MantineProvider theme={modelerTheme}>
+                <Notifications position="bottom-right" />
                 <Story />
             </MantineProvider>
         ),

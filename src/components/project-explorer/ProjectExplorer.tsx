@@ -31,6 +31,7 @@ import {CreateDialog} from './CreateDialog';
 import {KindIcon, type IconKind} from './icons';
 import {
     buildSections,
+    recordTypes,
     ROOT_FETCH_PATH,
     type ExplorerEntry,
     type ExplorerEntryKind,
@@ -144,8 +145,6 @@ interface NodeMeta {
     target?: ProjectExplorerOpenTarget; // set on an entry
 }
 
-const CODE_KINDS = new Set<IconKind>(['function', 'service', 'ruleset', 'test']);
-
 /** Where an entry is in the tree: its section, its own item, and the item of its workbook for a node. */
 interface EntryLocation {
     section: ExplorerSection;
@@ -204,7 +203,7 @@ interface PendingCreate {
  */
 export function ProjectExplorer({
     service,
-    rootLabel = 'Project',
+    rootLabel = 'Project Explorer',
     collapsed = false,
     onCollapsedChange,
     revision,
@@ -321,6 +320,7 @@ export function ProjectExplorer({
     }, [sections]);
 
     const canCreate = !readOnly && service.set !== undefined;
+    const types = useMemo(() => (isPortableError(model) ? [] : recordTypes(model as PortableContext)), [model]);
     const testSubjectOptions: {path: string; label: string; untypedArguments?: string[]}[] = [
         {path: '*', label: 'Model'},
         // The methods, the decisions and the services, by name.
@@ -401,7 +401,7 @@ export function ProjectExplorer({
         }
 
         // A document is a project file: the explorer does not create one.
-        if (section === 'documents' || section === 'factsLibrary' || section === 'decisions' || !canCreate) return null;
+        if (section === 'documents' || section === 'decisions' || !canCreate) return null;
         const options = CREATE_OPTIONS[section];
         if (options.length === 1) {
             return <span {...stop}>{trigger(() => setPending({section, option: options[0]!}))}</span>;
@@ -453,15 +453,7 @@ export function ProjectExplorer({
                 />
                 <span className={classes.label}>
                     {meta.section ? null : <KindIcon kind={meta.kind} />}
-                    <span
-                        className={cx(
-                            classes.text,
-                            meta.section && classes.group,
-                            CODE_KINDS.has(meta.kind) && classes.textCode,
-                        )}
-                    >
-                        {meta.text}
-                    </span>
+                    <span className={cx(classes.text, meta.section && classes.group)}>{meta.text}</span>
                     {meta.count !== undefined ? <span className={classes.count}>{meta.count}</span> : null}
                 </span>
                 {meta.section ? addButton(meta.section, meta.text) : null}
@@ -544,9 +536,10 @@ export function ProjectExplorer({
                 <CreateDialog
                     option={pending.option}
                     taken={taken}
+                    types={types}
                     onCancel={() => setPending(undefined)}
-                    onCreate={(name) => {
-                        const result = service.set!(name, pending.option.template());
+                    onCreate={(name, type) => {
+                        const result = service.set!(name, pending.option.template(type));
                         if (isPortableError(result)) return result.message;
                         setPending(undefined);
                         setCreated((count) => count + 1);

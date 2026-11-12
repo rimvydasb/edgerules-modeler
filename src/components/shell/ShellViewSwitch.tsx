@@ -33,6 +33,7 @@ export interface ShellViewSwitchProps {
     hasTests?: boolean; // the root path has a test suite; without one, the Tests cell offers to create it
     onCreateTests?: () => void; // creates the test suite of the root path; omitted when read-only
     document?: boolean; // the root path is a document: only the Preview and Code cells
+    overview?: boolean; // the root path is the model: its Flow cell reads "Overview"
 }
 
 // What a click on the Tests cell does.
@@ -72,7 +73,7 @@ function UntypedHint({names}: {names: readonly string[]}): ReactElement {
  * function opens a menu that tells which arguments need a type.
  */
 export function ShellViewSwitch(props: ShellViewSwitchProps): ReactElement {
-    const {view, onChange, views, untypedArguments = [], onCreateTests, document} = props;
+    const {view, onChange, views, untypedArguments = [], onCreateTests, document, overview} = props;
     const cells = document ? DOCUMENT_VIEWS : MODEL_VIEWS;
     const tests = testsCell(props);
     const isDisabled = (value: ShellView): boolean =>
@@ -112,7 +113,7 @@ export function ShellViewSwitch(props: ShellViewSwitchProps): ReactElement {
                         onClick={menu ? undefined : () => onChange(value)}
                     >
                         <ViewIcon aria-hidden="true" size={16} />
-                        {label}
+                        {overview && value === 'flow' ? 'Overview' : label}
                     </button>
                 );
                 if (!menu) return cell;

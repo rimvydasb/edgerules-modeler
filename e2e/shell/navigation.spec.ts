@@ -27,15 +27,17 @@ function section(page: Page, label: string) {
 }
 
 async function expectView(page: Page, view: string) {
-    await expect(page.getByRole('radio', {name: view})).toHaveAttribute('aria-checked', 'true');
+    // At the model root the Flow cell reads "Overview".
+    const name = view === 'Flow' ? /^(Flow|Overview)$/ : view;
+    await expect(page.getByRole('radio', {name})).toHaveAttribute('aria-checked', 'true');
 }
 
-test('the header shows the settings, then Flow, Boxed, Code and Tests, then the split screen toggle', async ({
+test('the header shows the settings, then Overview, Boxed, Code and Tests, then the split screen toggle', async ({
     page,
 }) => {
     await openStory(page, 'models-loan-repayment--overview');
     const views = page.getByRole('radiogroup', {name: 'View'}).getByRole('radio');
-    await expect(views).toHaveText(['Flow', 'Boxed', 'Code', 'Tests'], SLOW);
+    await expect(views).toHaveText(['Overview', 'Boxed', 'Code', 'Tests'], SLOW);
 
     const settings = await page.getByRole('button', {name: 'Model settings'}).boundingBox();
     const flow = await views.first().boundingBox();
@@ -238,7 +240,7 @@ test.describe('the column toggles of the Boxed view', () => {
 
         await crumbs.getByRole('button', {name: 'Mortgage plan'}).click();
         await expect(yearly).toBeVisible(SLOW);
-        await expect(page.getByRole('radio', {name: 'Flow'})).toBeChecked();
+        await expect(page.getByRole('radio', {name: /^(Flow|Overview)$/})).toBeChecked();
     });
 });
 

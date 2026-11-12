@@ -32,6 +32,22 @@ function componentAllowlist(component, allowed, section, sharedPaths = []) {
   };
 }
 
+const WEBMCP = `${COMPONENT}webmcp/`;
+
+/**
+ * One layer of the webmcp component (docs/stories/webmcp-story.md, "Component architecture"): code in `webmcp/<layer>/`
+ * must not import `forbidden` paths, except the webmcp folders in `allowedLayers`.
+ */
+function webmcpLayer(layer, forbidden, allowedLayers, why) {
+  return {
+    name: `webmcp-layer-${layer}`,
+    comment: `webmcp ${why}`,
+    severity: 'error',
+    from: {path: `${WEBMCP}${layer}/`, pathNot: TEST_CODE},
+    to: {path: forbidden, pathNot: allowedLayers.map((folder) => `${WEBMCP}${folder}`)},
+  };
+}
+
 /** Restricts `pkg` (a node_modules path prefix) to the source folders in `owners`; tests may use it anywhere. */
 function packageOwner(name, pkg, owners, why) {
   return {
@@ -116,6 +132,21 @@ module.exports = {
       'Project state architecture',
     ),
     componentAllowlist(
+      'example-library',
+      ['project-session', 'markdown-view'],
+      'Package placement of the page components',
+    ),
+    componentAllowlist(
+      'local-workspace',
+      ['project-session', 'example-library'],
+      'Package placement of the page components',
+    ),
+    componentAllowlist(
+      'modeler-home',
+      ['project-session', 'example-library', 'local-workspace'],
+      'Package placement of the page components',
+    ),
+    componentAllowlist(
       'shell',
       [
         'code-editor',
@@ -129,6 +160,46 @@ module.exports = {
         'tests-manager',
       ],
       'Main React components',
+    ),
+    componentAllowlist(
+      'webmcp',
+      ['project-session', 'project-explorer', 'tests-manager', 'test-cases-service'],
+      'WebMCP tools',
+    ),
+    webmcpLayer(
+      'core',
+      ['^src/components/'],
+      ['core/'],
+      'core/ is the transport-neutral bottom layer: it may import only @edgerules/portable types and #lib. Move the ' +
+        'code that needs another layer or component up into project/, or pass the value in as a parameter.',
+    ),
+    webmcpLayer(
+      'project',
+      ['^src/components/webmcp/(protocol|tools|platform)/'],
+      [],
+      'project/ holds the use cases and knows no WebMCP: it must not import protocol/, tools/ or platform/. Move the ' +
+        'shared type down into core/, or let the tool in tools/ adapt the project/ result.',
+    ),
+    webmcpLayer(
+      'protocol',
+      ['^src/components/', '^src/lib/', '^node_modules/@edgerules/'],
+      ['core/', 'protocol/'],
+      'protocol/ is the tool contract and may import only core/. Make the type generic (as ToolDefinition is over its ' +
+        'context) instead of importing project/, or move the shared type down into core/.',
+    ),
+    webmcpLayer(
+      'tools',
+      ['^src/components/', '^node_modules/@edgerules/'],
+      ['core/', 'protocol/', 'project/', 'tools/'],
+      'A tool validates its input, calls one project/ method and returns its ToolResult: it may import only core/, ' +
+        'protocol/ and project/. Move engine and ProjectSession access into a project/ service.',
+    ),
+    webmcpLayer(
+      'platform',
+      ['^src/components/', '^src/lib/', '^node_modules/@edgerules/'],
+      ['core/', 'protocol/', 'platform/'],
+      'platform/ is the WebMCP adapter and may import only core/ and protocol/. The composition root ' +
+        '(registerProjectTools.ts) passes it the tools and the context; do not import project/ or tools/ here.',
     ),
     {
       name: 'no-circular',
@@ -160,6 +231,17 @@ module.exports = {
       to: {path: '^node_modules/@edgerules/node/'},
     },
 
+    {
+      name: 'no-router-in-library',
+      comment:
+        'The library has no router: page-level components report navigation through callbacks and the host owns ' +
+        'the routes (docs/stories/examples-library-story.md, "Package placement of the page components"). ' +
+        '@tanstack/react-router is a dev dependency of the local Modeler host in app/ only.',
+      severity: 'error',
+      from: {path: '^src/'},
+      to: {path: '^node_modules/@tanstack/react-router'},
+    },
+
     // --- Optional peer dependencies stay inside their component ---------------------------------------------------
     packageOwner(
       'peer-xyflow-only-in-flow-editor',
@@ -188,6 +270,13 @@ module.exports = {
       ['src/components/code-editor/', 'src/components/code-editor-cell/'],
       'it is an optional peer dependency of the code-editor subpaths. Other components render ' +
         'CodeEditorCell or HighlightedCode instead of using CodeMirror directly.',
+    ),
+    packageOwner(
+      'peer-mantine-notifications-only-in-tests-manager',
+      '@mantine/notifications/',
+      ['src/components/tests-manager/'],
+      'it is an optional peer dependency of the tests-manager subpath; importing it elsewhere makes every ' +
+        'consumer of that other subpath install it.',
     ),
     packageOwner(
       'dnd-kit-only-in-grid-editors',
@@ -276,7 +365,7 @@ module.exports = {
     extraExtensionsToScan: ['.md'],
     exclude: {
       // Anchored to the repo root: packages ship from node_modules/*/dist/, which must stay in the graph.
-      path: '^(dist|storybook-static|coverage|test-results|playwright-report|\\.git|\\.idea)/',
+      path: '^(dist|app/dist|storybook-static|coverage|test-results|playwright-report|\\.git|\\.idea)/',
     },
     // Not `exclude`: excluding node_modules would drop every npm import from the graph, so the package
     // rules could never fire. doNotFollow keeps the edges but does not descend into the packages.

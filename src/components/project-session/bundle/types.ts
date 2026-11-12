@@ -15,6 +15,13 @@ export interface ProjectLocator {
     projectPath: string; // indexeddb: project key
 }
 
+// Coordinates of the library example that a project is a copy of.
+export interface ProjectOrigin {
+    library: string; // indexUrl of the LibrarySource that resolved the example
+    id: string; // example id, the slug
+    version: string; // released example version
+}
+
 // `edgerules.project.json`.
 export interface ProjectManifest {
     kind: 'EdgeRulesProject';
@@ -24,6 +31,7 @@ export interface ProjectManifest {
     description?: string;
     tags?: string[];
     model: {format: 'dsl'; source: string} & ModelMetadata; // one model per project
+    origin?: ProjectOrigin; // coordinates of the library example that this project is a copy of
 }
 
 // The root metadata of the model. Neither the DSL nor the Portable format has a key for it, so the manifest keeps it;
@@ -66,12 +74,15 @@ export interface ProjectDescriptor {
     tags: string[];
     locator: ProjectLocator;
     headRevision: string;
+    origin?: ProjectOrigin; // from the manifest, for the workspace list and the Library badges
+    savedAt: string; // ISO time of the last save
 }
 
 export interface LoadedProject {
     locator: ProjectLocator;
     revision: string; // opaque concurrency token; never part of the bundle
     bundle: ProjectBundle;
+    savedAt?: string; // ISO time of the last save, when the repository keeps it
 }
 
 export interface SaveResult {
@@ -97,9 +108,23 @@ export function generateReadme(name: string, description?: string): string {
     return text ? `# ${name}\n\n${text}\n` : `# ${name}\n`;
 }
 
-export function describeProject(bundle: ProjectBundle, locator: ProjectLocator, revision: string): ProjectDescriptor {
-    const {projectId, name, description, tags} = bundle.manifest;
-    return {projectId, name, description, tags: tags ?? [], locator, headRevision: revision};
+export function describeProject(
+    bundle: ProjectBundle,
+    locator: ProjectLocator,
+    revision: string,
+    savedAt: string,
+): ProjectDescriptor {
+    const {projectId, name, description, tags, origin} = bundle.manifest;
+    return {
+        projectId,
+        name,
+        description,
+        tags: tags ?? [],
+        locator,
+        headRevision: revision,
+        ...(origin !== undefined && {origin}),
+        savedAt,
+    };
 }
 
 export function locatorKey(locator: ProjectLocator): string {

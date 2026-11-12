@@ -17,7 +17,8 @@ function crumbs(page: Page) {
 }
 
 async function expectView(page: Page, view: string) {
-    await expect(page.getByRole('radio', {name: view})).toHaveAttribute('aria-checked', 'true');
+    const name = view === 'Flow' ? /^(Flow|Overview)$/ : view;
+    await expect(page.getByRole('radio', {name})).toHaveAttribute('aria-checked', 'true');
 }
 
 test('opens README from the explorer, edits it in Code, saves, and keeps it after a reload', async ({page}) => {
@@ -65,15 +66,15 @@ test('the Overview shows the README panel above the workbooks; a click opens the
     const panel = picker.getByTestId('shell-readme-panel');
     await expect(panel.getByRole('heading', {name: 'Loan Repayment Planner'})).toBeVisible(SLOW);
 
-    // Above the workbooks, as wide as a row of three panels, at most two panels high.
+    // Above the workbooks, at most 260px high.
     const panelBox = (await panel.boundingBox())!;
     const workbookBox = (await picker.getByTestId('shell-workbook-mortgageBook').boundingBox())!;
     expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(workbookBox.y);
-    expect(panelBox.height).toBeLessThanOrEqual(2 * 196 + 24 + 1);
+    expect(panelBox.height).toBeLessThanOrEqual(261);
     // The README is higher than the panel: it is cut off with a fade.
     await expect(panel.locator('[data-cut]')).toHaveCount(1);
 
-    // At most 3 panels in a row.
+    // At most 3 cards in a row.
     const tops = await picker
         .getByRole('region', {name: 'Workbooks'})
         .locator('button')
@@ -83,5 +84,5 @@ test('the Overview shows the README panel above the workbooks; a click opens the
     await panel.getByText(/Prices consumer loans/).click();
     await expectView(page, 'Preview');
     await expect(crumbs(page)).toHaveText(/Loan Repayment Planner.*README\.md/);
-    await expect(page.getByTestId('shell-document-preview').getByRole('table')).toBeVisible();
+    await expect(page.getByTestId('shell-document-preview').getByRole('table').first()).toBeVisible();
 });

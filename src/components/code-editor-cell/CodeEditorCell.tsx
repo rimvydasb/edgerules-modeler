@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, type CSSProperties, type ReactElement} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactElement} from 'react';
 import {EditorState, Prec, type Extension} from '@codemirror/state';
 import {forceLinting} from '@codemirror/lint';
 import {EditorView, keymap, placeholder as cmPlaceholder, tooltips} from '@codemirror/view';
@@ -108,6 +108,15 @@ export function CodeEditorCell({
         }
     }, [effectiveService]);
 
+    // An unmount removes the host DOM before the effect below destroys the view, and Chrome fires `blur` on a focused
+    // element that is removed: a layout cleanup runs before that removal, so the removal does not commit.
+    useLayoutEffect(
+        () => () => {
+            suppressBlurCommitRef.current = true;
+        },
+        [],
+    );
+
     useEffect(() => {
         callbacksRef.current = {onChange, onCommit, onCancel};
     }, [onChange, onCommit, onCancel]);
@@ -183,6 +192,7 @@ export function CodeEditorCell({
             }),
         });
 
+        suppressBlurCommitRef.current = false;
         viewRef.current = view;
         forceLinting(view);
         if (autoFocus) {
@@ -191,6 +201,10 @@ export function CodeEditorCell({
         }
 
         return () => {
+            // Chrome fires `blur` when a focused element is removed from the DOM. Tearing the view down (an unmount, or
+            // React StrictMode's mount → unmount → mount in development) is not the user leaving the cell: without this
+            // guard that blur commits the untouched value and the host closes the cell the moment it opened.
+            suppressBlurCommitRef.current = true;
             view.destroy();
             viewRef.current = null;
         };

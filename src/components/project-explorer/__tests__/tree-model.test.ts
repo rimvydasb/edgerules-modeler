@@ -34,6 +34,39 @@ describe('buildSections', () => {
         ]);
     });
 
+    it('lists a loop and an optimise as methods, not variables', () => {
+        const result = sections(
+            [
+                '{',
+                '    loop total(items: number[]): { over: items; state: { sum: 0 }; do: { sum: state.sum + item }; return: state.sum }',
+                '    optimise best(limit: number): { variables: { x: <number, min: 0, max: 10> }; maximise: x; constraints: { cap: x <= limit } }',
+                '    value: 1',
+                '}',
+            ].join('\n'),
+        );
+
+        expect(result.methods.map((entry) => [entry.kind, entry.label])).toEqual([
+            ['optimise', 'best(...)'],
+            ['loop', 'total(...)'],
+        ]);
+        expect(result.variables.map((entry) => entry.path)).toEqual(['value']);
+    });
+
+    it('lists the parameters and the body fields of a service as its children, like the nodes of a workbook', () => {
+        const [service] = sections(
+            '{ func f(x: number): { r: x }\n service plan(values: number[], limit: number): { a: f(limit); b: a.r * 2; return: { out: b } } }',
+        ).services;
+
+        expect(service).toMatchObject({kind: 'service', path: 'plan', label: 'plan(...)'});
+        expect(service!.children!.map((entry) => [entry.kind, entry.path])).toEqual([
+            ['input-node', 'plan.values'],
+            ['input-node', 'plan.limit'],
+            ['function-node', 'plan.a'],
+            ['node', 'plan.b'],
+            ['output-node', 'plan.return'],
+        ]);
+    });
+
     it('lists every field of a workbook as its children, annotated or not, in model order', () => {
         const [workbook] = sections(MODEL_DSL).workbooks;
 

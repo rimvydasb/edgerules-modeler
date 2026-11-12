@@ -248,6 +248,16 @@ export function createTestCasesCore(options: TestCasesCoreOptions = {}): TestCas
             suiteChanged();
         },
 
+        restoreTestCase(testCase: TestCase): void {
+            const ordered = [...cases].sort((a, b) => a.order - b.order).filter((c) => c.id !== testCase.id);
+            ordered.splice(clampIndex(testCase.order, ordered.length), 0, cloneCase(testCase));
+            ordered.forEach((c, i) => {
+                c.order = i;
+            });
+            cases = ordered;
+            suiteChanged();
+        },
+
         moveTestCase(testCaseId: string, toIndex: number): void {
             const ordered = [...cases].sort((a, b) => a.order - b.order);
             const fromIndex = ordered.findIndex((c) => c.id === testCaseId);
@@ -295,8 +305,9 @@ export function createTestCasesCore(options: TestCasesCoreOptions = {}): TestCas
                 if (!derivedPaths.has(existing.path)) {
                     // A user-authored row is never derived from the schema, so its absence from `derivedRows`
                     // says nothing about whether it still addresses anything — only a derived row's
-                    // disappearance means the model dropped it. (The Path cell flags an unknown path instead.)
-                    nextRows.push({...existing, present: existing.custom === true});
+                    // disappearance means the model dropped it. (The Path cell flags an unknown path instead.) The
+                    // same holds for a row discovered from a run result: the schema never described it.
+                    nextRows.push({...existing, present: existing.custom === true || existing.discovered === true});
                 }
             }
 

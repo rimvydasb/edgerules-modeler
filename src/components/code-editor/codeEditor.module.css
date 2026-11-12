@@ -1,4 +1,5 @@
 .root {
+  background: var(--mantine-color-body);
   /* A sharp 1px frame in the border color of the other components (Boxed Editor, Flow Editor). */
   border: 1px solid var(--mantine-color-default-border);
   overflow: hidden;

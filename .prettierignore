@@ -3,3 +3,4 @@ coverage
 storybook-static
 playwright-report
 test-results
+src/components/webmcp/project/guide/reference

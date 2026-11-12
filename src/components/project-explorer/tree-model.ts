@@ -26,6 +26,8 @@ export type ExplorerEntryKind =
     | 'decision'
     | 'service'
     | 'ruleset'
+    | 'loop'
+    | 'optimise'
     | 'context'
     | 'variable'
     | 'workbook'
@@ -41,7 +43,7 @@ export interface ExplorerEntry {
     // the fully qualified model path; the test subject ID for a test; `doc:<file>` for a document
     path: string;
     label: string;
-    children?: ExplorerEntry[]; // the nodes of a workbook
+    children?: ExplorerEntry[]; // the nodes of a workbook or of a service
     untypedArguments?: string[]; // a generic function: the arguments without a type, which keep it from being tested
 }
 
@@ -65,17 +67,22 @@ function kindOf(node: Record<string, unknown>): string | undefined {
 // The `@kind` of a function: a `func` or an external function, in the declaration or the interface view.
 const FUNCTION_KINDS = new Set(['method', 'method-interface', 'external-method']);
 
+/** The kind of a callable entry: its row icon and the section it is listed in. */
+export type MethodKind = 'function' | 'decision' | 'service' | 'ruleset' | 'loop' | 'optimise';
+
 /**
  * The method kind of a callable field, or undefined when the field is not callable. A `service` and a `decision` are
- * listed apart.
+ * listed apart; a `loop` and an `optimise` are methods.
  */
-export function methodKind(node: unknown): 'function' | 'decision' | 'service' | 'ruleset' | undefined {
+export function methodKind(node: unknown): MethodKind | undefined {
     if (!isRecord(node)) return undefined;
     const kind = kindOf(node);
     if (kind === 'service' || kind === 'service-interface') return 'service';
     if (kind === 'decision' || kind === 'decision-interface') return 'decision';
     if (kind !== undefined && FUNCTION_KINDS.has(kind)) return 'function';
     if (kind === 'ruleset' || kind === 'ruleset-interface') return 'ruleset';
+    if (kind === 'loop' || kind === 'loop-interface') return 'loop';
+    if (kind === 'optimise' || kind === 'optimise-interface') return 'optimise';
     return undefined;
 }
 
@@ -114,11 +121,13 @@ function collectMethods(contextPath: string, context: Record<string, unknown>, s
         if (kind) {
             const untypedArguments = untypedParameters(node);
             const section = kind === 'service' ? 'services' : kind === 'decision' ? 'decisions' : 'methods';
+            const children = kind === 'service' ? serviceNodes(path, node as unknown as Record<string, unknown>) : [];
             sections[section].push({
                 kind,
                 path,
                 label: methodLabel(path, node as unknown as Record<string, unknown>),
                 ...(untypedArguments.length > 0 && {untypedArguments}),
+                ...(children.length > 0 && {children}),
             });
         } else if (isContext(node)) collectMethods(path, node, sections);
     }
@@ -132,6 +141,23 @@ function workbookNodes(workbookPath: string, workbook: Record<string, unknown>):
         path: joinPath(workbookPath, name),
         label: name,
     }));
+}
+
+// The nodes of the Flow view of a service, in its order: the parameters as inputs, then every field of its body. A call
+// of a callable is a function node, the `return` the output, anything else a node.
+function serviceNodes(servicePath: string, service: Record<string, unknown>): ExplorerEntry[] {
+    const parameters = callableParameters(service);
+    const inputs: ExplorerEntry[] = Object.keys(isRecord(parameters) ? parameters : {}).map((name) => ({
+        kind: 'input-node',
+        path: joinPath(servicePath, name),
+        label: name,
+    }));
+    const body = fields(service.body).map(([name, node]): ExplorerEntry => {
+        const kind: ExplorerEntryKind =
+            name === 'return' ? 'output-node' : isRecord(node) && kindOf(node) === 'invocation' ? 'function-node' : 'node';
+        return {kind, path: joinPath(servicePath, name), label: name};
+    });
+    return [...inputs, ...body];
 }
 
 function workbookNodeKind(node: unknown): ExplorerEntryKind {
@@ -162,10 +188,11 @@ function byLabel(a: ExplorerEntry, b: ExplorerEntry): number {
  * - **Documents**: the document files of `documents`, such as `README.md`, as `doc:<file>` paths. The engine has none.
  * - **Types**: the `type` declarations of the root.
  * - **Facts Library**: the `facts` declarations of the root.
- * - **Methods**: every function and ruleset, also inside contexts, by qualified path: `path(...)` when it has
+ * - **Methods**: every function, ruleset, loop and optimise, also inside contexts, by qualified path: `path(...)` when it has
  *   arguments, `path()` when it has none.
  * - **Decisions**: every `decision` declaration, labelled like a method.
- * - **Services**: every `service` declaration, labelled like a method.
+ * - **Services**: every `service` declaration, labelled like a method, with the nodes of its Flow view as children: its
+ *   parameters, then the fields of its body.
  * - **Variables**: every other root field, contexts included.
  * - **Workbooks**: every root `workbook` declaration, labelled with its `@Name`, with its nodes as children. A model
  *   without a `workbook` declaration lists none.
@@ -217,6 +244,14 @@ export function buildSections(
     // A section lists its entries by name, the model test first.
     for (const entries of Object.values(sections)) entries.sort(byLabel);
     return sections;
+}
+
+/** The names of the record types of the root (a `type` with fields, not an alias), by name: what a `facts` is for. */
+export function recordTypes(model: PortableContext): string[] {
+    return fields(model)
+        .filter(([, node]) => isRecord(node) && kindOf(node) === 'type' && isRecord(node.fields))
+        .map(([name]) => name)
+        .sort((a, b) => a.localeCompare(b));
 }
 
 /** An EdgeRules identifier (EBNF.md): a letter or `_`, then letters, digits or `_`. */

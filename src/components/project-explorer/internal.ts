@@ -3,3 +3,4 @@
 export {CreateDialog} from './CreateDialog';
 export {CREATE_OPTIONS} from './create-templates';
 export {buildSections, DOCUMENT_PATH_PREFIX, documentPath} from './tree-model';
+export type {ExplorerEntryKind, ExplorerSection} from './tree-model';

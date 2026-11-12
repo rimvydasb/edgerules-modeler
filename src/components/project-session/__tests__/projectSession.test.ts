@@ -35,6 +35,7 @@ describe('ProjectSession — open', () => {
             phase: 'ready',
             projectId: bundle.manifest.projectId,
             name: 'Loans',
+            savedAt: expect.any(String),
             locator,
             revision: '1',
             localVersion: 0,
@@ -277,6 +278,51 @@ describe('ProjectSession — commands', () => {
         expect(session.getDslDraft()).toBe('{ a: ');
         expect(session.getSnapshot()).toMatchObject({hasDslDraft: true, dirtySlices: []});
         expect(session.exportBundle().model).toBe(dsl);
+    });
+});
+
+describe('ProjectSession — fork', () => {
+    it('copies the committed state into a detached session whose changes never reach the original', async () => {
+        const {session} = await openFixtureProject({tests: RISK_TESTS});
+        session.documentation.setDescription('risk', 'Risk class.');
+        const before = {dsl: session.engine.exportDsl(), version: session.getSnapshot().localVersion};
+        const listener = vi.fn();
+        session.subscribe(listener);
+
+        const fork = session.fork();
+        expect(fork.engine.exportDsl()).toBe(before.dsl);
+        expect(fork.documentation.getDescription('risk')).toBe('Risk class.');
+        expect(fork.getSlice('tests')).toEqual(session.getSlice('tests'));
+
+        fork.engine.setCode('unused', '2');
+        fork.documentation.setDescription('risk', 'Changed.');
+        fork.dispose();
+
+        expect(session.engine.exportDsl()).toBe(before.dsl);
+        expect(session.documentation.getDescription('risk')).toBe('Risk class.');
+        expect(session.getSnapshot().localVersion).toBe(before.version);
+        expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('forks the committed model while a DSL draft is invalid, keeps the solvers and cannot save', async () => {
+        const {session} = await openFixtureProject();
+        const solver = () => ({status: 'optimal', objective: 0, values: {}}) as never;
+        session.engine.registerSolver(solver);
+        session.execute({type: 'commitDsl', source: '{ a: '});
+
+        const fork = session.fork();
+        expect(fork.engine.exportDsl()).toBe(session.engine.exportDsl());
+        expect(fork.engine.solverHandler).toBe(solver);
+        await expect(fork.save()).rejects.toMatchObject({code: 'invalid-state'});
+        fork.dispose();
+    });
+
+    it('refuses to fork inside a transaction', async () => {
+        const {session} = await openFixtureProject();
+        const result = session.transaction(() => {
+            session.fork();
+        });
+        expect(result).toMatchObject({ok: false, error: {code: 'invalid-state'}});
     });
 });
 

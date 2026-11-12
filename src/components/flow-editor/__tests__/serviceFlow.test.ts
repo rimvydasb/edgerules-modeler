@@ -287,3 +287,42 @@ describe('FlowEditorService of a service: expression nodes', () => {
         expect(await mutable.execute('f', {a: 1})).toMatchObject({b: 1, expression: 0});
     });
 });
+
+describe('FlowEditorService of a service with computed values', () => {
+    const MODEL = [
+        '{',
+        '    func totals(xs: number[], label: string): { name: label; total: sum(xs) }',
+        '    loop running(items: number[]): { over: items; state: { total: 0 }; do: { total: state.total + item }; return: state.total }',
+        '    optimise best(limit: number): { variables: { x: <number, min: 0, max: 10> }; maximise: x; constraints: { cap: x <= limit } }',
+        '    service plan(values: number[], limit: number): {',
+        '        doubled: for v in values return v * 2',
+        '        mix: best(limit: limit)',
+        '        total: running(items: for d in doubled return d + 1)',
+        '        byLabel: [totals(doubled, "a"), totals(values, "b")]',
+        '        constants: [1, 2, 3]',
+        '        summary: { status: mix.status; overall: total }',
+        '    }',
+        '}',
+    ].join('\n');
+
+    it('draws a call of a loop or an optimise as a function node, and computed lists and records as expressions', () => {
+        const {service} = build(MODEL, 'plan');
+        expect(service.listNodes()).toEqual([
+            {field: 'plan.values', kind: 'parameter'},
+            {field: 'plan.limit', kind: 'parameter'},
+            {field: 'plan.doubled', kind: 'expression'},
+            {field: 'plan.mix', kind: 'function'},
+            {field: 'plan.total', kind: 'function'},
+            {field: 'plan.byLabel', kind: 'expression'},
+            {field: 'plan.constants', kind: 'list-input'},
+            {field: 'plan.summary', kind: 'expression'},
+        ]);
+        expect(service.getFunctionNode('plan.mix')).toMatchObject({callee: {path: 'best'}, draft: false});
+        expect(service.getFunctionNode('plan.total')).toMatchObject({callee: {path: 'running'}, draft: false});
+        expect(service.getExpressionNode('plan.byLabel').variables).toEqual(['doubled', 'values']);
+        expect(service.getExpressionNode('plan.summary')).toMatchObject({
+            type: 'object',
+            variables: ['mix.status', 'total'],
+        });
+    });
+});

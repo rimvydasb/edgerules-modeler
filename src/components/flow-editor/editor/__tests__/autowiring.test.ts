@@ -68,7 +68,7 @@ describe('autowiring of a multi-node model', () => {
         expect(new Set(wires.map((w) => w.id)).size).toBe(wires.length);
     });
 
-    it('draws no wire for an expression or literal argument, but keeps the others', () => {
+    it('wires an expression argument from every node path it reads, and a literal argument from none', () => {
         const {summary} = wiresOf(`
             @InputNode
             applicant: { age: 30, income: 40000, segment: "retail" }
@@ -79,6 +79,7 @@ describe('autowiring of a multi-node model', () => {
         expect([...summary].sort()).toEqual([
             'applicant.out:age->points.in:age',
             'applicant.out:income->other.in:income',
+            'applicant.out:income->points.in:income',
         ]);
     });
 

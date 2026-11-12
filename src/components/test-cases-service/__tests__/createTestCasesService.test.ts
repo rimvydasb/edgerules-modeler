@@ -87,6 +87,25 @@ describe('createTestCasesService — test case CRUD', () => {
         expect(service.getResultSet(testCase.id)).toBeUndefined();
         service.dispose();
     });
+
+    it('restores a removed test case with its id, values and order', async () => {
+        const service = createTestCasesService('model', '*', {dbName: uniqueDbName()});
+        await waitForHydration(service);
+        service.syncRows([INPUT_ROW]);
+        const a = service.addTestCase('A');
+        const b = service.addTestCase('B');
+        const c = service.addTestCase('C');
+        service.setCell(b.id, 'age', 'input', '42');
+        const removed = service.getTestCase(b.id)!;
+
+        service.removeTestCase(b.id);
+        service.restoreTestCase(removed);
+
+        expect(service.listTestCases().map((t) => t.id)).toEqual([a.id, b.id, c.id]);
+        expect(service.getTestCase(b.id)).toEqual(removed);
+        expect(service.listTestCases().map((t) => t.order)).toEqual([0, 1, 2]);
+        service.dispose();
+    });
 });
 
 describe('createTestCasesService — rows', () => {
@@ -109,6 +128,19 @@ describe('createTestCasesService — rows', () => {
         const afterRemoval = service.listRows();
         expect(afterRemoval.find((r) => r.path === 'eligible')?.present).toBe(false);
         expect(afterRemoval.find((r) => r.path === 'age')?.present).toBe(true);
+
+        service.dispose();
+    });
+
+    it('a row discovered from a run result stays present when the schema rows are derived again', async () => {
+        const service = createTestCasesService('model', '*', {dbName: uniqueDbName()});
+        await waitForHydration(service);
+        service.syncRows([INPUT_ROW]);
+        service.syncRows([INPUT_ROW, {...VALIDATION_ROW, discovered: true}]);
+
+        // Opening the Tests view again derives the schema only; the call site's leaf is not in it.
+        service.syncRows([INPUT_ROW]);
+        expect(service.listRows().find((r) => r.path === 'score')?.present).toBe(true);
 
         service.dispose();
     });

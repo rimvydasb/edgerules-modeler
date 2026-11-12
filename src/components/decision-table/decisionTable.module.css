@@ -1,5 +1,6 @@
 /* Decision Table. Cell borders/metrics come from src/ui/grid; this file holds the table's own layout. */
 .root {
+  background: var(--mantine-color-body);
   min-width: 0;
 }
 

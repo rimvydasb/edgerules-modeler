@@ -1,0 +1,747 @@
+/*
+ * The page chrome of the Modeler pages (Home, Examples, Workspace, project overview): soft cards on a warm page, a
+ * monospace eyebrow label, a calm sans type scale. The values follow `proposal/app.css`. The editors (Boxed, Flow,
+ * Decision Table, Tests) keep their own Mantine look; only the chrome around them uses these tokens.
+ *
+ * `.tokens` defines the variables once. A page root takes `sheetClasses.tokens`; the primitives below take them too,
+ * so they also work on their own. The light theme is the only one.
+ */
+.tokens,
+.panel,
+.pageHeader,
+.section,
+.keyValues,
+.facets {
+  --er-bg: #fafaf9;
+  --er-surface: #fff;
+  --er-subtle: #f4f4f2;
+  --er-hover: #f0f0ee;
+  --er-border: #e7e7e4;
+  --er-border-strong: #d6d6d1;
+  --er-text: #0d0d0e;
+  --er-text-2: #4f4f57;
+  --er-text-3: #8b8b93;
+  --er-primary: #0d0d0e;
+  --er-on-primary: #fff;
+  --er-accent: #1971c2;
+  --er-accent-soft: #e8f1fb;
+  --er-ok: #15803d;
+  --er-ok-soft: #e9f7ee;
+  --er-warn: #b45309;
+  --er-warn-soft: #fdf3e5;
+  --er-danger: #c92a2a;
+  --er-danger-soft: #fdecec;
+  /* The fonts come from the Mantine theme of the host, so the chrome and the editors share one sans and one mono. */
+  --er-sans: var(--mantine-font-family);
+  --er-mono: var(--mantine-font-family-monospace);
+  --er-r: 8px;
+  --er-r-sm: 6px;
+  --er-shadow-pop: 0 8px 28px rgb(13 13 14 / 0.12), 0 1px 3px rgb(13 13 14 / 0.08);
+}
+
+.tokens *,
+.tokens *::before,
+.tokens *::after,
+.panel *,
+.panel *::before,
+.panel *::after,
+.pageHeader *,
+.pageHeader *::before,
+.pageHeader *::after {
+  box-sizing: border-box;
+}
+
+.tokens,
+.panel,
+.pageHeader,
+.section,
+.keyValues,
+.facets {
+  color: var(--er-text);
+  font-family: var(--er-sans);
+}
+
+/* The monospace eyebrow label above a title. */
+.eyebrow {
+  color: var(--er-text-3);
+  font: 500 11px/1 var(--er-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- card: head, body, footer */
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+  font-size: 14px;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.panel:hover,
+.panel:focus-within {
+  border-color: var(--er-border-strong);
+  box-shadow: 0 2px 10px rgb(13 13 14 / 0.05);
+}
+
+.panel:focus-visible {
+  outline: 2px solid var(--er-accent);
+  outline-offset: 1px;
+}
+
+/* A panel that is a button as a whole: a compact row such as a recent project or an industry tile. */
+.panelButton {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panelButton:hover {
+  background-color: var(--er-surface);
+}
+
+.panelHeader {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 8px 10px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 16px 16px 0;
+}
+
+/* A panel that is one header row only: a tile with an icon, a title and an aside. */
+.panelHeaderOnly {
+  flex-wrap: nowrap;
+  min-height: 0;
+  padding: 12px;
+}
+
+.panelHeader .eyebrow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon {
+  display: flex;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: #fff;
+}
+
+/* An icon square without a kind color: an outlined square. */
+.iconMuted {
+  border: 1px solid var(--er-border-strong);
+  background-color: var(--er-surface);
+  color: var(--er-text-2);
+}
+
+.title {
+  display: flex;
+  flex: 1 0 100%;
+  min-width: 0;
+  align-items: center;
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.panelHeaderOnly .title {
+  flex: 1 1 0;
+}
+
+.titleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titleLink {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The whole card opens the link: the title button stretches over it. */
+.titleLink::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.titleLink:hover {
+  text-decoration: none;
+}
+
+.titleLink:focus-visible {
+  outline: none;
+}
+
+.aside {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--er-text-3);
+  font-size: 12px;
+}
+
+.thumbnail {
+  display: block;
+  width: 100%;
+  height: 90px;
+  flex: none;
+  margin-top: 12px;
+  border-block: 1px solid var(--er-border);
+  object-fit: cover;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 16px 16px;
+}
+
+.description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--er-text-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.description i {
+  color: var(--er-text-3);
+}
+
+/* The left part of a card footer: version, tests, save time. */
+.meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  color: var(--er-text-3);
+  font-size: 12.5px;
+}
+
+.meta > span + span::before {
+  margin-right: 8px;
+  color: var(--er-text-3);
+  content: '·';
+}
+
+.footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 41px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--er-border);
+  color: var(--er-text-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.footer .meta {
+  flex: 1;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- tags: features, coordinates */
+.tags {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.token {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--er-border);
+  border-radius: 5px;
+  background-color: var(--er-subtle);
+  color: var(--er-text-2);
+  font: 11.5px var(--er-mono);
+  white-space: nowrap;
+}
+
+.tokenMore {
+  color: var(--er-text-3);
+}
+
+/* ---------------------------------------------------------------- status badges */
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chipGreen {
+  background-color: var(--er-ok-soft);
+  color: var(--er-ok);
+}
+
+.chipYellow {
+  background-color: var(--er-accent-soft);
+  color: var(--er-accent);
+}
+
+.chipOrange {
+  background-color: var(--er-warn-soft);
+  color: var(--er-warn);
+}
+
+.chipRed {
+  background-color: var(--er-danger-soft);
+  color: var(--er-danger);
+}
+
+.chipGray {
+  background-color: var(--er-subtle);
+  color: var(--er-text-2);
+}
+
+/* ---------------------------------------------------------------- actions: small buttons, shown on hover in cards */
+.actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.footer .actions {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  padding-left: 16px;
+  background: linear-gradient(90deg, transparent, var(--er-surface) 16px);
+  transform: translateY(-50%);
+}
+
+/* A pointer device shows the actions of a card on hover and on focus; a touch screen always shows them. */
+@media (hover: hover) {
+  .footer .actions {
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .panel:hover .footer .actions,
+  .panel:focus-within .footer .actions {
+    opacity: 1;
+  }
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--er-border-strong);
+  border-radius: var(--er-r-sm);
+  background-color: var(--er-surface);
+  color: var(--er-text);
+  font: 500 12.5px var(--er-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.action:hover:not(:disabled) {
+  background-color: var(--er-hover);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--er-accent);
+  outline-offset: 1px;
+}
+
+.action:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* The main action: the filled primary button. */
+.actionPrimary {
+  border-color: var(--er-primary);
+  background-color: var(--er-primary);
+  color: var(--er-on-primary);
+}
+
+.actionPrimary:hover:not(:disabled) {
+  background-color: var(--er-primary);
+  opacity: 0.88;
+}
+
+.actionIconOnly {
+  width: 28px;
+  padding: 0;
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--er-text-2);
+}
+
+.actionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------- page header: eyebrow, title, subtitle, aside */
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pageHeaderRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.pageHeaderRow .icon {
+  align-self: flex-start;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.pageTitle {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pageTitleText {
+  margin: 0;
+  font: 600 30px/1.15 var(--er-sans);
+  letter-spacing: -0.025em;
+}
+
+.pageSubtitle {
+  max-width: 640px;
+  color: var(--er-text-2);
+  font-size: 15px;
+}
+
+.pageAside {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbarGrow {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A page-level button: the same filled / outlined buttons as the card actions, one step larger. */
+.pageActions .action,
+.pageAside .action {
+  height: 34px;
+  padding: 0 13px;
+  font-size: 13.5px;
+}
+
+.pageActions .actionIconOnly,
+.pageAside .actionIconOnly {
+  width: 34px;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------- section: title, count pill, link */
+.section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sectionLabel {
+  margin: 0;
+  font: 600 16px var(--er-sans);
+  letter-spacing: -0.01em;
+}
+
+.sectionCount {
+  margin-left: -4px;
+  padding: 1px 8px;
+  border: 1px solid var(--er-border);
+  border-radius: 999px;
+  background-color: var(--er-subtle);
+  color: var(--er-text-2);
+  font: 500 11.5px/1.5 var(--er-mono);
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* A quiet text button of a section header: "All projects →". */
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--er-r-sm);
+  background: transparent;
+  color: var(--er-text-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  background-color: var(--er-hover);
+  color: var(--er-text);
+}
+
+.linkButton:focus-visible {
+  outline: 2px solid var(--er-accent);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------- key-value rows: label and value per row */
+.keyValues {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  margin: 0;
+  padding: 6px 16px;
+  border: 1px solid var(--er-border);
+  border-radius: var(--er-r);
+  background-color: var(--er-surface);
+  font-size: 13.5px;
+}
+
+.keyValues > dt,
+.keyValues > dd {
+  margin: 0;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--er-border);
+}
+
+.keyValues > dt:nth-last-child(2),
+.keyValues > dd:last-child {
+  border-bottom: 0;
+}
+
+.keyValues > dt {
+  color: var(--er-text-3);
+}
+
+.keyValues > dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.keyValues code {
+  font: 12.5px var(--er-mono);
+}
+
+/* ---------------------------------------------------------------- facets: the filter column of a list page */
+.facets {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  font-size: 13.5px;
+}
+
+.facetGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.facetGroup .eyebrow {
+  margin-bottom: 8px;
+}
+
+.facet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -8px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--er-text-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.facet:hover {
+  background-color: var(--er-hover);
+  color: var(--er-text);
+}
+
+.facet[aria-pressed='true'],
+.facet[aria-current='true'] {
+  background-color: var(--er-subtle);
+  color: var(--er-text);
+  font-weight: 500;
+}
+
+.facet input {
+  margin: 0;
+  accent-color: var(--er-primary);
+}
+
+.facetCount {
+  margin-left: auto;
+  color: var(--er-text-3);
+  font: 12px var(--er-mono);
+}
+
+/* ---------------------------------------------------------------- grid of panels */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.gridCompact {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.gridFour {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .gridFour {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .gridFour {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 16px;
+  border: 1px dashed var(--er-border-strong);
+  border-radius: var(--er-r);
+  color: var(--er-text-3);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* The initials of a project: the same family as the kind squares of the editors */
+.projectMark {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--er-border-strong);
+  border-radius: 7px;
+  background-color: var(--er-subtle);
+  color: var(--er-text);
+  font: 600 12px/1 var(--er-sans);
+  letter-spacing: 0.02em;
+}
+
+.projectMark::after {
+  content: attr(data-initials);
+}
+
+.projectMark_sm {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 9px;
+}
+
+.projectMark_xs {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 8.5px;
+}
+
+.titleWithMark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

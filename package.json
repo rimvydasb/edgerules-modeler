@@ -7,6 +7,7 @@
   "sideEffects": false,
   "files": [
     "dist",
+    "schemas",
     "README.md",
     "LICENSE"
   ],
@@ -49,6 +50,36 @@
       "require": {
         "types": "./dist/components/code-editor-cell/index.d.cts",
         "default": "./dist/components/code-editor-cell/index.cjs"
+      }
+    },
+    "./example-library": {
+      "import": {
+        "types": "./dist/components/example-library/index.d.ts",
+        "default": "./dist/components/example-library/index.js"
+      },
+      "require": {
+        "types": "./dist/components/example-library/index.d.cts",
+        "default": "./dist/components/example-library/index.cjs"
+      }
+    },
+    "./local-workspace": {
+      "import": {
+        "types": "./dist/components/local-workspace/index.d.ts",
+        "default": "./dist/components/local-workspace/index.js"
+      },
+      "require": {
+        "types": "./dist/components/local-workspace/index.d.cts",
+        "default": "./dist/components/local-workspace/index.cjs"
+      }
+    },
+    "./modeler-home": {
+      "import": {
+        "types": "./dist/components/modeler-home/index.d.ts",
+        "default": "./dist/components/modeler-home/index.js"
+      },
+      "require": {
+        "types": "./dist/components/modeler-home/index.d.cts",
+        "default": "./dist/components/modeler-home/index.cjs"
       }
     },
     "./markdown-view": {
@@ -140,7 +171,18 @@
         "types": "./dist/components/shell/index.d.cts",
         "default": "./dist/components/shell/index.cjs"
       }
-    }
+    },
+    "./webmcp": {
+      "import": {
+        "types": "./dist/components/webmcp/index.d.ts",
+        "default": "./dist/components/webmcp/index.js"
+      },
+      "require": {
+        "types": "./dist/components/webmcp/index.d.cts",
+        "default": "./dist/components/webmcp/index.cjs"
+      }
+    },
+    "./schemas/*": "./schemas/*"
   },
   "imports": {
     "#lib/*": "./src/lib/*.ts",
@@ -149,6 +191,7 @@
     "#ui/kindColors": "./src/ui/kindColors.ts",
     "#ui/ErrorPopover": "./src/ui/ErrorPopover.tsx",
     "#ui/RowActionsMenu": "./src/ui/RowActionsMenu.tsx",
+    "#ui/sheet": "./src/ui/sheet/index.tsx",
     "#ui/Toast": "./src/ui/Toast.tsx"
   },
   "scripts": {
@@ -161,11 +204,14 @@
     "check": "npm run typecheck && npm run lint && npm run depcruise && npm test",
     "test": "vitest run",
     "test:watch": "vitest",
+    "dev": "vite --config app/vite.config.ts",
+    "app:build": "vite build --config app/vite.config.ts",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "e2e": "playwright test",
     "depcruise": "depcruise . --config .dependency-cruiser.cjs --ignore-known --output-type err-long",
-    "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs"
+    "depcruise:baseline": "depcruise-baseline . --config .dependency-cruiser.cjs",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "@codemirror/autocomplete": "^6.0.0",
@@ -178,6 +224,7 @@
     "@lezer/highlight": "^1.0.0",
     "@mantine/core": "^9.0.0",
     "@mantine/hooks": "^9.0.0",
+    "@mantine/notifications": "^9.0.0",
     "@tabler/icons-react": "^3.0.0",
     "@tanstack/charts": "^1.1.0",
     "@tanstack/markdown": "^1.2.0",
@@ -221,14 +268,17 @@
     },
     "@tanstack/markdown": {
       "optional": true
+    },
+    "@mantine/notifications": {
+      "optional": true
     }
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@edgerules/portable": "0.2.7-alpha.202611081915",
-    "@edgerules/web": "0.2.7-alpha.202611081915"
+    "@edgerules/portable": "0.2.8-alpha.202611121551",
+    "@edgerules/web": "0.2.8-alpha.202611121551"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.4",
@@ -238,16 +288,18 @@
     "@codemirror/lint": "^6.9.7",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.15",
-    "@edgerules/node": "0.2.7-alpha.202611081915",
+    "@edgerules/node": "0.2.8-alpha.202611121551",
     "@lezer/highlight": "^1.2.5",
     "@mantine/core": "^9.7.3",
     "@mantine/hooks": "^9.7.3",
+    "@mantine/notifications": "^9.7.3",
     "@playwright/test": "^1.64.1",
     "@storybook/react-vite": "^10.6.3",
     "@swc/core": "^1.16.20",
     "@tabler/icons-react": "^3.49.0",
     "@tanstack/charts": "^1.1.0",
     "@tanstack/markdown": "^1.2.0",
+    "@tanstack/react-router": "^1.170.46",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",

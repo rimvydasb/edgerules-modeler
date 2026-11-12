@@ -57,6 +57,15 @@ export function formatValue(value: unknown): string {
     return JSON.stringify(value);
 }
 
+// Renders an engine value as cell text that `parseCell` reads back to the same value: what "Copy actual to expected"
+// writes. Unlike `formatValue`, a list or a record is the full JSON, never a summary like "5 items".
+export function toCellText(value: unknown): string {
+    if (value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    return JSON.stringify(value);
+}
+
 function deepEqual(a: unknown, b: unknown): boolean {
     if (Object.is(a, b)) return true;
     if (typeof a !== typeof b) return false;

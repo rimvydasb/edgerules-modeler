@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120" font-family="JetBrains Mono, monospace" font-size="6.5" fill="#495057">
+  <g fill="none" stroke="#495057" stroke-width="0.9">
+    <path d="M74 23 C90 23 88 23 104 23"/>
+    <path d="M74 55 C92 55 86 23 104 23"/>
+    <path d="M74 87 C92 87 86 65 104 65"/>
+    <path d="M74 55 C92 55 86 65 104 65"/>
+    <path d="M176 23 C192 23 190 39 206 39"/>
+    <path d="M176 65 C192 65 190 39 206 39"/>
+    <path d="M176 65 C192 65 190 79 206 79"/>
+  </g>
+  <g stroke="#17191c" stroke-width="0.9" fill="#fff">
+    <rect x="14" y="14" width="60" height="18"/><rect x="14" y="46" width="60" height="18"/><rect x="14" y="78" width="60" height="18"/>
+    <rect x="104" y="14" width="72" height="18"/><rect x="104" y="56" width="72" height="18"/>
+    <rect x="206" y="30" width="62" height="18"/><rect x="206" y="70" width="62" height="18"/>
+  </g>
+  <g>
+    <rect x="14" y="14" width="8" height="18" fill="#ed6c02"/><rect x="14" y="46" width="8" height="18" fill="#ed6c02"/><rect x="14" y="78" width="8" height="18" fill="#ed6c02"/>
+    <rect x="104" y="14" width="8" height="18" fill="#1976d2"/><rect x="104" y="56" width="8" height="18" fill="#6a1b9a"/>
+    <rect x="206" y="30" width="8" height="18" fill="#00897b"/><rect x="206" y="70" width="8" height="18" fill="#00897b"/>
+  </g>
+  <text x="26" y="25">loan</text><text x="26" y="57">applicant</text><text x="26" y="89">coApplicant</text>
+  <text x="116" y="25">jointApplication</text><text x="116" y="67">scorecard</text>
+  <text x="218" y="41">decision</text><text x="218" y="81">offer</text>
+</svg>

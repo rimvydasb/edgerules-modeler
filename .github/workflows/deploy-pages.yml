@@ -1,0 +1,58 @@
+name: Deploy app to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer merge supersedes a queued one but never cancels a running deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check (typecheck, lint, dependency rules, tests)
+        run: npm run check
+
+      - name: Build the app
+        run: npm run app:build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      # GitHub Pages has no SPA fallback: it serves 404.html for unknown paths, so a deep link such as
+      # /<repo>/project/x loads the app, whose router then reads the URL.
+      - name: Add the SPA fallback
+        run: cp app/dist/index.html app/dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

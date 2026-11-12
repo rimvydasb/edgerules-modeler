@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Home A · Title page</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .hero {
+        text-align: center;
+        padding: 56px 16px 40px;
+        border-bottom: 1px solid var(--rule);
+    }
+    .hero .mk {
+        width: 88px;
+        height: 88px;
+    }
+    .hero h1 {
+        font: 500 44px/1.1 var(--serif);
+        margin: 14px 0 6px;
+        letter-spacing: 0.005em;
+    }
+    .hero .tag {
+        font: italic 18px/1.5 var(--serif);
+        color: var(--ink-2);
+        margin: 0 0 28px;
+    }
+    .hero .search {
+        max-width: 640px;
+        margin: 0 auto;
+        text-align: left;
+    }
+    .hero .try {
+        margin-top: 12px;
+        font-size: 12.5px;
+        color: var(--ink-3);
+    }
+    .hero .try .tok {
+        cursor: pointer;
+    }
+    .hero .try .tok:hover {
+        border-color: var(--ink);
+        color: var(--ink);
+    }
+    .rows {
+        background: var(--paper);
+        border: 1px solid var(--rule);
+    }
+    .row {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        height: 48px;
+        border-bottom: 1px solid var(--rule-soft);
+        color: inherit;
+    }
+    .row:last-child {
+        border-bottom: 0;
+    }
+    .row:hover {
+        background: var(--canvas);
+        text-decoration: none;
+    }
+    .row .nm {
+        padding: 0 14px;
+        font-weight: 500;
+        min-width: 220px;
+    }
+    .row .nm em {
+        font: italic 13px var(--serif);
+        color: var(--ink-3);
+        font-weight: 400;
+        margin-left: 4px;
+    }
+    .row .src {
+        flex: 1;
+    }
+    .row .when {
+        width: 110px;
+        font-size: 12px;
+        color: var(--ink-3);
+    }
+    .row .go {
+        width: 80px;
+        font-size: 13px;
+        color: var(--link);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .chapters {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 0;
+        border-top: 1px solid var(--rule);
+        border-left: 1px solid var(--rule);
+        background: var(--paper);
+    }
+    .chap {
+        border-right: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+        padding: 16px 16px 14px;
+        color: inherit;
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 2px 12px;
+    }
+    .chap:hover {
+        background: var(--canvas);
+        text-decoration: none;
+    }
+    .chap .ico {
+        grid-row: span 3;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--ink);
+        display: grid;
+        place-items: center;
+    }
+    .chap .ico svg {
+        width: 22px;
+        height: 22px;
+    }
+    .chap .rn {
+        font: italic 12px var(--serif);
+        color: var(--straw);
+    }
+    .chap .ti {
+        font: 500 17px var(--serif);
+    }
+    .chap .ct {
+        font-size: 12px;
+        color: var(--ink-3);
+    }
+    .chap.empty {
+        opacity: 0.45;
+    }
+    .ex .fig {
+        padding: 6px 0 8px;
+    }
+    .ex .ph .t {
+        font: 500 17px var(--serif);
+    }
+    .ex .ph .no {
+        font: italic 12px var(--serif);
+        color: var(--ink-3);
+        padding-right: 12px;
+    }
+    .colophon {
+        margin-top: 72px;
+        text-align: center;
+        font: italic 13px var(--serif);
+        color: var(--ink-3);
+    }
+    .colophon img {
+        width: 28px;
+        display: block;
+        margin: 0 auto 8px;
+        opacity: 0.6;
+    }
+    .news li {
+        display: flex;
+        gap: 14px;
+        padding: 6px 0;
+        border-bottom: 1px dotted var(--dot);
+        align-items: baseline;
+    }
+    .news {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .news .d {
+        font: 12px var(--mono);
+        color: var(--ink-3);
+        width: 86px;
+    }
+    .news .n {
+        font: 15px var(--serif);
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="home-a.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <a class="cell" href="examples-a.html"><i data-i="library"></i><span class="lbl">Examples</span></a>
+    <a class="cell" href="workspace-a.html"><i data-i="grid"></i><span class="lbl">Workspace</span></a>
+    <a class="cell" href="project-a.html" title="Last open project"><i data-i="clock"></i><span class="lbl">Loan origination</span></a>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+
+<section class="hero squared">
+    <img class="mk ink-img" src="assets/sodas.svg" alt="EdgeRules" />
+    <h1>EdgeRules</h1>
+    <p class="tag">Business rules as a workbook — model, test and run decisions in the browser.</p>
+    <div class="search"><i data-i="search"></i><span class="ph">Search 3 examples and 3 projects — loan, scorecard, optimise…</span><span class="kbd">/</span></div>
+    <div class="try">Try&nbsp; <span class="tok">decision-table</span><span class="tok">scorecard</span><span class="tok">loop</span><span class="tok">optimise</span></div>
+</section>
+
+<main class="page">
+    <div class="sec">
+        <span class="no">§1</span>
+        <h2>Continue</h2>
+        <span class="line"></span>
+        <a class="btn sm" href="#"><i data-i="plus"></i>New project</a>
+        <a class="more" href="workspace-a.html">All 3 projects →</a>
+    </div>
+    <div class="rows">
+        <a class="row" href="project-a.html">
+            <span class="kind"><i data-i="book"></i></span>
+            <span class="nm">Loan origination <em>copy 3</em></span>
+            <span class="src"><span class="tok">loan-origination@2.0.0</span></span>
+            <span class="when">saved 8 h ago</span>
+            <span class="go">Open <i data-i="arrow"></i></span>
+        </a>
+        <a class="row" href="project-a.html">
+            <span class="kind" style="background: var(--k-decision)"><i data-i="book"></i></span>
+            <span class="nm">Loan origination <em>copy 2</em></span>
+            <span class="src"><span class="tok">loan-origination@2.0.0</span></span>
+            <span class="when">saved 8 h ago</span>
+            <span class="go">Open <i data-i="arrow"></i></span>
+        </a>
+        <a class="row" href="project-a.html">
+            <span class="kind" style="background: var(--k-ruleset)"><i data-i="book"></i></span>
+            <span class="nm">My pricing</span>
+            <span class="src"><span class="chip ink">Own project</span></span>
+            <span class="when">saved 3 d ago</span>
+            <span class="go">Open <i data-i="arrow"></i></span>
+        </a>
+    </div>
+
+    <div class="sec">
+        <span class="no">§2</span>
+        <h2>Chapters</h2>
+        <span class="line"></span>
+        <span class="count">by industry</span>
+    </div>
+    <div class="chapters">
+        <a class="chap" href="examples-b.html"><span class="ico"><i data-i="financial"></i></span><span class="rn">Chapter I</span><span class="ti">Financial</span><span class="ct">3 examples</span></a>
+        <a class="chap empty" href="#"><span class="ico"><i data-i="insurance"></i></span><span class="rn">Chapter II</span><span class="ti">Insurance</span><span class="ct">coming</span></a>
+        <a class="chap empty" href="#"><span class="ico"><i data-i="health"></i></span><span class="rn">Chapter III</span><span class="ti">Healthcare</span><span class="ct">coming</span></a>
+        <a class="chap empty" href="#"><span class="ico"><i data-i="logistics"></i></span><span class="rn">Chapter IV</span><span class="ti">Logistics</span><span class="ct">coming</span></a>
+        <a class="chap empty" href="#"><span class="ico"><i data-i="retail"></i></span><span class="rn">Chapter V</span><span class="ti">Retail</span><span class="ct">coming</span></a>
+    </div>
+
+    <div class="sec">
+        <span class="no">§3</span>
+        <h2>Featured examples</h2>
+        <span class="line"></span>
+        <a class="more" href="examples-b.html">See all examples →</a>
+    </div>
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))">
+        <a class="panel ex" href="#">
+            <div class="ph"><span class="kind" style="background: var(--k-decision)"><i data-i="financial"></i></span><span class="t">Loan repayment</span><span class="no">Ex. I.1</span></div>
+            <div class="fig graph"><img src="assets/fig-repayment.svg" alt="" /></div>
+            <div class="desc">Prices a loan request and returns its monthly repayment schedule.</div>
+            <div class="pb">
+                <span class="tok">decision-table</span><span class="tok">function</span><span class="tok">service</span><span class="tok">+2</span>
+                <div class="meta" style="margin-top: 6px"><span class="diff"><i class="f"></i><i></i><i></i></span><span>Beginner</span><span>v1.2.0</span><span>13 tests</span></div>
+            </div>
+        </a>
+        <a class="panel ex" href="#">
+            <div class="ph"><span class="kind" style="background: var(--k-function)"><i data-i="financial"></i></span><span class="t">Loan origination</span><span class="no">Ex. I.2</span></div>
+            <div class="fig graph"><img src="assets/fig-origination.svg" alt="" /></div>
+            <div class="desc">Scores, checks, prices and decides a joint mortgage application.</div>
+            <div class="pb">
+                <span class="tok">facts</span><span class="tok">decision-table</span><span class="tok">decision</span><span class="tok">+4</span>
+                <div class="meta" style="margin-top: 6px"><span class="diff"><i class="f"></i><i class="f"></i><i></i></span><span>Intermediate</span><span>v2.0.0</span><span>38 tests</span><span class="chip ok"><i data-i="check"></i>In workspace · 3</span></div>
+            </div>
+        </a>
+        <a class="panel ex" href="#">
+            <div class="ph"><span class="kind" style="background: var(--k-ruleset)"><i data-i="financial"></i></span><span class="t">Client outreach</span><span class="no">Ex. I.3</span></div>
+            <div class="fig graph"><img src="assets/fig-outreach.svg" alt="" /></div>
+            <div class="desc">Decides whom to call, email or text in one working day for the largest expected value.</div>
+            <div class="pb">
+                <span class="tok">optimise</span><span class="tok">decision-table</span><span class="tok">loop</span><span class="tok">+3</span>
+                <div class="meta" style="margin-top: 6px"><span class="diff"><i class="f"></i><i class="f"></i><i class="f"></i></span><span>Advanced</span><span>v1.0.0</span><span>22 tests</span></div>
+            </div>
+        </a>
+    </div>
+
+    <div class="sec">
+        <span class="no">§4</span>
+        <h2>New and updated</h2>
+        <span class="line"></span>
+    </div>
+    <ul class="news">
+        <li><span class="d">2026-11-02</span><span class="n">Loan origination</span><span class="tok">2.0.0</span><span class="muted" style="font-size: 12px">joint applicants, counter-offer</span></li>
+        <li><span class="d">2026-10-28</span><span class="n">Loan repayment</span><span class="tok">1.2.0</span></li>
+        <li><span class="d">2026-10-20</span><span class="n">Client outreach</span><span class="tok">1.0.0</span><span class="chip straw">new</span></li>
+    </ul>
+
+    <div class="band" style="margin-top: 64px"></div>
+    <div class="colophon">
+        <img class="ink-img" src="assets/sodas.svg" alt="" />
+        EdgeRules Modeler · engine 0.2.6-alpha · every project lives in this browser
+    </div>
+</main>
+
+<div class="proposal-note"><span class="x">✕</span><b>Home A — “Title page”</b>A textbook title page: mark, name, one line, search. Sections are numbered (§1…§4) with straw numerals. Projects are a ruled list, not cards — names are what you scan. Industries become <i>chapters</i>; examples are <i>exercises</i> with a figure. <a href="index.html">← all proposals</a></div>
+<script src="assets/ds.js"></script>
+</body>
+</html>

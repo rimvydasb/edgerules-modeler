@@ -1,6 +1,7 @@
 import type {Unsubscribe} from '#lib/changeBatch';
 import type {
     DocumentationDocument,
+    ProjectOrigin,
     ModelMetadata,
     FlowMetadataDocument,
     ProjectBundle,
@@ -25,6 +26,8 @@ export interface ProjectSessionSnapshot {
     phase: ProjectSessionPhase;
     projectId: string;
     name: string;
+    origin?: ProjectOrigin; // the library example that the project is a copy of
+    savedAt?: string; // ISO time of the last save, when the repository reports it
     locator: ProjectLocator;
     revision: string; // the repository revision this working copy is based on
     localVersion: number; // increments with every change of any slice
@@ -84,9 +87,13 @@ export interface ProjectSession {
 
     getDslDraft(): string; // the uncommitted DSL text, or the committed model
     setDslDraft(text: string): void; // keeps text in memory only; `commitDsl` validates it
+    discardDslDraft(): void; // drops the uncommitted DSL text; the committed model is valid again
 
     // The whole project as one bundle. Throws while the DSL is invalid or a transaction is open.
     exportBundle(): ProjectBundle;
+    // A detached in-memory copy of the committed state, with its own engine. Its changes never reach this session,
+    // and its `save` fails with 'invalid-state'. The caller disposes it. Throws while a transaction is open.
+    fork(): ProjectSession;
     // Saves the bundle against the revision it was loaded from. On `conflict` the phase becomes 'conflict'.
     save(): Promise<SaveResult>;
     // Frees the engine and drops every subscriber. Called by `ProjectSessionManager.close`.

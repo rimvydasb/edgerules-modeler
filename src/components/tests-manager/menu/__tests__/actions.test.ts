@@ -3,6 +3,7 @@ import {describe, expect, it, vi} from 'vitest';
 import {createTestCasesService} from '../../../test-cases-service';
 import type {TestRow} from '../../../test-cases-service';
 import type {TestRunner} from '../../tests-manager-types';
+import {matches} from '../../model/values';
 import {rowActionsFor, testCaseActionsFor} from '../actions';
 
 function uniqueDbName(): string {
@@ -106,6 +107,53 @@ describe('rowActionsFor', () => {
 
         const labels = rowActionsFor(validationRow, service).map((a) => a.label);
         expect(labels).toContain('Move to Assertions');
+
+        service.dispose();
+    });
+});
+
+describe('rowActionsFor: assertions of a list result', () => {
+    it("Move to Assertions copies a list as JSON that matches, not as the '2 items' summary", async () => {
+        const service = createTestCasesService('function', 'borrowingCapacity', {dbName: uniqueDbName()});
+        await waitForHydration(service);
+        const row: TestRow = {path: 'result', section: 'validations', order: 0, type: 'array', present: true};
+        service.syncRows([row]);
+        const testCase = service.addTestCase('A');
+        const capacity = [
+            {termYears: 15, maxLoan: 307823},
+            {termYears: 30, maxLoan: 411917},
+        ];
+        service.saveResultSet({
+            testCaseId: testCase.id,
+            ranAt: 1,
+            status: 'ok',
+            results: {result: {path: 'result', value: capacity, status: 'ok'}},
+        });
+
+        rowActionsFor(row, service)
+            .find((action) => action.label === 'Move to Assertions')
+            ?.onSelect();
+
+        const expected = service.getCell(testCase.id, 'result', 'assertion');
+        expect(expected).toBe(JSON.stringify(capacity));
+        expect(matches(expected ?? '', capacity, 'array')).toBe(true);
+
+        service.dispose();
+    });
+
+    it('Duplicate runs the cases again, so the new row shows its actual value', async () => {
+        const service = createTestCasesService('function', 'borrowingCapacity', {dbName: uniqueDbName()});
+        await waitForHydration(service);
+        const row: TestRow = {path: 'result[0].maxLoan', section: 'assertions', order: 0, type: 'number', present: true};
+        service.syncRows([row]);
+        const rerun = vi.fn();
+
+        rowActionsFor(row, service, rerun)
+            .find((action) => action.label === 'Duplicate')
+            ?.onSelect();
+
+        expect(service.listRows().map((r) => r.path)).toContain('result[1].maxLoan');
+        expect(rerun).toHaveBeenCalledTimes(1);
 
         service.dispose();
     });

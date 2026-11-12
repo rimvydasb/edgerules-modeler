@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 2,
+  "layouts": {
+    "riskBook": {
+      "positions": {
+        "riskBook.check": {
+          "x": 320,
+          "y": 40
+        },
+        "riskBook.person": {
+          "x": 40,
+          "y": 40
+        }
+      },
+      "outputs": [
+        {
+          "id": "output",
+          "label": "Risk level",
+          "source": {
+            "node": "riskBook.check",
+            "handle": "out:level"
+          }
+        }
+      ]
+    }
+  }
+}

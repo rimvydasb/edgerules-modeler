@@ -5,7 +5,7 @@ import {CellInput} from '#ui/grid';
 import {cx} from '#ui/cx';
 import {useTestsManagerContext} from '../context/TestsManagerContext';
 import {useCell} from '../hooks/useCell';
-import {formatValue} from '../model/values';
+import {toCellText} from '../model/values';
 import * as classes from './testsGrid.module.css';
 
 // Editable expected value. A cell whose expected value does not equal the computed value is
@@ -26,7 +26,7 @@ export function AssertionCell({testCaseId, row}: {testCaseId: string; row: TestR
     // wrapping only when `mismatch` is true would change the element tree shape on every toggle,
     // remounting the input and dropping focus mid-edit.
     return (
-        <Tooltip label={formatValue(cell.result?.value)} disabled={!mismatch} withinPortal>
+        <Tooltip label={toCellText(cell.result?.value)} disabled={!mismatch} withinPortal>
             <CellInput
                 className={cx(mismatch && classes.mismatch)}
                 value={value}

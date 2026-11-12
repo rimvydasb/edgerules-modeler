@@ -3,8 +3,15 @@ import {LOAN_ORIGINATION_DOCUMENTATION} from './documentation';
 import {LOAN_ORIGINATION_FLOW} from './flow';
 import {LOAN_ORIGINATION_DSL} from './model';
 import {LOAN_ORIGINATION_TESTS} from './tests';
+import LOAN_ORIGINATION_README from './README.md?raw';
 
-export {LOAN_ORIGINATION_DOCUMENTATION, LOAN_ORIGINATION_DSL, LOAN_ORIGINATION_FLOW, LOAN_ORIGINATION_TESTS};
+export {
+    LOAN_ORIGINATION_DOCUMENTATION,
+    LOAN_ORIGINATION_DSL,
+    LOAN_ORIGINATION_FLOW,
+    LOAN_ORIGINATION_README,
+    LOAN_ORIGINATION_TESTS,
+};
 
 /** The loan origination project: pass it to `ProjectFactory.createBundle`. */
 export const LOAN_ORIGINATION_PROJECT: ProjectBundleInput = {
@@ -15,4 +22,5 @@ export const LOAN_ORIGINATION_PROJECT: ProjectBundleInput = {
     documentation: LOAN_ORIGINATION_DOCUMENTATION,
     tests: LOAN_ORIGINATION_TESTS,
     flow: LOAN_ORIGINATION_FLOW,
+    readme: LOAN_ORIGINATION_README,
 };

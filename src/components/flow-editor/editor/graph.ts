@@ -1,4 +1,5 @@
 import type {XYPosition} from '@xyflow/react';
+import {readPaths} from '#lib/expressionReads';
 import {parentPath} from '#lib/portableUtils';
 import {typeKind} from '../core-node';
 import type {ExpressionNodeModel} from '../expression-node/types';
@@ -142,23 +143,28 @@ export function modelWires(
             kind: typeKind(type),
         });
     };
-    for (const [field, model] of models) {
-        for (const argument of model.arguments) {
-            if (argument.binding?.kind === 'path') wire(field, argument.name, argument.binding.text, argument.type);
-        }
-    }
-    const wireVariables = (field: string, variables: string[]) => {
-        for (const variable of variables) {
-            // A read deeper than any pin, such as `applicant.address.city`, comes from the nearest pin on its path.
-            let path = variable.trim();
+    // One wire per node path read into the pin `pin`. A read deeper than any pin, such as `applicant.address.city`,
+    // comes from the nearest pin on its path.
+    const wireReads = (field: string, pin: string, reads: string[], type: string) => {
+        for (const read of reads) {
+            let path = read.trim();
             while (!resolve(qualifyBinding(path, field, sources))) {
                 const cut = Math.max(path.lastIndexOf('.'), path.lastIndexOf('['));
                 if (cut <= 0) break;
                 path = path.slice(0, cut);
             }
-            wire(field, '*', path, 'any', `${field}:*:${path}`);
+            wire(field, pin, path, type, `${field}:${pin}:${path}`);
         }
     };
+    for (const [field, model] of models) {
+        for (const argument of model.arguments) {
+            if (argument.binding?.kind === 'path') wire(field, argument.name, argument.binding.text, argument.type);
+            // A computed argument, such as `for r in records return r.value`: one wire per node path it reads.
+            else if (argument.binding?.kind === 'value')
+                wireReads(field, argument.name, readPaths(argument.binding.text), argument.type);
+        }
+    }
+    const wireVariables = (field: string, variables: string[]) => wireReads(field, '*', variables, 'any');
     for (const ref of refs) {
         if (ref.kind !== 'return' || !returnModel) continue;
         const model = returnModel(ref.field);

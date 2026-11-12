@@ -44,4 +44,7 @@ export const OriginationBook: Story = {args: {defaultPath: 'originationBook', de
 export const CapacityBook: Story = {args: {defaultPath: 'capacityBook', defaultView: 'flow'}};
 
 /** The tests of the `loanOriginationDecision` service: joint and single applications, one per outcome. Run all to check every case. */
+/** The tests of the whole model: its own rows, and the rows its workbooks add when a run reaches them. */
+export const ModelTests: Story = {args: {defaultPath: '*', defaultView: 'tests'}};
+
 export const ServiceTests: Story = {args: {defaultPath: 'loanOriginationDecision', defaultView: 'tests'}};

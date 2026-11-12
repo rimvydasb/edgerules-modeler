@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EdgeRules example manifest",
+  "description": "edgerules.project.json of an example in edgerules-examples: a project manifest without projectId, plus catalog metadata.",
+  "type": "object",
+  "required": ["kind", "formatVersion", "name", "description", "model", "example"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "kind": {"const": "EdgeRulesProject"},
+    "formatVersion": {"const": 3},
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1, "maxLength": 160},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "model": {
+      "type": "object",
+      "required": ["format", "source", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "format": {"const": "dsl"},
+        "source": {"type": "string", "pattern": "^model/[^/]+\\.edge$"},
+        "name": {"type": "string"},
+        "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"}
+      }
+    },
+    "documentation": {"type": "string"},
+    "tests": {"type": "array", "items": {"type": "string", "pattern": "^tests/[A-Za-z0-9_-]+\\.tests\\.json$"}},
+    "flow": {"type": "string"},
+    "example": {
+      "type": "object",
+      "required": ["industry", "level", "features", "engine", "authors"],
+      "additionalProperties": false,
+      "properties": {
+        "industry": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "level": {"enum": ["beginner", "intermediate", "advanced"]},
+        "features": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "type",
+              "facts",
+              "function",
+              "decision-table",
+              "decision",
+              "service",
+              "workbook",
+              "chart",
+              "loop",
+              "optimise"
+            ]
+          }
+        },
+        "engine": {"type": "string", "minLength": 1},
+        "authors": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "requires": {"type": "array", "uniqueItems": true, "items": {"enum": ["milp-solver"]}},
+        "thumbnail": {"type": "string"}
+      }
+    }
+  }
+}

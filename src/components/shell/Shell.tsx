@@ -4,7 +4,10 @@ import {listCallables, untypedParameters} from '#lib/callables';
 import {isPortableError} from '#lib/portable';
 import {callableParameters, isRecord, portableAtPath} from '#lib/portableUtils';
 import type {PortableNode} from '@edgerules/portable';
+import {primaryRootView} from '#lib/rootViews';
 import {cx} from '#ui/cx';
+import {KIND_COLORS} from '#ui/kindColors';
+import {sheetClasses} from '#ui/sheet';
 import {createBoxedEditorService, type BoxedEditorOpenTarget} from '../boxed-editor';
 import {createFlowEditorService, type FlowEditorOpenTarget, type FlowFocusRequest} from '../flow-editor';
 import {ProjectExplorer} from '../project-explorer';
@@ -24,22 +27,34 @@ import {
     README_FILE,
     README_PATH,
     ROOT_VIEWS,
+    resolveRootPath,
     rootPathSegments,
     rootViews,
+    TESTS_OVERVIEW_PATH,
     workbookNodeCounts,
 } from './shell-path';
+import {useTestsStatus} from './testsStatus';
 import {explorerRoute} from './shell-routing';
 import type {ShellProps, ShellView} from './shell-types';
+import {ShellAgentToast, ShellAgentWorking} from './ShellAgentToast';
 import {ShellBreadcrumbs, type PrimaryView} from './ShellBreadcrumbs';
+import {ShellProjectMenu} from './ShellProjectMenu';
 import {ShellSettings} from './ShellSettings';
 import {ShellSplitToggle} from './ShellSplitToggle';
 import {ShellViewSwitch} from './ShellViewSwitch';
 import {BoxedView} from './views/BoxedView';
-import {CodeView} from './views/CodeView';
+import {CodeView, type CodeDraft} from './views/CodeView';
 import {DocumentCode, DocumentPreview} from './views/DocumentView';
 import {FlowView} from './views/FlowView';
+import {TestsOverview} from './views/TestsOverview';
 import {TestsView} from './views/TestsView';
-import {WorkbookPicker, type ServiceSummary, type WorkbookSummary} from './views/WorkbookPicker';
+import {
+    WorkbookPicker,
+    type OverviewCount,
+    type ProjectOverview,
+    type ServiceSummary,
+    type WorkbookSummary,
+} from './views/WorkbookPicker';
 import * as classes from './shell.module.css';
 
 type OpenTarget = BoxedEditorOpenTarget | FlowEditorOpenTarget;
@@ -75,6 +90,8 @@ export function Shell({
     defaultExplorerOpen = true,
     onExplorerOpenChange,
     onOpenNode,
+    navigation,
+    agentActivity,
     className,
     style,
 }: ShellProps): ReactElement {
@@ -82,7 +99,7 @@ export function Shell({
     const {version, metadata} = useProjectSlice('model');
     const {subjects} = useProjectSlice('tests');
     const testSubjects = useMemo(() => Object.keys(subjects), [subjects]);
-    const {dslValidity} = useProjectSnapshot();
+    const {dslValidity, name: projectName, origin: projectOrigin, savedAt} = useProjectSnapshot();
     const {byPath: descriptions} = useProjectSlice('documentation');
     const readme = useProjectSlice('readme');
     const readmeExists = hasReadme(readme);
@@ -100,6 +117,9 @@ export function Shell({
     const requestedView = viewProp ?? ownView;
     // A document root path: the README is the only document of a project. Another `doc:` path falls back to '*'.
     const isDocument = isDocumentPath(requested) && documentFile(requested) === README_FILE;
+    // The Tests Overview page: a project page with no model path and the Tests view only.
+    const isTestsOverview = requested === TESTS_OVERVIEW_PATH;
+    const testsStatus = useTestsStatus(session);
 
     // The test subjects of the Tests Manager: the model ('*') and every fully typed callable.
     const subjectPaths = useMemo(
@@ -111,13 +131,13 @@ export function Shell({
     // The requested path, or its nearest valid ancestor that exists in the current model. A test subject that does
     // not exist falls back to the tests of the model.
     const segments = useMemo(() => {
-        if (isDocument) return [];
+        if (isDocument || isTestsOverview) return [];
         const resolved = rootPathSegments(session.engine.toPortable(), requested);
         return requestedView === 'tests' && !subjectPaths.has(resolved.at(-1)?.path ?? '*') ? [] : resolved;
         // `version` changes with every model change, which can remove or rename the path.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session, requested, requestedView, version, subjectPaths, isDocument]);
-    const root = isDocument ? README_PATH : (segments.at(-1)?.path ?? '*');
+    }, [session, requested, requestedView, version, subjectPaths, isDocument, isTestsOverview]);
+    const root = isDocument ? README_PATH : isTestsOverview ? TESTS_OVERVIEW_PATH : (segments.at(-1)?.path ?? '*');
     // A generic function: the arguments that need a type before it can be tested.
     const untypedArguments = useMemo(
         () =>
@@ -133,14 +153,16 @@ export function Shell({
     // the Boxed view, which every model path has, or to the Preview view of a document.
     const views = useMemo(
         () =>
-            isDocument
-                ? ROOT_VIEWS.document
-                : rootViews(segments, session.engine.toPortable(), readmeExists).filter(
-                      (candidate) => candidate !== 'tests' || subjectPaths.has(root),
-                  ),
+            isTestsOverview
+                ? (['tests'] as ShellView[])
+                : isDocument
+                  ? ROOT_VIEWS.document
+                  : rootViews(segments, session.engine.toPortable(), readmeExists).filter(
+                        (candidate) => candidate !== 'tests' || subjectPaths.has(root),
+                    ),
         // `version` changes with every model change, which can add or remove the workbooks of the model.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [session, segments, subjectPaths, root, version, isDocument, readmeExists],
+        [session, segments, subjectPaths, root, version, isDocument, isTestsOverview, readmeExists],
     );
     const view = views.includes(requestedView) ? requestedView : isDocument ? 'preview' : 'boxed';
 
@@ -150,17 +172,17 @@ export function Shell({
         const model = session.engine.toPortable();
         return {
             rootLabel: modelName(metadata),
-            hasSettings: !isDocument && hasRootSettings(model, root),
+            hasSettings: !isDocument && !isTestsOverview && hasRootSettings(model, root),
             // The model has a Flow view only when it has a workbook, a service or a README.
             modelView: (hasModelFlow(model, readmeExists) ? 'flow' : 'boxed') as ShellView,
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session, root, version, metadata, isDocument, readmeExists]);
+    }, [session, root, version, metadata, isDocument, isTestsOverview, readmeExists]);
 
     // The Flow view of the model root offers the workbooks and the services to open, when the model has workbooks.
     // A new workbook must not take a root name.
-    const {workbooks, services, taken} = useMemo(() => {
-        if (root !== '*') return {workbooks: [], services: [], taken: new Set<string>()};
+    const {workbooks, services, taken, counts} = useMemo(() => {
+        if (root !== '*') return {workbooks: [], services: [], taken: new Set<string>(), counts: [] as OverviewCount[]};
         const model = session.engine.toPortable();
         const workbooks: WorkbookSummary[] = modelWorkbooks(model).map((workbook) => ({
             path: workbook,
@@ -175,7 +197,15 @@ export function Shell({
             arguments: Object.keys(parametersAt(model, entry.path)).length,
         }));
         const taken = new Set(Object.keys(model.fields));
-        return {workbooks, services, taken};
+        const sections = buildSections(model, []);
+        const counts: OverviewCount[] = [
+            {label: 'Types', count: sections.types.length, color: KIND_COLORS.complexType},
+            {label: 'Facts', count: sections.factsLibrary.length, color: KIND_COLORS.facts},
+            {label: 'Methods', count: sections.methods.length, color: KIND_COLORS.function},
+            {label: 'Decisions', count: sections.decisions.length, color: KIND_COLORS.decision},
+            {label: 'Variables', count: sections.variables.length, color: '#adb5bd'},
+        ];
+        return {workbooks, services, taken, counts};
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session, root, version, descriptions]);
 
@@ -185,8 +215,8 @@ export function Shell({
     );
     const flowService = useMemo(() => createFlowEditorService(session.engine, {root}), [session, root]);
 
-    // Uncommitted code of context and function paths; the session keeps the draft of '*'.
-    const drafts = useMemo(() => new Map<string, string>(), [session]);
+    // Uncommitted code by root path and the committed code it was typed over; the session also keeps the text of '*'.
+    const drafts = useMemo(() => new Map<string, CodeDraft>(), [session]);
     const [codeErrors, setCodeErrors] = useState<Record<string, string>>({});
     const flushCode = useRef<(() => void) | undefined>(undefined);
     const onCommitError = useCallback((errorPath: string, message: string | undefined) => {
@@ -236,7 +266,13 @@ export function Shell({
 
     // The kind icon opens a document in the Preview view, and a model path in the Flow view when it has one,
     // otherwise in the Boxed view.
-    const primaryView: PrimaryView = isDocument ? 'preview' : views.includes('flow') ? 'flow' : 'boxed';
+    const primaryView: PrimaryView = isTestsOverview
+        ? 'tests'
+        : isDocument
+          ? 'preview'
+          : views.includes('flow')
+            ? 'flow'
+            : 'boxed';
 
     // A `model:` link of the README opens the model path, or its nearest valid ancestor, in its main view.
     const openModelLink = (linked: string) => {
@@ -246,6 +282,20 @@ export function Shell({
     };
 
     const openReadme = () => navigate({path: README_PATH, view: 'preview'});
+
+    const openTestsOverview = () => navigate({path: TESTS_OVERVIEW_PATH, view: 'tests'});
+
+    // "Show" of an agent change: a test case opens the tests of its subject, a document its Preview view, and a model
+    // path its root path in the main view.
+    const showTarget = (target: string) => {
+        if (isDocumentPath(target)) return navigate({path: target, view: 'preview'});
+        const hash = target.indexOf('#');
+        if (hash !== -1) return navigate({path: target.slice(0, hash), view: 'tests'});
+        const model = session.engine.toPortable();
+        const shown = resolveRootPath(model, target);
+        const shownViews = rootViews(rootPathSegments(model, shown), model, readmeExists);
+        navigate({path: shown, view: primaryRootView(shownViews)});
+    };
 
     const setExplorerOpen = (open: boolean) => {
         if (explorerOpenProp === undefined) setOwnExplorerOpen(open);
@@ -299,11 +349,11 @@ export function Shell({
 
     const explorer = (
         <ProjectExplorer
-            className={cx(classes.explorer, !explorerOpen && classes.explorerCollapsed)}
+            className={cx(sheetClasses.tokens, classes.explorer, !explorerOpen && classes.explorerCollapsed)}
             collapsed={!explorerOpen}
             service={session.engine}
             revision={version}
-            rootLabel="Project"
+            rootLabel="Project Explorer"
             documents={DOCUMENTS}
             testSubjects={testSubjects}
             // The entry of the open editor, or of the Flow node it centers: its section expands and it is selected.
@@ -315,14 +365,48 @@ export function Shell({
         />
     );
 
+    // The facts of the overview page: the project header and its side column.
+    const overview: ProjectOverview = {
+        name: projectName,
+        savedAt,
+        origin: projectOrigin,
+        originStatus: navigation?.originStatus,
+        onShowOrigin: navigation?.onShowOrigin,
+        counts,
+        testSuites: testSubjects.length,
+        tests: testsStatus.summary,
+        testsRun: testsStatus.run,
+        onRunAllTests: testSubjects.length > 0 ? () => void testsStatus.runAll() : undefined,
+        onOpenTests: openTestsOverview,
+    };
+
+    const projectMenu = navigation && (
+        <ShellProjectMenu
+            name={projectName}
+            origin={projectOrigin}
+            navigation={navigation}
+            current={root === '*'}
+            onOpenOverview={() => navigate({path: '*', view: modelView})}
+            onOpenTestsOverview={openTestsOverview}
+            onOpenReadme={readmeExists ? openReadme : undefined}
+        />
+    );
+
     return (
         <div className={cx(classes.root, className)} style={style} data-testid="shell">
-            <div className={classes.header}>
+            <div className={cx(classes.header, sheetClasses.tokens)}>
                 <ShellBreadcrumbs
                     segments={segments}
                     rootLabel={rootLabel}
+                    first={projectMenu}
                     origin={originCrumb}
-                    document={isDocument ? {path: root, label: README_FILE} : undefined}
+                    document={
+                        isDocument
+                            ? {path: root, label: README_FILE}
+                            : isTestsOverview
+                              ? {path: root, label: 'Tests Overview'}
+                              : undefined
+                    }
                     // The model name opens the Flow view of the model, its workbooks, or its Boxed view when it declares
                     // none; the crumb of the origin opens its Flow view. Another crumb of the Tests view opens the
                     // model entity, not its tests.
@@ -340,21 +424,31 @@ export function Shell({
                     tests={view === 'tests'}
                 />
                 {hasSettings && !readOnly && <ShellSettings key={root} root={root} />}
-                <ShellViewSwitch
-                    view={view}
-                    views={views}
-                    untypedArguments={untypedArguments}
-                    hasTests={testSubjects.includes(root)}
-                    onCreateTests={readOnly ? undefined : createTests}
-                    onChange={(next) => navigate({view: next})}
-                    document={isDocument}
-                />
+                <ShellAgentWorking activity={agentActivity} />
+                {!isTestsOverview && (
+                    <ShellViewSwitch
+                        view={view}
+                        views={views}
+                        untypedArguments={untypedArguments}
+                        hasTests={testSubjects.includes(root)}
+                        onCreateTests={readOnly ? undefined : createTests}
+                        onChange={(next) => navigate({view: next})}
+                        document={isDocument}
+                        overview={root === '*'}
+                    />
+                )}
                 <ShellSplitToggle open={split} disabled={view !== 'flow'} onToggle={() => setSplit(!split)} />
             </div>
             <div className={classes.content}>
                 {explorer}
                 <div className={classes.main}>
-                    <div className={classes.body}>
+                    <div
+                        className={cx(
+                            classes.body,
+                            !(view === 'flow' && root !== '*') && classes.bodyPage,
+                            view === 'tests' && !isTestsOverview && classes.bodyTests,
+                        )}
+                    >
                         {view === 'preview' && <DocumentPreview markdown={readme} onModelLink={openModelLink} />}
                         {view === 'code' && isDocument && (
                             <DocumentCode
@@ -398,6 +492,7 @@ export function Shell({
                                 onModelLink={openModelLink}
                                 workbooks={workbooks}
                                 services={services}
+                                overview={overview}
                                 taken={taken}
                                 onSelect={(workbook) => navigate({path: workbook, view: 'flow'})}
                                 onSelectService={(service) => navigate({path: service, view: 'flow'})}
@@ -420,8 +515,18 @@ export function Shell({
                                 onExpand={(next) => navigate({path: next, view: 'boxed', from: root})}
                             />
                         )}
-                        {view === 'tests' && (
+                        {view === 'tests' && isTestsOverview && (
+                            <TestsOverview
+                                modelLabel={rootLabel}
+                                summary={testsStatus.summary}
+                                run={testsStatus.run}
+                                onRunAll={() => void testsStatus.runAll()}
+                                onOpenSubject={(subject) => navigate({path: subject, view: 'tests'})}
+                            />
+                        )}
+                        {view === 'tests' && !isTestsOverview && (
                             <TestsView
+                                className={classes.testsView}
                                 subjectId={root}
                                 readOnly={readOnly}
                                 onSubjectChange={(subjectId) => navigate({path: subjectId})}
@@ -441,6 +546,7 @@ export function Shell({
                     )}
                 </div>
             </div>
+            {agentActivity && <ShellAgentToast activity={agentActivity} onShow={showTarget} />}
         </div>
     );
 }

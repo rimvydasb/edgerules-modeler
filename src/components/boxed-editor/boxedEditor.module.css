@@ -16,6 +16,7 @@
  */
 .root {
   --bx-border: var(--mantine-color-default-border);
+  background: transparent; /* the page canvas of the shell shows around the grid */
   --bx-muted: var(--mantine-color-default-hover);
   min-width: 0;
 }

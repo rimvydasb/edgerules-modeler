@@ -305,9 +305,9 @@ describe('loan origination model', () => {
 
         it('capacityBook lends more over a longer term at the same payment', async () => {
             const result = (await engine().execute('*')) as {
-                capacityBook: {capacity: {termYears: number; maxPayment: number; maxLoan: number}[]};
+                capacityBook: {capacity: {result: {termYears: number; maxPayment: number; maxLoan: number}[]}};
             };
-            const {capacity} = result.capacityBook;
+            const capacity = result.capacityBook.capacity.result;
             expect(capacity.map((row) => row.termYears)).toEqual([10, 15, 20, 25, 30]);
             expect(new Set(capacity.map((row) => row.maxPayment))).toEqual(new Set([2810]));
             const loans = capacity.map((row) => row.maxLoan);

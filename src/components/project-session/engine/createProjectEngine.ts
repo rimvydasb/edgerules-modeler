@@ -14,6 +14,8 @@ export interface EngineHandle {
     // Builds a new instance from `dsl` and swaps it in. With `link` (the default) the model must also link.
     // Throws `ProjectError('invalid-model')` and keeps the current instance when it does not.
     load(dsl: string, options?: {link?: boolean}): void;
+    // The registered solvers, so a fork of the session registers the same ones.
+    solvers(): readonly {handler: SolverHandler; info?: SolverInfo}[];
     dispose(): void;
 }
 
@@ -87,6 +89,8 @@ export function createProjectEngine(engineClass: ProjectEngineClass, dsl: string
             current = next;
             previous[Symbol.dispose]();
         },
+
+        solvers: () => [...solvers].map(({handler, info}) => ({handler, info})),
 
         dispose() {
             solvers.clear();

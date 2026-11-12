@@ -5,12 +5,25 @@
  * Every command lives inside the grid itself — there is no toolbar above it.
  */
 .root {
+  /* Transparent: a page behind the grid (the dotted canvas of the Shell) shows right of the columns. The table owns
+   * the open fill of the sheet. */
+  background: transparent;
   --tm-muted: var(--mantine-color-default-hover);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
+/*
+ * The only scroll container of the grid; the sticky header row and the frozen columns stick to it. A host that gives
+ * the Tests Manager a fixed height sets `--tm-max-height: none` and makes the Tests Manager a flex column: the grid
+ * then shrinks to the height of the host and scrolls inside it, with one scrollbar.
+ */
 .container {
-  max-height: 640px;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: var(--tm-max-height, 640px);
   overflow: auto;
   position: relative;
 }
@@ -27,6 +40,8 @@
   border-collapse: separate;
   border-top: 1px solid var(--grid-border);
   border-left: 1px solid var(--grid-border);
+  /* The open fill of the sheet: a page behind the grid (the dotted canvas of the Shell) never shows through a cell. */
+  background-color: var(--mantine-color-body);
 }
 
 .table th,

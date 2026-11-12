@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {CellParseError, formatValue, matches, parseCell} from '../model/values';
+import {CellParseError, formatValue, matches, parseCell, toCellText} from '../model/values';
 
 describe('parseCell', () => {
     it('parses per the row type', () => {
@@ -43,6 +43,31 @@ describe('formatValue', () => {
     it('summarizes an array by its length', () => {
         expect(formatValue(['a', 'b', 'c'])).toBe('3 items');
         expect(formatValue(['a'])).toBe('1 item');
+    });
+});
+
+describe('toCellText', () => {
+    it('writes text that parses back to the same value and matches it', () => {
+        const capacity = [
+            {termYears: 15, maxPayment: 2810, maxLoan: 307823},
+            {termYears: 30, maxPayment: 2810, maxLoan: 411917},
+        ];
+        for (const [value, type] of [
+            [30, 'number'],
+            [true, 'boolean'],
+            ['APPROVE', 'string'],
+            [capacity, 'array'],
+            [{grade: 'A'}, 'any'],
+            [null, 'any'],
+        ] as const) {
+            expect(parseCell(toCellText(value), type)).toEqual(value);
+            expect(matches(toCellText(value), value, type)).toBe(true);
+        }
+    });
+
+    it('never writes the display summary of a list', () => {
+        expect(toCellText(['a', 'b'])).toBe('["a","b"]');
+        expect(toCellText(undefined)).toBe('');
     });
 });
 

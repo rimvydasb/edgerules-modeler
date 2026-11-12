@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "byPath": {
+    "*": "Grades the risk of an applicant by age",
+    "risk": "High below 25, else low"
+  }
+}

@@ -49,6 +49,15 @@ function replaceDoc(container: HTMLElement, text: string): void {
 // whole body). `createBoxedEditorService`'s `complexTypeOwner` coalesces every member edit into a
 // whole-type rewrite, the same way `optimisationOwner` already does for `@optimise` settings.
 describe('complexType field editing', () => {
+    it('shows the type name under the Type header when the type is opened alone', () => {
+        render(<BoxedEditor service={buildService()} path="Applicant" languageService={languageService} />);
+
+        expect(screen.getByRole('heading', {level: 2})).toHaveTextContent('Type');
+        expect(screen.getByTestId('row-Applicant')).toHaveTextContent('Applicant');
+        expect(screen.getByTestId('row-Applicant.age')).toBeInTheDocument();
+        expect(screen.getByText('(new field)')).toBeInTheDocument();
+    });
+
     it('re-commits an unchanged type field without a "wrong field path" error', async () => {
         const user = userEvent.setup();
         const service = buildService();

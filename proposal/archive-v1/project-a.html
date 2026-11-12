@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Project A · Title page</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    body {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .shell {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 0;
+    }
+    .explorer {
+        background: var(--paper);
+        border-right: 1px solid var(--rule);
+        overflow: auto;
+        font-size: 13px;
+    }
+    .explorer .s {
+        padding: 10px 12px 2px;
+    }
+    .explorer .it {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 12px 3px 22px;
+        color: var(--ink);
+    }
+    .explorer .it.on {
+        background: var(--canvas);
+        box-shadow: inset 2px 0 0 var(--ink);
+    }
+    .explorer .it code {
+        font-size: 12px;
+    }
+    .content {
+        overflow: auto;
+    }
+    .leaf {
+        max-width: 980px;
+        margin: 32px auto 80px;
+        background: var(--paper);
+        border: 1px solid var(--rule);
+        display: grid;
+        grid-template-columns: 1fr 220px;
+    }
+    .leaf .body {
+        padding: 48px 56px 56px;
+        border-right: 1px solid var(--rule-soft);
+    }
+    .leaf .margin {
+        padding: 48px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+    .kicker {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 12px;
+        color: var(--ink-3);
+    }
+    h1.title {
+        font: 500 42px/1.1 var(--serif);
+        margin: 10px 0 14px;
+    }
+    .abstract {
+        font: 17px/1.6 var(--serif);
+        color: var(--ink-2);
+    }
+    .abstract b {
+        font-variant: small-caps;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+        color: var(--ink);
+    }
+    .defn {
+        margin: 28px 0 0;
+        border-left: 2px solid var(--ink);
+        padding: 4px 0 4px 16px;
+    }
+    .defn .h {
+        font: 600 14px var(--serif);
+    }
+    .defn .h i {
+        font-weight: 400;
+    }
+    .defn pre {
+        font: 13.5px/1.6 var(--mono);
+        margin: 6px 0 0;
+        white-space: pre-wrap;
+    }
+    .defn pre .k {
+        color: var(--k-type);
+    }
+    .defn pre .f {
+        color: var(--k-service);
+        font-weight: 500;
+    }
+    h2.c {
+        font: 500 24px var(--serif);
+        margin: 0 0 8px;
+    }
+    .toc li .ic {
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        flex: none;
+        align-self: center;
+    }
+    .toc li .ic svg {
+        width: 12px;
+        height: 12px;
+    }
+    .toc .add {
+        padding-left: 52px;
+        font-size: 12.5px;
+    }
+    .toc .add a {
+        color: var(--ink-3);
+    }
+    .toc .add a:hover {
+        color: var(--link);
+    }
+    .mrow .label {
+        display: block;
+        margin-bottom: 4px;
+    }
+    .mrow div {
+        font-size: 13px;
+    }
+    .tests {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        margin-top: 6px;
+    }
+    .tests i {
+        width: 9px;
+        height: 9px;
+        background: var(--ok);
+    }
+    .tests i.x {
+        background: #e03131;
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="home-a.html" style="padding-right: 0; border-right: 1px solid var(--rule)"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span></a>
+    <a class="cell" href="examples-a.html" title="Examples"><i data-i="library"></i></a>
+    <a class="cell" href="workspace-a.html" title="Workspace"><i data-i="grid"></i></a>
+    <div class="crumbs">
+        <a href="#" style="color: var(--ink); font-weight: 600; display: flex; align-items: center; gap: 4px">Loan origination <i data-i="chev"></i></a>
+        <span class="sep">/</span><b>Contents</b>
+        <span class="muted" style="margin-left: 8px; font-size: 12px">· saved 8 h ago</span>
+    </div>
+    <span class="grow"></span>
+    <nav class="seg">
+        <a class="on" href="#"><i data-i="doc"></i>Contents</a>
+        <a href="#"><i data-i="flow"></i>Flow</a>
+        <a href="#"><i data-i="boxed"></i>Boxed</a>
+        <a href="#"><i data-i="code"></i>Code</a>
+        <a href="#"><i data-i="tests"></i>Tests</a>
+    </nav>
+    <a class="cell r" href="#" title="Settings"><i data-i="gear"></i></a>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+
+<div class="shell">
+    <aside class="explorer">
+        <div class="s"><span class="label">Documents</span></div>
+        <a class="it" href="#"><span class="kind sm" style="background: #adb5bd"><i data-i="doc"></i></span>README.md</a>
+        <div class="s"><span class="label">Workbooks · 2</span></div>
+        <a class="it" href="#"><span class="kind sm"><i data-i="book"></i></span>Joint mortgage application</a>
+        <a class="it" href="#"><span class="kind sm"><i data-i="book"></i></span>Borrowing capacity</a>
+        <div class="s"><span class="label">Services · 1</span></div>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-service)"><i data-i="fx"></i></span><code>loanOriginationDecision</code></a>
+        <div class="s"><span class="label">Decisions · 6</span></div>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-decision)"><i data-i="decision"></i></span><code>ApplicantPolicy</code></a>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-decision)"><i data-i="decision"></i></span><code>LoanDecision</code></a>
+        <a class="it muted" href="#" style="padding-left: 52px; font-size: 12px">+ 4 more</a>
+        <div class="s"><span class="label">Methods · 9</span></div>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-function)"><i data-i="fx"></i></span><code>affordability</code></a>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-ruleset)"><i data-i="boxed"></i></span><code>pricingGrid</code></a>
+        <a class="it muted" href="#" style="padding-left: 52px; font-size: 12px">+ 7 more</a>
+        <div class="s"><span class="label">Types · 3</span></div>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-type)"><i data-i="type"></i></span><code>Applicant</code></a>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-type)"><i data-i="type"></i></span><code>Application</code></a>
+        <a class="it" href="#"><span class="kind sm" style="background: var(--k-type)"><i data-i="type"></i></span><code>LoanTerms</code></a>
+    </aside>
+
+    <div class="content graph">
+        <article class="leaf">
+            <div class="body">
+                <div class="kicker"><span class="kind sm"><i data-i="book"></i></span>Project<span>·</span><a href="#" class="tok" style="margin: 0">from loan-origination@2.0.0 ↗</a></div>
+                <h1 class="title">Mortgage Origination</h1>
+                <p class="abstract"><b>Abstract.</b> Scores, checks, prices and decides a joint mortgage application. Every applicant gets a scorecard grade and a policy check; the household is graded by its weaker applicant, the loan is priced by grade and loan-to-value, the payment is stress-tested, and the bank <i>approves</i>, <i>refers</i> or <i>declines</i> the application, with an offer or a counter-offer. <a href="#" style="font-family: var(--sans); font-size: 13px">Read README →</a></p>
+
+                <div class="defn">
+                    <div class="h">Service 1 <i>(entry point)</i></div>
+<pre><span class="f">loanOriginationDecision</span>(application: <span class="k">Application</span>) → <span class="k">Decision</span></pre>
+                </div>
+
+                <div class="orn"><i></i><i class="f"></i><i></i></div>
+
+                <h2 class="c">Contents</h2>
+                <ul class="toc">
+                    <li><span class="n">1</span><span class="ti">Workbooks</span><span class="lead"></span><span class="pg">2</span></li>
+                    <li class="sub"><span class="n">1.1</span><span class="ic" style="background: var(--k-model)"><i data-i="book"></i></span><a class="ti" href="#">Joint mortgage application</a><span class="lead"></span><span class="pg">3 inputs · 4 ƒ</span></li>
+                    <li class="sub"><span class="n">1.2</span><span class="ic" style="background: var(--k-model)"><i data-i="book"></i></span><a class="ti" href="#">Borrowing capacity</a><span class="lead"></span><span class="pg">1 input · 1 ƒ</span></li>
+                    <li class="add"><a href="#">+ new workbook</a></li>
+                    <li><span class="n">2</span><span class="ti">Services</span><span class="lead"></span><span class="pg">1</span></li>
+                    <li class="sub"><span class="n">2.1</span><span class="ic" style="background: var(--k-service)"><i data-i="fx"></i></span><a class="ti mono" href="#">loanOriginationDecision(…)</a><span class="lead"></span><span class="pg">22 tests</span></li>
+                    <li class="add"><a href="#">+ new service</a></li>
+                    <li><span class="n">3</span><span class="ti">Decisions</span><span class="lead"></span><span class="pg">6</span></li>
+                    <li><span class="n">4</span><span class="ti">Methods</span><span class="lead"></span><span class="pg">9</span></li>
+                    <li><span class="n">5</span><span class="ti">Types</span><span class="lead"></span><span class="pg">3</span></li>
+                    <li><span class="n">6</span><span class="ti">Facts</span><span class="lead"></span><span class="pg">2</span></li>
+                    <li><span class="n">7</span><span class="ti">Tests</span><span class="lead"></span><span class="pg">38 · ✓ 36</span></li>
+                </ul>
+            </div>
+            <aside class="margin">
+                <div class="mrow"><span class="label">Tests</span><div><b>36</b> of 38 pass</div><div class="tests"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+                <div class="mrow"><span class="label">Origin</span><div class="mono" style="font-size: 12px">loan-origination@2.0.0</div><div class="muted" style="font-size: 12px">copy 3 · up to date</div></div>
+                <div class="mrow"><span class="label">Saved</span><div>8 h ago</div></div>
+                <div class="mrow"><span class="label">Engine</span><div class="mono" style="font-size: 12px">0.2.6-alpha</div></div>
+                <p class="marg">Margin notes hold facts about the project; the main column stays for reading.</p>
+            </aside>
+        </article>
+    </div>
+</div>
+
+<div class="proposal-note"><span class="x">✕</span><b>Project A — “Title page + Contents”</b>The project opens like a book: title, abstract (README first paragraph), the entry-point signature as a definition, then a <i>Contents</i> with dotted leaders. One bar only: mark · Examples · Workspace · project ▾ / path · views. Margin column: tests as little squares, origin, engine. <a href="index.html">← all proposals</a></div>
+<script src="assets/ds.js"></script>
+</body>
+</html>

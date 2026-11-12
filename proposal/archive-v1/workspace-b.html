@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workspace B · Notebooks</title>
+<link rel="stylesheet" href="assets/ds.css" />
+<style>
+    .hd {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .hd h1 {
+        font: 500 34px/1.1 var(--serif);
+        margin: 0;
+    }
+    .hd p {
+        font: italic 16px var(--serif);
+        color: var(--ink-2);
+        margin: 4px 0 0;
+    }
+    .hd .sp {
+        flex: 1;
+    }
+    .shelf {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 28px 24px;
+    }
+    .nb {
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+    }
+    .nb:hover {
+        text-decoration: none;
+    }
+    .cover {
+        aspect-ratio: 3 / 3.4;
+        position: relative;
+        background: var(--c, #17191c);
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: transform 0.15s;
+        box-shadow: inset 6px 0 0 rgba(0, 0, 0, 0.18);
+    }
+    .nb:hover .cover {
+        transform: translateY(-3px);
+    }
+    .cover .band {
+        width: 100%;
+        margin-top: 18px;
+        filter: brightness(1.6) saturate(0.6);
+    }
+    .cover .lbl {
+        margin-top: 18px;
+        width: 72%;
+        background: #fffdf6;
+        border: 1px solid rgba(0, 0, 0, 0.3);
+        padding: 8px 10px 6px;
+        color: #17191c;
+        font-family: var(--serif);
+    }
+    .cover .lbl .r {
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+        border-bottom: 1px solid #c9c2b0;
+        padding: 3px 0;
+        font-size: 13px;
+    }
+    .cover .lbl .r small {
+        font: italic 10.5px var(--serif);
+        color: #8a8170;
+        width: 38px;
+        flex: none;
+    }
+    .cover .lbl .r:last-child {
+        border-bottom: 0;
+    }
+    .cover .lbl .r .mono {
+        font-size: 10px;
+    }
+    .cover .lbl .title {
+        font: 500 17px/1.2 var(--serif);
+    }
+    .cover .mk {
+        margin-top: auto;
+        margin-bottom: 14px;
+        width: 36px;
+        opacity: 0.85;
+    }
+    .nb .under {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 2px 0;
+        font-size: 12px;
+        color: var(--ink-3);
+    }
+    .nb .under .sp {
+        flex: 1;
+    }
+    .nb .under .m {
+        color: var(--ink-3);
+        padding: 2px;
+    }
+    .nb.new .cover {
+        background: transparent;
+        border: 1.5px dashed var(--ink-3);
+        box-shadow: none;
+        justify-content: center;
+        gap: 10px;
+    }
+    .nb.new .cover img {
+        width: 64px;
+        opacity: 0.75;
+    }
+    .nb.new .cover b {
+        font: 500 18px var(--serif);
+        color: var(--ink);
+    }
+    .nb.new .cover .opts {
+        display: flex;
+        gap: 6px;
+    }
+    .storage {
+        margin-top: 48px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 12.5px;
+        color: var(--ink-3);
+        border-top: 1px solid var(--rule);
+        padding-top: 12px;
+    }
+</style>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="home-a.html"><span class="mark"><img src="assets/sodas-solid-white.svg" alt="" /></span><b>EdgeRules</b></a>
+    <a class="cell" href="examples-b.html"><i data-i="library"></i><span class="lbl">Examples</span></a>
+    <a class="cell on" href="workspace-b.html"><i data-i="grid"></i><span class="lbl">Workspace</span></a>
+    <span class="grow"></span>
+    <button class="cell r theme-toggle" data-theme-toggle title="Light / dark"><i data-i="moon"></i></button>
+</header>
+
+<main class="page graph" style="max-width: none">
+    <div style="max-width: 1200px; margin: 0 auto">
+        <div class="hd">
+            <div>
+                <div class="label" style="color: var(--straw)">Your projects</div>
+                <h1>Workspace</h1>
+                <p>Every project is a notebook on your shelf.</p>
+            </div>
+            <span class="sp"></span>
+            <div class="search sm" style="width: 260px"><i data-i="search"></i><span class="ph">Search</span></div>
+            <span class="select">Last saved</span>
+        </div>
+
+        <div class="shelf">
+            <a class="nb new" href="#">
+                <div class="cover">
+                    <img class="ink-img" src="assets/sodas.svg" alt="" />
+                    <b>New notebook</b>
+                    <span class="opts"><span class="btn sm primary">Blank</span><span class="btn sm">From example</span></span>
+                </div>
+                <div class="under">Start empty or copy a worked example</div>
+            </a>
+
+            <a class="nb" href="project-b.html">
+                <div class="cover" style="--c: #1f2a44">
+                    <div class="band"></div>
+                    <div class="lbl">
+                        <div class="r"><small>project</small><span class="title">Loan origination</span></div>
+                        <div class="r"><small>copy</small>3</div>
+                        <div class="r"><small>from</small><span class="mono">loan-origination@2.0.0</span></div>
+                    </div>
+                    <img class="mk" src="assets/sodas-white.svg" alt="" />
+                </div>
+                <div class="under"><i data-i="clock"></i>saved 8 h ago<span class="sp"></span>52 KB<span class="m"><i data-i="dots"></i></span></div>
+            </a>
+
+            <a class="nb" href="project-b.html">
+                <div class="cover" style="--c: #0f5c55">
+                    <div class="band"></div>
+                    <div class="lbl">
+                        <div class="r"><small>project</small><span class="title">Loan origination</span></div>
+                        <div class="r"><small>copy</small>2</div>
+                        <div class="r"><small>from</small><span class="mono">loan-origination@2.0.0</span></div>
+                    </div>
+                    <img class="mk" src="assets/sodas-white.svg" alt="" />
+                </div>
+                <div class="under"><i data-i="clock"></i>saved 8 h ago<span class="sp"></span>50 KB<span class="m"><i data-i="dots"></i></span></div>
+            </a>
+
+            <a class="nb" href="project-b.html">
+                <div class="cover" style="--c: #8a3a22">
+                    <div class="band"></div>
+                    <div class="lbl">
+                        <div class="r"><small>project</small><span class="title">Loan repayment</span></div>
+                        <div class="r"><small>from</small><span class="mono">loan-repayment@1.1.0</span></div>
+                        <div class="r"><small>news</small><span style="color: #9a6b12; font-size: 12px">1.2.0 available</span></div>
+                    </div>
+                    <img class="mk" src="assets/sodas-white.svg" alt="" />
+                </div>
+                <div class="under"><i data-i="clock"></i>saved 2 d ago<span class="sp"></span>31 KB<span class="m"><i data-i="dots"></i></span></div>
+            </a>
+
+            <a class="nb" href="project-b.html">
+                <div class="cover" style="--c: #9a7420">
+                    <div class="band"></div>
+                    <div class="lbl">
+                        <div class="r"><small>project</small><span class="title">My pricing</span></div>
+                        <div class="r"><small>from</small><i>own project</i></div>
+                        <div class="r"><small>&nbsp;</small>&nbsp;</div>
+                    </div>
+                    <img class="mk" src="assets/sodas-white.svg" alt="" />
+                </div>
+                <div class="under"><i data-i="clock"></i>saved 3 d ago<span class="sp"></span>17 KB<span class="m"><i data-i="dots"></i></span></div>
+            </a>
+        </div>
+
+        <div class="storage"><i data-i="db"></i>150 KB of 10 GB in this browser · <span style="color: var(--warn)">the browser may clear it</span> · <a href="#">Keep projects safe</a></div>
+    </div>
+</main>
+
+<div class="proposal-note"><span class="x">✕</span><b>Workspace B — “Notebooks”</b>The warm one. Each project is a school exercise-book (<i>sąsiuvinis</i>) with a straw sodas band and a paper name label: project, copy, origin. Cover colour is picked per project, so copies differ at a glance. Best for a small number of projects; Ledger (A) scales better. <a href="index.html">← all proposals</a></div>
+<script src="assets/ds.js"></script>
+</body>
+</html>
