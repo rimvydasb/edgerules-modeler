@@ -27,9 +27,16 @@ function isModelContext(value: unknown): value is ModelContextLike {
     );
 }
 
-/** `document.modelContext` when the browser has it; `undefined` otherwise, for example outside a secure context. */
-export function getModelContext(doc?: Document): ModelContextLike | undefined {
+/**
+ * `document.modelContext` (current draft and Chromium) or `navigator.modelContext` (earlier previews); `undefined` when
+ * the browser has neither, for example outside a secure context or without the browser flag.
+ */
+export function getModelContext(doc?: Document, nav?: Navigator): ModelContextLike | undefined {
     const target = doc ?? (typeof document === 'undefined' ? undefined : document);
-    const candidate = (target as {modelContext?: unknown} | undefined)?.modelContext;
-    return isModelContext(candidate) ? candidate : undefined;
+    const navTarget = nav ?? (typeof navigator === 'undefined' ? undefined : navigator);
+    for (const owner of [target, navTarget]) {
+        const candidate = (owner as {modelContext?: unknown} | undefined)?.modelContext;
+        if (isModelContext(candidate)) return candidate;
+    }
+    return undefined;
 }

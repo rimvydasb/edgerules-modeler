@@ -37,6 +37,7 @@ import {
 } from '../../../src/components/project-session';
 import {Shell, type ShellView} from '../../../src/components/shell';
 import {getModelContext, registerProjectTools, type ProjectToolsHandle} from '../../../src/components/webmcp';
+import {AgentToolsSwitch, useAgentToolsEnabled} from './AgentToolsSwitch';
 import {createExamplesClient, EXAMPLES_REPOSITORY_URL} from '../examplesSource';
 import {defaultView, routePath, sectionOf, type ModelerRoute, type ProjectRoute} from './routes';
 import {cx} from '../../../src/ui/cx';
@@ -501,11 +502,12 @@ export function ProjectPage({
     // The WebMCP tools of the open project, when the browser has `document.modelContext`. `open-in-editor` navigates
     // as a Project Explorer click does: a new history entry.
     const [tools, setTools] = useState<ProjectToolsHandle>();
+    const [agentTools, setAgentTools] = useAgentToolsEnabled();
     const navigateRef = useRef(navigate);
     navigateRef.current = navigate;
     useEffect(() => {
         const session = opened.session;
-        if (!session) return undefined;
+        if (!session || !agentTools) return undefined;
         const handle = registerProjectTools({
             modelContext: getModelContext(),
             session,
@@ -528,7 +530,7 @@ export function ProjectPage({
             handle.dispose();
             setTools(undefined);
         };
-    }, [opened.session, projectPath]);
+    }, [opened.session, projectPath, agentTools]);
 
     // `/project/<path>` without a view is the project home: show it as `?view=flow`.
     useEffect(() => {
@@ -591,6 +593,7 @@ export function ProjectPage({
                         originStatus: newest ? (newest === origin.version ? 'latest' : 'update-available') : undefined,
                     }}
                 />
+                <AgentToolsSwitch enabled={agentTools} onChange={setAgentTools} />
             </div>
         </ProjectProvider>
     );

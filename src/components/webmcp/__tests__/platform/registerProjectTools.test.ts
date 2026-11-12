@@ -12,6 +12,12 @@ describe('getModelContext', () => {
         const doc = {modelContext} as unknown as Document;
         expect(getModelContext(doc)).toBe(modelContext);
         expect(getModelContext({modelContext: {}} as unknown as Document)).toBeUndefined();
+        // Earlier previews put the entry point on `navigator`.
+        expect(getModelContext(doc, {modelContext: {registerTool: async () => {}}} as unknown as Navigator)).toBe(
+            modelContext,
+        );
+        const earlier = {registerTool: async () => {}};
+        expect(getModelContext({} as Document, {modelContext: earlier} as unknown as Navigator)).toBe(earlier);
     });
 });
 

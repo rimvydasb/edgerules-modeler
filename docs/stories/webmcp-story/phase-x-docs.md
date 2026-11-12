@@ -15,12 +15,23 @@ Read these sections of the main story before you start. Do not read the other ph
 
 ## Tasks
 
-- [ ] Update `docs/architecture.md` with the changes from `## Architecture Changes`
-- [ ] Add the four ADR entries to `docs/architecture-adr.md`
-- [ ] Add the `webmcp` component to `README.md`
+- [x] Update `docs/architecture.md` with the changes from `## Architecture Changes`
+- [x] Add the four ADR entries to `docs/architecture-adr.md`
+- [x] Add the `webmcp` component to `README.md`
 - [ ] Review the implementation against this story and the project conventions
 
 Acceptance criteria:
 
 - [ ] Every command in `## Verification` passes
 - [ ] The application starts with `npm run dev`, and Chrome with `#enable-webmcp-testing` lists the tools
+
+## Implementation notes
+
+- **Entry points:** `docs/architecture.md` — component table row, `webmcp-layer-*` and `webmcp` allowlist rows, section
+  "WebMCP tools go through the open session". `docs/architecture-adr.md` — ADR-004 to ADR-007. `README.md` — the
+  `webmcp` entry.
+- **Deviations and open items:** The review task is open: only the dependency-cruiser config and the story allowlist
+  were compared (they match); the code was not reviewed line by line. `npm run e2e` has 27 failures outside this story
+  (26 `visual/grids` screenshots, `flow-editor/object-input-node.spec.ts:69`). `npm run dev` starts; the tool list in
+  Chrome with `#enable-webmcp-testing` was not checked by hand (the `webmcp` Playwright project covers it on the Modeler
+  story). The story's `protocol/outputBudget.ts` layout is outdated: it lives in `core/outputBudget.ts`.
