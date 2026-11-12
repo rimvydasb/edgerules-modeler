@@ -285,7 +285,6 @@
 }
 
 /* ---------------------------------------------------------------- tags: features, coordinates */
-.tokens-row,
 .tags {
   display: flex;
   min-width: 0;

@@ -248,6 +248,16 @@ export function createTestCasesCore(options: TestCasesCoreOptions = {}): TestCas
             suiteChanged();
         },
 
+        restoreTestCase(testCase: TestCase): void {
+            const ordered = [...cases].sort((a, b) => a.order - b.order).filter((c) => c.id !== testCase.id);
+            ordered.splice(clampIndex(testCase.order, ordered.length), 0, cloneCase(testCase));
+            ordered.forEach((c, i) => {
+                c.order = i;
+            });
+            cases = ordered;
+            suiteChanged();
+        },
+
         moveTestCase(testCaseId: string, toIndex: number): void {
             const ordered = [...cases].sort((a, b) => a.order - b.order);
             const fromIndex = ordered.findIndex((c) => c.id === testCaseId);

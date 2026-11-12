@@ -80,6 +80,9 @@ export interface TestCasesService {
     renameTestCase(testCaseId: string, name: string): void;
 
     removeTestCase(testCaseId: string): void; // Also drops that case's values and its result set.
+    // Puts back a removed case with its id, values and name at the index `testCase.order`; the cases after it move
+    // down one place. Replaces a case that has the same id. The undo of `removeTestCase`.
+    restoreTestCase(testCase: TestCase): void;
     moveTestCase(testCaseId: string, toIndex: number): void;
 
     // --- rows (shared by every column) ---

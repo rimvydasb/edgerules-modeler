@@ -32,6 +32,22 @@ function componentAllowlist(component, allowed, section, sharedPaths = []) {
   };
 }
 
+const WEBMCP = `${COMPONENT}webmcp/`;
+
+/**
+ * One layer of the webmcp component (docs/stories/webmcp-story.md, "Component architecture"): code in `webmcp/<layer>/`
+ * must not import `forbidden` paths, except the webmcp folders in `allowedLayers`.
+ */
+function webmcpLayer(layer, forbidden, allowedLayers, why) {
+  return {
+    name: `webmcp-layer-${layer}`,
+    comment: `webmcp ${why}`,
+    severity: 'error',
+    from: {path: `${WEBMCP}${layer}/`, pathNot: TEST_CODE},
+    to: {path: forbidden, pathNot: allowedLayers.map((folder) => `${WEBMCP}${folder}`)},
+  };
+}
+
 /** Restricts `pkg` (a node_modules path prefix) to the source folders in `owners`; tests may use it anywhere. */
 function packageOwner(name, pkg, owners, why) {
   return {
@@ -144,6 +160,46 @@ module.exports = {
         'tests-manager',
       ],
       'Main React components',
+    ),
+    componentAllowlist(
+      'webmcp',
+      ['project-session', 'project-explorer', 'tests-manager', 'test-cases-service'],
+      'WebMCP tools',
+    ),
+    webmcpLayer(
+      'core',
+      ['^src/components/'],
+      ['core/'],
+      'core/ is the transport-neutral bottom layer: it may import only @edgerules/portable types and #lib. Move the ' +
+        'code that needs another layer or component up into project/, or pass the value in as a parameter.',
+    ),
+    webmcpLayer(
+      'project',
+      ['^src/components/webmcp/(protocol|tools|platform)/'],
+      [],
+      'project/ holds the use cases and knows no WebMCP: it must not import protocol/, tools/ or platform/. Move the ' +
+        'shared type down into core/, or let the tool in tools/ adapt the project/ result.',
+    ),
+    webmcpLayer(
+      'protocol',
+      ['^src/components/', '^src/lib/', '^node_modules/@edgerules/'],
+      ['core/', 'protocol/'],
+      'protocol/ is the tool contract and may import only core/. Make the type generic (as ToolDefinition is over its ' +
+        'context) instead of importing project/, or move the shared type down into core/.',
+    ),
+    webmcpLayer(
+      'tools',
+      ['^src/components/', '^node_modules/@edgerules/'],
+      ['core/', 'protocol/', 'project/', 'tools/'],
+      'A tool validates its input, calls one project/ method and returns its ToolResult: it may import only core/, ' +
+        'protocol/ and project/. Move engine and ProjectSession access into a project/ service.',
+    ),
+    webmcpLayer(
+      'platform',
+      ['^src/components/', '^src/lib/', '^node_modules/@edgerules/'],
+      ['core/', 'protocol/', 'platform/'],
+      'platform/ is the WebMCP adapter and may import only core/ and protocol/. The composition root ' +
+        '(registerProjectTools.ts) passes it the tools and the context; do not import project/ or tools/ here.',
     ),
     {
       name: 'no-circular',

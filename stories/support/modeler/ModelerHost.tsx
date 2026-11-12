@@ -36,6 +36,8 @@ import {
     type ProjectSession,
 } from '../../../src/components/project-session';
 import {Shell, type ShellView} from '../../../src/components/shell';
+import {getModelContext, registerProjectTools, type ProjectToolsHandle} from '../../../src/components/webmcp';
+import {useAgentToolsEnabled, WebMcpToggle} from './WebMcpToggle';
 import {createExamplesClient, EXAMPLES_REPOSITORY_URL} from '../examplesSource';
 import {defaultView, routePath, sectionOf, type ModelerRoute, type ProjectRoute} from './routes';
 import {cx} from '../../../src/ui/cx';
@@ -308,6 +310,7 @@ export function ModelerFrame({route, children}: {route: ModelerRoute; children: 
                         {routePath(route)}
                     </span>
                 )}
+                <WebMcpToggle />
                 <button
                     type="button"
                     className={classes.iconButton}
@@ -497,6 +500,39 @@ export function ProjectPage({
         });
     };
 
+    // The WebMCP tools of the open project, when the browser has `document.modelContext`. `open-in-editor` navigates
+    // as a Project Explorer click does: a new history entry.
+    const [tools, setTools] = useState<ProjectToolsHandle>();
+    const agentTools = useAgentToolsEnabled();
+    const navigateRef = useRef(navigate);
+    navigateRef.current = navigate;
+    useEffect(() => {
+        const session = opened.session;
+        if (!session || !agentTools) return undefined;
+        const handle = registerProjectTools({
+            modelContext: getModelContext(),
+            session,
+            navigation: {
+                getFocus: () => {
+                    const focused = current.current.path ?? '*';
+                    return {path: focused, view: current.current.view ?? defaultView(focused)};
+                },
+                open: (next, nextView) =>
+                    navigateRef.current({
+                        page: 'project',
+                        projectPath,
+                        path: next === '*' ? undefined : next,
+                        view: nextView === defaultView(next) ? undefined : nextView,
+                    }),
+            },
+        });
+        setTools(handle);
+        return () => {
+            handle.dispose();
+            setTools(undefined);
+        };
+    }, [opened.session, projectPath, agentTools]);
+
     // `/project/<path>` without a view is the project home: show it as `?view=flow`.
     useEffect(() => {
         if (!view && (!path || path === '*')) navigate({page: 'project', projectPath}, {replace: true});
@@ -544,6 +580,7 @@ export function ProjectPage({
                     onPathChange={(next) => change({path: next})}
                     view={view ?? defaultView(path)}
                     onViewChange={(next) => change({view: next})}
+                    agentActivity={tools?.activity}
                     navigation={{
                         onBrowseExamples: () => navigate({page: 'examples'}),
                         onOpenProject: (next) => navigate({page: 'project', projectPath: next.projectPath}),

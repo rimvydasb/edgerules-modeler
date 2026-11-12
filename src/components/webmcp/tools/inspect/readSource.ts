@@ -1,0 +1,45 @@
+import {validateInputMembers, validateSourcePath} from '../../core/paths';
+import type {ReadSourceInput, SourcePage} from '../../project/inspection/sourceReader';
+import {inputSchema, resultSchema, sourcePathSchema} from '../../protocol/schemas';
+import type {ProjectTool} from '../projectTool';
+import {validateOffset} from './inspectInput';
+
+export const readSource: ProjectTool<ReadSourceInput, SourcePage> = {
+    name: 'read-source',
+    title: 'Read source',
+    description:
+        'Returns the source of one path: the DSL of a model entry with its documentation, the whole model for ' +
+        "'*', or Markdown for doc:README.md. Long text comes in pages; continue with nextOffset. Read an " +
+        'entry before you change it.',
+    summary: 'Read the DSL of an entry, the whole model or README',
+    inputSchema: inputSchema(
+        {
+            path: sourcePathSchema,
+            offset: {type: 'integer', description: 'Character offset; `nextOffset` of the previous page.'},
+        },
+        ['path'],
+    ),
+    outputSchema: resultSchema(
+        {
+            path: {type: 'string'},
+            language: {enum: ['edgerules', 'markdown']},
+            text: {type: 'string'},
+            offset: {type: 'integer'},
+            totalChars: {type: 'integer'},
+            nextOffset: {type: 'integer'},
+            documentation: {type: 'string'},
+        },
+        ['path', 'language', 'text', 'offset', 'totalChars'],
+    ),
+    annotations: {readOnlyHint: true, untrustedContentHint: true, consequentialHint: false},
+    availability: 'always',
+
+    async run(input, context) {
+        const invalid =
+            validateInputMembers(input, ['path', 'offset']) ??
+            validateSourcePath(input.path) ??
+            validateOffset(input.offset);
+        if (invalid) return {ok: false, error: invalid};
+        return context.inspector.source(input);
+    },
+};

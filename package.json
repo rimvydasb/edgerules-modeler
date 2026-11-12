@@ -172,6 +172,16 @@
         "default": "./dist/components/shell/index.cjs"
       }
     },
+    "./webmcp": {
+      "import": {
+        "types": "./dist/components/webmcp/index.d.ts",
+        "default": "./dist/components/webmcp/index.js"
+      },
+      "require": {
+        "types": "./dist/components/webmcp/index.d.cts",
+        "default": "./dist/components/webmcp/index.cjs"
+      }
+    },
     "./schemas/*": "./schemas/*"
   },
   "imports": {

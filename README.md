@@ -60,6 +60,12 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
       keeps the projects of the user in IndexedDB and a copy keeps its `origin`; `edgerules-react/modeler-home`
       (`ModelerHome`) is the Home page. The host owns the routes: the components report navigation through callbacks.
       The Shell gets an optional `navigation` prop (Workspace crumb, project menu, origin chip).
+- [x] [EdgeRules WebMCP tools](docs/stories/webmcp-story.md) (`edgerules-react/webmcp`, no GUI): `registerProjectTools`
+      registers the tools of the open project on `document.modelContext` for a companion LLM agent. A change tool
+      (`edit-model`, `edit-tests`, `set-documentation`, `undo-agent-change`) links the model, runs every test case and
+      returns the link errors or the failed cases. Read tools orient and inspect; `open-in-editor` and `save-project`
+      serve the host. The Shell shows each agent change as a toast with "Undo". Needs a Chromium with WebMCP
+      (`chrome://flags/#enable-webmcp-testing`).
 
 ## Preview
 

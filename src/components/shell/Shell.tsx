@@ -4,6 +4,7 @@ import {listCallables, untypedParameters} from '#lib/callables';
 import {isPortableError} from '#lib/portable';
 import {callableParameters, isRecord, portableAtPath} from '#lib/portableUtils';
 import type {PortableNode} from '@edgerules/portable';
+import {primaryRootView} from '#lib/rootViews';
 import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
 import {sheetClasses} from '#ui/sheet';
@@ -26,19 +27,21 @@ import {
     README_FILE,
     README_PATH,
     ROOT_VIEWS,
+    resolveRootPath,
     rootPathSegments,
     rootViews,
     workbookNodeCounts,
 } from './shell-path';
 import {explorerRoute} from './shell-routing';
 import type {ShellProps, ShellView} from './shell-types';
+import {ShellAgentToast, ShellAgentWorking} from './ShellAgentToast';
 import {ShellBreadcrumbs, type PrimaryView} from './ShellBreadcrumbs';
 import {ShellProjectMenu} from './ShellProjectMenu';
 import {ShellSettings} from './ShellSettings';
 import {ShellSplitToggle} from './ShellSplitToggle';
 import {ShellViewSwitch} from './ShellViewSwitch';
 import {BoxedView} from './views/BoxedView';
-import {CodeView} from './views/CodeView';
+import {CodeView, type CodeDraft} from './views/CodeView';
 import {DocumentCode, DocumentPreview} from './views/DocumentView';
 import {FlowView} from './views/FlowView';
 import {TestsView} from './views/TestsView';
@@ -85,6 +88,7 @@ export function Shell({
     onExplorerOpenChange,
     onOpenNode,
     navigation,
+    agentActivity,
     className,
     style,
 }: ShellProps): ReactElement {
@@ -203,8 +207,8 @@ export function Shell({
     );
     const flowService = useMemo(() => createFlowEditorService(session.engine, {root}), [session, root]);
 
-    // Uncommitted code of context and function paths; the session keeps the draft of '*'.
-    const drafts = useMemo(() => new Map<string, string>(), [session]);
+    // Uncommitted code by root path and the committed code it was typed over; the session also keeps the text of '*'.
+    const drafts = useMemo(() => new Map<string, CodeDraft>(), [session]);
     const [codeErrors, setCodeErrors] = useState<Record<string, string>>({});
     const flushCode = useRef<(() => void) | undefined>(undefined);
     const onCommitError = useCallback((errorPath: string, message: string | undefined) => {
@@ -264,6 +268,18 @@ export function Shell({
     };
 
     const openReadme = () => navigate({path: README_PATH, view: 'preview'});
+
+    // "Show" of an agent change: a test case opens the tests of its subject, a document its Preview view, and a model
+    // path its root path in the main view.
+    const showTarget = (target: string) => {
+        if (isDocumentPath(target)) return navigate({path: target, view: 'preview'});
+        const hash = target.indexOf('#');
+        if (hash !== -1) return navigate({path: target.slice(0, hash), view: 'tests'});
+        const model = session.engine.toPortable();
+        const shown = resolveRootPath(model, target);
+        const shownViews = rootViews(rootPathSegments(model, shown), model, readmeExists);
+        navigate({path: shown, view: primaryRootView(shownViews)});
+    };
 
     const setExplorerOpen = (open: boolean) => {
         if (explorerOpenProp === undefined) setOwnExplorerOpen(open);
@@ -383,6 +399,7 @@ export function Shell({
                     tests={view === 'tests'}
                 />
                 {hasSettings && !readOnly && <ShellSettings key={root} root={root} />}
+                <ShellAgentWorking activity={agentActivity} />
                 <ShellViewSwitch
                     view={view}
                     views={views}
@@ -486,6 +503,7 @@ export function Shell({
                     )}
                 </div>
             </div>
+            {agentActivity && <ShellAgentToast activity={agentActivity} onShow={showTarget} />}
         </div>
     );
 }
