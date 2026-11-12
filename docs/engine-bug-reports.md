@@ -7,8 +7,8 @@ Each entry has a label:
 
 Delete a [VALID] entry when the engine fixes it.
 
-All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.7-alpha.202611081915`** on
-**2026-11-08** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
+All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.8-alpha.202611121551`** on
+**2026-11-12** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
 
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
 [VALID]) or **Why it is not a bug** (for [NOT A BUG]).
@@ -36,8 +36,8 @@ MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
 //  'coalesce | (any) -> any', ...]
 ```
 
-Still reproduces on `0.2.7-alpha.202611081915`: the statics are still only `fromCode`, `fromPortable`, `diagnostics` and
-`completions`, with the same `detail` strings.
+Still reproduces on `0.2.8-alpha.202611121551` (and `0.2.7-alpha.202611081915`): the statics are still only `fromCode`,
+`fromPortable`, `diagnostics` and `completions`, with the same `detail` strings.
 
 **Expected behaviour:** a structured built-in catalog, for example a static `builtins()`. It returns
 `PortableMethodInterface`-shaped entries with named `parameters`, optional/variadic markers per parameter (or one entry
@@ -48,6 +48,8 @@ per overload), and `return`. `get('*', Kinds.INVOCABLE_INTERFACES)` already cove
 **What is wrong:** `rename(oldPath, newPath)` returns `void`. A callable rename also rewrites every call site in the
 model, but the caller cannot learn which entries changed. A host must compare `getCode` of every entry before and after.
 This is a missing capability: `api-spec.md` specifies the `void` return.
+
+Still returns `undefined` on `0.2.8-alpha.202611121551`.
 
 **Expected behaviour:** `rename()` returns the paths of the entries whose code it rewrote, and an empty list when it
 rewrote nothing. `edit-model` of the WebMCP story reports these paths in `changed`
@@ -67,8 +69,8 @@ service.getCode('*'); // "{\n    x y: 1\n    b: a + 1\n}"
 MutableDecisionService.fromCode(service.getCode('*')); // throws: "parse error: Parse errors: UnexpectedToken at 6"
 ```
 
-Found on `0.2.7-alpha.202611081915` (2026-11-11). The `edit-model` WebMCP tool validates `newName` itself, so it does
-not reach this path.
+Found on `0.2.7-alpha.202611081915` (2026-11-11); still reproduces on `0.2.8-alpha.202611121551`. The `edit-model`
+WebMCP tool validates `newName` itself, so it does not reach this path.
 
 **Expected behaviour:** `rename` returns a `PortableError` and changes nothing when `newName` is not one identifier
 segment (`[A-Za-z_][A-Za-z0-9_]*`).
