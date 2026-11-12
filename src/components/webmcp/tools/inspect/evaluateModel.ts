@@ -10,6 +10,7 @@ export const evaluateModel: ProjectTool<EvaluateModelInput, EvaluationResult> = 
     description:
         'Runs the whole model, or one function, decision or service, with an input object and returns the result ' +
         'value. Nothing in the project changes. Use it to probe an assumption with one concrete case.',
+    summary: 'Run the model or one callable with an input',
     inputSchema: inputSchema(
         {
             target: {...modelPathSchema, description: "'*' evaluates the whole model; otherwise a callable path."},

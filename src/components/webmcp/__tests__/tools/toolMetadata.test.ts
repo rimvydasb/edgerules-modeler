@@ -9,6 +9,7 @@ function tool(overrides: Partial<AnyToolDefinition>): AnyToolDefinition {
         name: 'run-tests',
         title: 'Run tests',
         description: 'Runs the tests.',
+        summary: 'Run the tests',
         inputSchema: {type: 'object', properties: {}},
         outputSchema: {type: 'object'},
         annotations: {},
@@ -50,11 +51,12 @@ describe('tool metadata', () => {
         expect(new Set(names).size).toBe(names.length);
     });
 
-    it('flags a bad name, a long description and long parameter names and descriptions', () => {
+    it('flags a bad name, a long description and summary, and long parameter names and descriptions', () => {
         const problems = checkToolMetadata(
             tool({
                 name: 'RunTests',
-                description: 'x'.repeat(501),
+                description: 'x'.repeat(251),
+                summary: 's'.repeat(61),
                 inputSchema: {
                     type: 'object',
                     properties: {
@@ -69,10 +71,15 @@ describe('tool metadata', () => {
         );
         expect(problems).toEqual([
             "name 'RunTests' is not kebab-case verb-noun",
-            'RunTests: description has 501 characters, at most 500',
+            'RunTests: description has 251 characters, at most 250',
+            'RunTests: summary has 61 characters, at most 60',
             `RunTests: parameter '${'p'.repeat(31)}' has a name longer than 30 characters`,
             "RunTests: parameter 'items[].code' has a description longer than 150 characters",
         ]);
+    });
+
+    it('flags an empty summary', () => {
+        expect(checkToolMetadata(tool({summary: ' '}))).toEqual(['run-tests: summary is empty']);
     });
 
     it('flags a name longer than 30 characters and an input schema that is not an object', () => {

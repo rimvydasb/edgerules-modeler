@@ -33,8 +33,6 @@ interface EditResult {
 
 // The tools register after the project opens.
 async function openProject(page: Page): Promise<void> {
-    // The Modeler registers the tools only after the user turns "Agent tools" on.
-    await page.addInitScript(() => window.localStorage.setItem('edgerules-agent-tools', 'on'));
     await openStory(page, 'modeler--loan-repayment-project-tests');
     await expect(page.getByTestId('tests-grid')).toBeVisible(SLOW);
     await expect.poll(async () => (await page.webmcp.tools()).length, SLOW).toBeGreaterThan(0);
@@ -54,6 +52,8 @@ test('tools() lists every registered tool with its annotations', async ({page}) 
     await openProject(page);
     const tools = await page.webmcp.tools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([...MODEL_TOOLS, ...READ_TOOLS].sort());
+    // A browser agent that reads the page text learns how to list the tools and where to start.
+    await expect(page.getByTestId('agent-tools-hint')).toContainText('get-project-overview');
 
     // Chromium reports only the hints that are true: a change tool has none.
     const annotations = Object.fromEntries(tools.map((tool) => [tool.name, tool.annotations ?? {}]));
@@ -114,15 +114,24 @@ test('a read-only project lists only the read tools and open-in-editor', async (
     await expect(options).toHaveText(READ_TOOLS);
 });
 
-test('the tools are off until the user turns on "Agent tools"', async ({page}) => {
+test('the tools are on by default, and the WebMCP switch in the top bar turns them off', async ({page}) => {
     await openStory(page, 'modeler--loan-repayment-project-tests');
     await expect(page.getByTestId('tests-grid')).toBeVisible(SLOW);
-    const agentTools = page.getByRole('switch', {name: 'Agent tools'});
-    await expect(agentTools).not.toBeChecked();
-    expect(await page.webmcp.tools()).toEqual([]);
+    const webMcp = page.getByRole('switch', {name: 'WebMCP'});
+    await expect(webMcp).toBeChecked();
+    await expect.poll(async () => (await page.webmcp.tools()).length, SLOW).toBeGreaterThan(0);
 
-    await agentTools.check();
-    await expect.poll(async () => (await page.webmcp.tools()).length).toBeGreaterThan(0);
-    await agentTools.uncheck();
+    await webMcp.uncheck();
     await expect.poll(async () => (await page.webmcp.tools()).length).toBe(0);
+    await expect(page.getByTestId('agent-tools-hint')).toHaveCount(0);
+    await webMcp.check();
+    await expect.poll(async () => (await page.webmcp.tools()).length).toBeGreaterThan(0);
+});
+
+test('the help button explains WebMCP and says that it is experimental', async ({page}) => {
+    await openStory(page, 'modeler--loan-repayment-project-tests');
+    await page.getByRole('button', {name: 'About WebMCP'}).click();
+    const panel = page.getByTestId('webmcp-help-panel');
+    await expect(panel).toContainText('experimental');
+    await expect(panel).not.toContainText('WebMCP is off in this browser');
 });

@@ -16,6 +16,7 @@ function tool(name: string, run: () => Promise<void>): ToolDefinition<object, ob
         name,
         title: name,
         description: name,
+        summary: name,
         inputSchema: {type: 'object'},
         outputSchema: {type: 'object'},
         annotations: {},

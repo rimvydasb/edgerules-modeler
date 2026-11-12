@@ -3,7 +3,8 @@ import type {AnyToolDefinition} from './toolDefinition';
 // webmcp-story.md, "Tool design rules".
 export const METADATA_LIMITS = {
     name: 30,
-    description: 500,
+    description: 250,
+    summary: 60,
     parameterName: 30,
     parameterDescription: 150,
 } as const;
@@ -43,7 +44,15 @@ export function checkToolMetadata(tool: AnyToolDefinition): string[] {
     if (tool.title.trim() === '') problems.push(`${tool.name}: title is empty`);
     if (tool.description.trim() === '') problems.push(`${tool.name}: description is empty`);
     if (tool.description.length > METADATA_LIMITS.description) {
-        problems.push(`${tool.name}: description has ${tool.description.length} characters, at most 500`);
+        problems.push(
+            `${tool.name}: description has ${tool.description.length} characters, at most ${METADATA_LIMITS.description}`,
+        );
+    }
+    if (tool.summary.trim() === '') problems.push(`${tool.name}: summary is empty`);
+    if (tool.summary.length > METADATA_LIMITS.summary) {
+        problems.push(
+            `${tool.name}: summary has ${tool.summary.length} characters, at most ${METADATA_LIMITS.summary}`,
+        );
     }
     if (!isRecord(tool.inputSchema) || tool.inputSchema.type !== 'object') {
         problems.push(`${tool.name}: inputSchema is not of type 'object'`);

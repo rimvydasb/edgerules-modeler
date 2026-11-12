@@ -17,6 +17,7 @@ function tool(
         name,
         title: name,
         description: `The ${name} tool.`,
+        summary: `The ${name} tool.`,
         inputSchema: {type: 'object'},
         outputSchema: {type: 'object'},
         annotations: {readOnlyHint: availability === 'always'},

@@ -148,7 +148,7 @@ export const changeResultProperties: Schema = {
 
 export const changeResultRequired = ['version', 'changeId', 'changed', 'regression'];
 
-/** A map of EdgeRules literal text by subject-relative path. */
+/** A map of test cell text by subject-relative path: strings without quotes, lists and objects as JSON. */
 export const testValuesSchema: Schema = {
     type: 'object',
     additionalProperties: {type: 'string'},

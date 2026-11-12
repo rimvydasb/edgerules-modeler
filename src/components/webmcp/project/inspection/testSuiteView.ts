@@ -15,7 +15,7 @@ export interface TestSuiteView {
     cases: {
         id: string;
         name: string;
-        inputs: TestValuesByPath; // raw EdgeRules literal text
+        inputs: TestValuesByPath; // raw test cell text: strings without quotes
         assertions: TestValuesByPath;
     }[];
 }

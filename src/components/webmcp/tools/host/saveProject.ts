@@ -17,6 +17,7 @@ export const saveProject: ProjectTool<SaveProjectInput, SaveResultView> = {
     description:
         'Saves the open project as a new revision in the workspace of the user. Changes stay only in this page ' +
         'until a save. Use it when the user asks to save.',
+    summary: 'Save the project as a new workspace revision',
     inputSchema: inputSchema({baseVersion: baseVersionSchema}),
     outputSchema: resultSchema({revision: {type: 'string'}, savedAt: {type: 'string'}}, ['revision', 'savedAt']),
     annotations: {readOnlyHint: false, untrustedContentHint: false, consequentialHint: true},

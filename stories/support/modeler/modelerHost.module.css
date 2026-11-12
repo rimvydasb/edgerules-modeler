@@ -308,17 +308,43 @@
   }
 }
 
-/* The opt-in of the agent tools sits in the bottom-left corner of the project page. */
-.agentTools {
-  position: fixed;
-  bottom: 8px;
-  left: 8px;
-  z-index: 200;
+/* The WebMCP opt-in in the top bar, before the theme button: "WebMCP" with a switch and a help button. */
+.webMcp {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 2px;
-  padding: 6px 10px;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-sm);
-  background: var(--mantine-color-body);
+  padding-inline: 8px 0;
+}
+
+.webMcpLabel {
+  padding-inline-end: 8px;
+  color: var(--er-text-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.webMcpHelp {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--er-r-sm);
+  background: none;
+  color: var(--er-text-3);
+  cursor: pointer;
+}
+
+.webMcpHelp:hover {
+  background-color: var(--er-hover);
+  color: var(--er-text);
+}
+
+.webMcpHelp[data-warn] {
+  color: var(--er-warn);
+}
+
+.webMcpHelp:focus-visible {
+  outline: 2px solid var(--er-accent);
+  outline-offset: -2px;
 }

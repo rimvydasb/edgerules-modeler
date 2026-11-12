@@ -12,6 +12,7 @@ export interface InspectionHostState {
     readOnly: boolean;
     canSave: boolean; // `save-project` is registered
     focus?: {path: SourcePath; view: OverviewView}; // only with `navigation`
+    tools?: Record<string, string>; // the summary of each registered tool by name, in catalog order
 }
 
 export interface ProjectOverview {
@@ -29,6 +30,7 @@ export interface ProjectOverview {
     focus?: {path: SourcePath; view: OverviewView};
     readOnly: boolean;
     canSave: boolean;
+    tools?: Record<string, string>; // the tool index: what each tool of this page does, in one line
 }
 
 export function projectOverview(
@@ -64,5 +66,6 @@ export function projectOverview(
         ...(host.focus && {focus: host.focus}),
         readOnly: host.readOnly,
         canSave: host.canSave,
+        ...(host.tools && {tools: host.tools}),
     };
 }

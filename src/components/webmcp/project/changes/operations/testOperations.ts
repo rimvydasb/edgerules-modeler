@@ -3,7 +3,7 @@ import type {TestSubject} from '../../../core/paths';
 import {fail} from '../../../core/toolResult';
 import {OperationFailure, type AppliedOperation, type OperationApplier} from './appliedOperation';
 
-/** EdgeRules literal text by path, relative to the test subject. */
+/** Test cell text by path, relative to the test subject: strings without quotes, lists and objects as JSON. */
 export type TestValues = Record<string, string>;
 
 export type TestOperation =

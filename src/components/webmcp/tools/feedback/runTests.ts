@@ -16,9 +16,10 @@ export const runTests: ProjectTool<RunTestsInput, RunTestsResult> = {
     name: 'run-tests',
     title: 'Run tests',
     description:
-        'Runs the authored test cases of one test subject, or of every subject, and returns the regression report: the ' +
-        'cases that fail with expected and actual values, and what changed since the previous run. Change tools run ' +
-        'every test already; use this tool after the user says they changed something.',
+        'Runs the test cases of every subject, or of one subject, now. Returns the totals, the failing cases ' +
+        'with expected and actual values, and what changed since the last run. Use it when the user asks to ' +
+        'run tests.',
+    summary: 'Run all tests, or one subject, now',
     inputSchema: inputSchema({
         subject: {...testSubjectSchema, description: "'*' or the path of a function. Omit it to run every subject."},
     }),

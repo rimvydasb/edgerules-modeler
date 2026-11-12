@@ -8,9 +8,10 @@ export const readSource: ProjectTool<ReadSourceInput, SourcePage> = {
     name: 'read-source',
     title: 'Read source',
     description:
-        "Returns the source text of one project element: EdgeRules DSL for a model path, the whole model for '*', or " +
-        'Markdown for doc:README.md. A model path also returns its documentation. Long text comes in pages; ' +
-        'continue with nextOffset. Use it to troubleshoot, or before you change an entry you have not seen.',
+        'Returns the source of one path: the DSL of a model entry with its documentation, the whole model for ' +
+        "'*', or Markdown for doc:README.md. Long text comes in pages; continue with nextOffset. Read an " +
+        'entry before you change it.',
+    summary: 'Read the DSL of an entry, the whole model or README',
     inputSchema: inputSchema(
         {
             path: sourcePathSchema,

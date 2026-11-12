@@ -10,9 +10,10 @@ export const getProjectOverview: ProjectTool<GetProjectOverviewInput, ProjectOve
     name: 'get-project-overview',
     title: 'Get project overview',
     description:
-        'Returns the state of the EdgeRules project open in this page: project and model name, save state, DSL ' +
-        'validity, the number of entries per section, the test totals of the last run, the entry the user is looking ' +
-        'at, and the current version. Call it at the start of a session.',
+        'Call it first. Returns the state of the open project: names, save state, DSL validity, entry counts, ' +
+        "the totals of the last test run, the user's focus, the version, and a one-line index of every tool " +
+        'of this page.',
+    summary: 'Project state, last test totals and this tool index',
     inputSchema: inputSchema({}),
     outputSchema: resultSchema(
         {
@@ -30,6 +31,7 @@ export const getProjectOverview: ProjectTool<GetProjectOverviewInput, ProjectOve
             focus: {type: 'object'},
             readOnly: {type: 'boolean'},
             canSave: {type: 'boolean'},
+            tools: {type: 'object', additionalProperties: {type: 'string'}},
         },
         [
             'project',

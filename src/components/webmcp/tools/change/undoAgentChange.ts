@@ -14,9 +14,10 @@ export const undoAgentChange: ProjectTool<UndoAgentChangeInput, UndoResult> = {
     name: 'undo-agent-change',
     title: 'Undo agent change',
     description:
-        'Reverts one change that a tool of this page made, with its changeId, by its inverse operations. The undo is ' +
-        'a new change: it has its own changeId, and the result reports link errors and the regression like ' +
-        'edit-model. It fails when the user or another agent change edited a target of that change later.',
+        'Reverts one change that a tool of this page made, by its changeId. The undo is a new change and ' +
+        'reports link errors and failing tests like edit-model. It fails when a later edit changed a target ' +
+        'of that change.',
+    summary: 'Revert one agent change by its changeId',
     inputSchema: inputSchema(
         {changeId: {type: 'string', description: "The changeId of a change result, e.g. 'ac-3'."}},
         ['changeId'],

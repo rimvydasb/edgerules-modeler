@@ -12,9 +12,9 @@ export const openInEditor: ProjectTool<OpenInEditorInput, OpenResult> = {
     name: 'open-in-editor',
     title: 'Open in editor',
     description:
-        'Shows one project element to the user in the Modeler: a model entry or the README, in the code, boxed, ' +
-        'flow, tests or preview view. Use it to show the user the result of a change or the entry that an answer is ' +
-        'about.',
+        'Shows a model entry or the README to the user in the Modeler, in the code, boxed, flow, tests or ' +
+        'preview view. Use it to show the result of a change or the entry that an answer is about.',
+    summary: 'Show an entry to the user in the Modeler',
     inputSchema: inputSchema(
         {
             path: sourcePathSchema,

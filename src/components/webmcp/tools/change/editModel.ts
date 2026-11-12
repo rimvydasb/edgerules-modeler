@@ -55,10 +55,10 @@ export const editModel: ProjectTool<EditModelInput, ChangeResult> = {
     name: 'edit-model',
     title: 'Edit model',
     description:
-        'Changes the EdgeRules model in one atomic step: set the DSL of an entry (creates it when new), rename or ' +
-        'remove. If the model does not parse or link after the last operation, nothing changes and the exact errors ' +
-        'return. Otherwise every test case of the project runs, and the result lists the cases that now fail with ' +
-        'expected and actual values. You do not need to read the model back to check the change.',
+        'Changes the model in one atomic step: set the DSL of an entry (creates it when new), rename or ' +
+        'remove. On a parse or link error nothing changes and the errors return. Otherwise every test runs ' +
+        'and the cases that now fail return.',
+    summary: 'Change model DSL: set, rename, remove; runs all tests',
     inputSchema: inputSchema(
         {
             operations: {

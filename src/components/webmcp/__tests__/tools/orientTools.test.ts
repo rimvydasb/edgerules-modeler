@@ -26,6 +26,42 @@ describe('get-project-overview', () => {
         if (result.ok) expect(result.tests.ranAt).toBeTypeOf('number');
     });
 
+    it('lists every registered tool with its summary, in catalog order', async () => {
+        const {call, handle} = await openToolsFixture();
+        const result = await call<ProjectOverview>('get-project-overview');
+        if (!result.ok) throw new Error('overview failed');
+        expect(Object.keys(result.tools ?? {})).toEqual([
+            'edit-model',
+            'edit-tests',
+            'set-documentation',
+            'undo-agent-change',
+            'run-tests',
+            'get-project-overview',
+            'get-language-guide',
+            'list-model-entries',
+            'read-source',
+            'search-model',
+            'list-tests',
+            'evaluate-model',
+        ]);
+        expect(result.tools?.['run-tests']).toBe('Run all tests, or one subject, now');
+
+        handle.setReadOnly(true);
+        const readOnly = await call<ProjectOverview>('get-project-overview');
+        if (!readOnly.ok) throw new Error('overview failed');
+        expect(readOnly.tools).not.toHaveProperty('edit-model');
+        expect(readOnly.tools).toHaveProperty('run-tests');
+    });
+
+    it('adds the host tools to the index when the host allows them', async () => {
+        const navigation = {getFocus: () => ({path: '*', view: 'flow' as const}), open: () => {}};
+        const {call} = await openToolsFixture(undefined, {navigation, allowSave: true});
+        const result = await call<ProjectOverview>('get-project-overview');
+        if (!result.ok) throw new Error('overview failed');
+        expect(result.tools).toHaveProperty('open-in-editor');
+        expect(result.tools).toHaveProperty('save-project');
+    });
+
     it('reports the version after a change and the unsaved slices', async () => {
         const {call} = await openToolsFixture();
         const before = await call<ProjectOverview>('get-project-overview');

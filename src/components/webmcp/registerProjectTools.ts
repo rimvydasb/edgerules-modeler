@@ -32,7 +32,12 @@ export function registerProjectTools(options: ProjectToolsOptions): ProjectTools
     const canSave = () => flags.allowSave && !flags.readOnly;
     const context = createProjectToolsContext(
         session,
-        () => ({readOnly: flags.readOnly, canSave: canSave(), ...(navigation && {focus: navigation.getFocus()})}),
+        () => ({
+            readOnly: flags.readOnly,
+            canSave: canSave(),
+            ...(navigation && {focus: navigation.getFocus()}),
+            tools: toolIndex(registry.registered()),
+        }),
         createProjectHostActions(session, navigation, canSave),
     );
     const queue = createToolQueue();
@@ -78,6 +83,14 @@ export function registerProjectTools(options: ProjectToolsOptions): ProjectTools
         },
         dispose: () => registry.dispose(),
     };
+}
+
+// The summary of each registered tool by name, in catalog order: an agent whose tool list was cut short finds every
+// tool in `get-project-overview`.
+function toolIndex(registered: readonly string[]): Record<string, string> {
+    return Object.fromEntries(
+        TOOL_CATALOG.filter((tool) => registered.includes(tool.name)).map((tool) => [tool.name, tool.summary]),
+    );
 }
 
 // The tool call that runs now. Calls run one at a time through `ToolQueue`, so one name is enough.

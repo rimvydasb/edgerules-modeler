@@ -6,7 +6,7 @@ import type {ToolAnnotations} from '../protocol/toolDefinition';
 export interface ModelContextToolLike {
     name: string; // kebab-case, at most 30 characters
     title: string; // label for a confirmation dialog
-    description: string; // at most 500 characters
+    description: string; // at most 250 characters
     inputSchema: object; // JSON Schema draft 2020-12, `type: 'object'`
     outputSchema: object; // JSON Schema of `ToolResult<T>`
     annotations: ToolAnnotations;

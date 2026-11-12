@@ -10,9 +10,9 @@ export const searchModel: ProjectTool<SearchModelInput, SearchResult> = {
     name: 'search-model',
     title: 'Search model',
     description:
-        'Finds text in the model DSL, entry names and documentation, without regard to case. Returns the path of each ' +
-        'matching entry with a short excerpt and line. Use it to find where a name occurs. It matches text, so a ' +
-        'result can be a comment or a string.',
+        'Finds text in the model DSL, entry names and documentation, ignoring case, like grep. Returns each ' +
+        'matching path with its line and an excerpt. Use it to find every place that uses a name or a value.',
+    summary: 'Grep the model DSL, names and documentation',
     inputSchema: inputSchema(
         {
             query: {type: 'string', description: 'The text to find; 1 to 200 characters.'},

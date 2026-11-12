@@ -26,9 +26,9 @@ export const setDocumentation: ProjectTool<SetDocumentationInput, DocumentationC
     name: 'set-documentation',
     title: 'Set documentation',
     description:
-        'Sets the documentation of model entries or the project README. Each item replaces the whole Markdown text ' +
-        'of one path; an empty text removes the documentation of a model entry. The editors show the documentation ' +
-        'next to its entry. Documentation does not change test results, so no tests run.',
+        'Sets the Markdown documentation of model entries or of the project README. Each item replaces the ' +
+        'whole text of one path; an empty text removes the documentation of an entry. No tests run.',
+    summary: 'Set the documentation of entries or the README',
     inputSchema: inputSchema(
         {
             items: {

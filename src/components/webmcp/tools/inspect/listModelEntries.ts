@@ -10,10 +10,10 @@ export const listModelEntries: ProjectTool<ListModelEntriesInput, ModelEntriesPa
     name: 'list-model-entries',
     title: 'List model entries',
     description:
-        'Lists the entries of the EdgeRules model as a flat outline: path, kind, signature or type, the first line of ' +
-        'the documentation and the number of test cases. Use it to find the path of an entry, for example before a ' +
-        'change to an entry you have not seen. Filter by Project Explorer section or list only the entries below one ' +
-        'context.',
+        'Lists the model entries as a flat outline: path, kind, signature or type, the first line of the ' +
+        'documentation and the number of test cases. Filter by section or by context. Use it to find the path ' +
+        'of an entry.',
+    summary: 'Outline of the model entries: path, kind, signature',
     inputSchema: inputSchema({
         sections: {type: 'array', items: {enum: [...MODEL_SECTIONS]}, description: 'Default: every section.'},
         under: {...modelPathSchema, description: "Only entries at or below this context; default '*'."},

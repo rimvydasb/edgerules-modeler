@@ -60,10 +60,10 @@ export const editTests: ProjectTool<EditTestsInput, TestsChangeResult> = {
     name: 'edit-tests',
     title: 'Edit tests',
     description:
-        'Adds, changes or removes test cases of one test subject in one atomic step. Values are EdgeRules literal ' +
-        'text, keyed by paths relative to the subject; inputs feed the run and assertions are the expected results. ' +
-        'An empty value text removes that value. After the change every test case of the project runs, and the ' +
-        'result lists the cases that now fail with expected and actual values.',
+        'Adds, updates or removes test cases of one subject in one atomic step. Values are cell texts by ' +
+        "subject-relative path: strings and dates without quotes, lists and objects as JSON; '' clears a " +
+        'value. Every test runs after it.',
+    summary: 'Add, update or remove test cases; runs all tests',
     inputSchema: inputSchema(
         {
             subject: testSubjectSchema,

@@ -10,9 +10,10 @@ export const getLanguageGuide: ProjectTool<GetLanguageGuideInput, GuidePage> = {
     name: 'get-language-guide',
     title: 'Get language guide',
     description:
-        'Returns the EdgeRules language reference for one topic, with valid examples and their outputs. Without a ' +
-        'section, it returns the introduction of the topic and its section titles. Read the introduction topic before ' +
-        'you write EdgeRules code for the first time, and the topic of each construct you use.',
+        'Returns the EdgeRules language reference of one topic, with valid examples. Without a section, it ' +
+        'returns the topic introduction and its section titles. Read the introduction topic before you write ' +
+        'EdgeRules code.',
+    summary: 'EdgeRules language reference by topic',
     inputSchema: inputSchema(
         {
             topic: {enum: [...GUIDE_TOPICS], description: 'The reference topic.'},

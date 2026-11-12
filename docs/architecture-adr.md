@@ -137,7 +137,8 @@ fails on intermediate states, for example a rename before the references that us
 ### Consequences
 
 - A batch can pass through states that do not link.
-- The tool count stays small, and each description stays under 500 characters.
+- The tool count stays small. Each description stays at or under 250 characters, and each tool has a summary of at most
+  60 characters for the tool index of `get-project-overview`.
 
 ## ADR-007: An undo replays recorded inverse operations
 

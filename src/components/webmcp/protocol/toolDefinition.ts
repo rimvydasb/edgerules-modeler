@@ -20,7 +20,8 @@ export interface ToolAnnotations {
 export interface ToolDefinition<I extends object, O extends object, C = unknown> {
     name: string; // kebab-case `verb-noun`, at most 30 characters
     title: string; // label for a confirmation dialog
-    description: string; // at most 500 characters
+    description: string; // at most 250 characters
+    summary: string; // at most 60 characters: the line of the tool in the tool index of `get-project-overview`
     inputSchema: object; // JSON Schema draft 2020-12, `type: 'object'`
     outputSchema: object; // JSON Schema of `ToolResult<O>`
     annotations: ToolAnnotations;

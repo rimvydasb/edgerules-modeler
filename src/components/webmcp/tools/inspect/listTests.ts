@@ -7,9 +7,10 @@ export const listTests: ProjectTool<ListTestsInput, TestSuiteView> = {
     name: 'list-tests',
     title: 'List tests',
     description:
-        "Returns the authored test cases of one test subject, the whole model ('*') or a callable path. Each case has " +
-        'its id, name, input values and assertion values, keyed by paths relative to the subject. Also returns the ' +
-        'paths that cases can use. Use it before edit-tests on a subject you have not seen.',
+        "Returns the test cases of one subject ('*' or a callable path): id, name, and input and assertion " +
+        'values by subject-relative path, and the paths that cases can use. Call it before edit-tests on a ' +
+        'new subject.',
+    summary: 'Test cases and value paths of one test subject',
     inputSchema: inputSchema({subject: testSubjectSchema}, ['subject']),
     outputSchema: resultSchema(
         {
