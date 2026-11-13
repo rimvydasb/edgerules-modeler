@@ -1,4 +1,4 @@
-import {Alert, Button, Loader, Select, Stack, Text, TextInput} from '@mantine/core';
+import {Alert, Button, Select, Stack, Text, TextInput} from '@mantine/core';
 import {IconSearch} from '@tabler/icons-react';
 import {useEffect, useMemo, useRef, useState, type ReactElement} from 'react';
 import {cx} from '#ui/cx';
@@ -21,6 +21,7 @@ import {satisfiesEngine} from './semver';
 import type {ExampleCoordinates, LibraryClient, LibraryEntry, LoadedExample} from './types';
 import {useLibraryIndex} from './useLibraryIndex';
 import * as classes from './exampleGallery.module.css';
+import {SodasLoader} from '#ui/SodasLoader';
 
 export interface ExampleGalleryProps {
     client: LibraryClient; // from createLibraryClient(source)
@@ -161,7 +162,7 @@ export function ExampleGallery({
             </Alert>
         );
     }
-    if (!search) return <Loader size="sm" aria-label="Loading examples" />;
+    if (!search) return <SodasLoader label="Loading examples" />;
 
     const copyAndOpen = async (entry: LibraryEntry) => {
         setBusyId(entry.id);

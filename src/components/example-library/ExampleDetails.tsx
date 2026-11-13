@@ -1,4 +1,4 @@
-import {Alert, Anchor, Button, Loader, Select, Stack, Text} from '@mantine/core';
+import {Alert, Anchor, Button, Select, Stack, Text} from '@mantine/core';
 import {
     IconBrandGithub,
     IconChevronRight,
@@ -32,6 +32,7 @@ import {satisfiesEngine} from './semver';
 import type {ExampleCoordinates, LibraryClient, LibraryEntry, LoadedExample} from './types';
 import {useLibraryIndex} from './useLibraryIndex';
 import * as classes from './exampleDetails.module.css';
+import {SodasLoader} from '#ui/SodasLoader';
 
 export interface ExampleDetailsProps {
     client: LibraryClient; // from createLibraryClient(source)
@@ -105,7 +106,7 @@ export function ExampleDetails({
             </Alert>
         );
     }
-    if (!search) return <Loader size="sm" aria-label="Loading example" />;
+    if (!search) return <SodasLoader label="Loading example" />;
     if (!entry || !version)
         return (
             <Alert color="gray" title="Example not found">
@@ -254,7 +255,7 @@ export function ExampleDetails({
                         <span>README.md</span>
                     </div>
                     <div className={classes.readmeBody}>
-                        {!currentReadme && <Loader size="sm" aria-label="Loading README" />}
+                        {!currentReadme && <SodasLoader label="Loading README" size={32} />}
                         {currentReadme?.error && (
                             <Alert color="red" role="alert">
                                 README.md: {currentReadme.error}

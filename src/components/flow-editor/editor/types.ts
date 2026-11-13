@@ -15,6 +15,7 @@ export interface FlowEditorProps {
     focusNode?: FlowFocusRequest; // a new object selects that node and centers the view on it
     defaultPaletteCollapsed?: boolean; // the node palette starts as the rail of node types; defaults to false
     onSelectionChange?: (selection: FlowSelection | undefined) => void; // the one selected node; undefined for none or several
+    onReady?: () => void; // once, after the first measure, auto layout and fit: the canvas shows its final picture
 }
 
 /**

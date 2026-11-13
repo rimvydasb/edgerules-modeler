@@ -1,0 +1,24 @@
+.sodas {
+  flex: none;
+  color: var(--mantine-color-dimmed);
+  transform-origin: 50% 10%; /* hangs from the top of the mark */
+  /* A continuous pendulum, not a kick and a pause. The negative delay starts it mid-swing, at full speed: it never
+     waits at rest for its first move. */
+  animation: sodasSway 0.8s ease-in-out -0.4s infinite alternate;
+  will-change: transform;
+}
+
+@keyframes sodasSway {
+  from {
+    transform: rotate(-7deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sodas {
+    animation: none;
+  }
+}

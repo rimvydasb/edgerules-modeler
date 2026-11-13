@@ -466,9 +466,29 @@
 }
 
 .splitCanvas {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
+}
+
+/* The canvas mounts under the loader and fades in once its nodes are measured and laid out. */
+.splitCanvas > [data-testid='flow-editor'] {
+  height: 100%;
+  transition: opacity 120ms ease-out;
+}
+
+.splitCanvas[data-ready='false'] > [data-testid='flow-editor'] {
+  opacity: 0;
+}
+
+.flowLoading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /*

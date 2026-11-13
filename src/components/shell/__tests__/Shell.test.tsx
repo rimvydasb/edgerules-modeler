@@ -1027,6 +1027,17 @@ describe('Shell split screen', () => {
         expect(toggle).toHaveAttribute('aria-pressed', 'false');
     });
 
+    it('shows a loader until the flow canvas is measured and laid out', async () => {
+        const session = await openWorkbook();
+        await renderShell({defaultPath: 'loanBook', defaultView: 'flow'}, session);
+        // The first frame paints the loader alone; the canvas mounts on the next frame.
+        expect(screen.getByTestId('flow-loading')).toBeInTheDocument();
+        expect(screen.queryByTestId('flow-editor')).toBeNull();
+        await screen.findByTestId('function-node-loanBook.decision');
+        // jsdom measures no node: the canvas reports ready by its timeout.
+        await waitFor(() => expect(screen.queryByTestId('flow-loading')).toBeNull(), {timeout: 3000});
+    });
+
     it('shows the callee of a function node and an input node in a Boxed Editor, follows the selection and closes on a canvas click', async () => {
         const session = await openWorkbook();
         const user = userEvent.setup();
@@ -1059,6 +1070,8 @@ describe('Shell split screen', () => {
         const session = await openWorkbook();
         await renderShell({defaultPath: 'loanBook', defaultView: 'flow'}, session);
 
+        // The canvas mounts a frame after the loader paints.
+        await screen.findByTestId('output-node-output');
         fireEvent.click(nodeOf('output-node-output'));
         const sheet = await screen.findByTestId('sink-sheet');
         expect(within(sheet).getByText('Decision')).toBeInTheDocument();

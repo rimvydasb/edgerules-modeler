@@ -4,10 +4,11 @@ import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import {StrictMode, useEffect, useState, type ReactElement} from 'react';
 import {createRoot} from 'react-dom/client';
-import {Loader, MantineProvider} from '@mantine/core';
+import {MantineProvider} from '@mantine/core';
 import {Notifications} from '@mantine/notifications';
 import {RouterProvider} from '@tanstack/react-router';
 import {init, MutableDecisionService} from '@edgerules/web/mutable';
+import {SodasLoader} from '../src/ui/SodasLoader';
 import {createLocalProjectRepository, createProjectFactory} from '../src/components/project-session';
 import {initAnalytics} from './analytics';
 import {createModelerRouter} from './router';
@@ -32,7 +33,9 @@ function App(): ReactElement {
     return router ? (
         <RouterProvider router={router} />
     ) : (
-        <Loader size="sm" aria-label="Loading the engine" style={{margin: 48}} />
+        <div style={{display: 'flex', justifyContent: 'center', padding: 48}}>
+            <SodasLoader label="Loading the engine" />
+        </div>
     );
 }
 
