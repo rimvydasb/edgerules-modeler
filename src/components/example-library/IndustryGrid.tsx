@@ -1,4 +1,4 @@
-import {Alert, Button, Loader} from '@mantine/core';
+import {Alert, Button} from '@mantine/core';
 import type {ReactElement} from 'react';
 import {KIND_COLORS} from '#ui/kindColors';
 import {SheetBody, SheetDescription, SheetGrid, SheetPanelButton, SheetPanelHeader} from '#ui/sheet';
@@ -6,6 +6,7 @@ import {IndustryIcon} from './industryIcon';
 import {countByIndustry} from './libraryQuery';
 import type {LibraryClient} from './types';
 import {useLibraryIndex} from './useLibraryIndex';
+import {SodasLoader} from '#ui/SodasLoader';
 
 export interface IndustryGridProps {
     client: LibraryClient; // from createLibraryClient(source)
@@ -25,7 +26,7 @@ export function IndustryGrid({client, onSelectIndustry}: IndustryGridProps): Rea
             </Alert>
         );
     }
-    if (!search) return <Loader size="sm" aria-label="Loading industries" />;
+    if (!search) return <SodasLoader label="Loading industries" />;
     const counts = countByIndustry(search.index);
     return (
         <SheetGrid compact data-testid="industry-grid">

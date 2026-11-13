@@ -1,0 +1,361 @@
+/*
+ * The Decision Requirements Diagram: DMN shapes on a dotted canvas. Mantine colors only, so the light and dark schemes
+ * follow the host theme. The kind colors are the KIND_COLORS of src/ui/kindColors.ts.
+ */
+.diagram {
+  --drd-border: var(--mantine-color-default-border);
+  --drd-canvas: var(--mantine-color-gray-0);
+  --drd-dot: #ced4da;
+  --drd-surface: var(--mantine-color-body);
+  --drd-muted: var(--mantine-color-dimmed);
+  --drd-wire: var(--mantine-color-gray-6);
+  --drd-decision: #00897b;
+  --drd-decision-tint: rgb(0 137 123 / 0.07);
+  --drd-input: #ed6c02;
+  --drd-input-tint: rgb(237 108 2 / 0.07);
+  --drd-service: #d49b00;
+  --drd-service-tint: rgb(212 155 0 / 0.08);
+  --drd-facts: #8d6e63;
+  --drd-focus: var(--mantine-primary-color-filled);
+
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid var(--drd-border);
+  background: var(--drd-surface);
+  color: var(--mantine-color-text);
+  font-family: var(--mantine-font-family);
+
+  --xy-background-color: var(--drd-canvas);
+  --xy-edge-stroke: var(--drd-wire);
+  --xy-minimap-background-color: var(--mantine-color-body);
+  --xy-controls-button-background-color: var(--mantine-color-body);
+  --xy-controls-button-background-color-hover: var(--mantine-color-default-hover);
+  --xy-controls-button-color: var(--mantine-color-text);
+  --xy-controls-button-border-color: var(--drd-border);
+}
+
+:global([data-mantine-color-scheme='dark']) .diagram {
+  --drd-canvas: var(--mantine-color-dark-8);
+  --drd-dot: #3a3a3a;
+  --drd-surface: var(--mantine-color-dark-7);
+  --drd-wire: var(--mantine-color-dark-1);
+  --drd-decision: #26a69a;
+  --drd-decision-tint: rgb(38 166 154 / 0.12);
+  --drd-input: #ff9800;
+  --drd-input-tint: rgb(255 152 0 / 0.1);
+  --drd-service: #f0b90b;
+  --drd-service-tint: rgb(240 185 11 / 0.1);
+  --drd-facts: #bcaaa4;
+}
+
+.background {
+  --xy-background-pattern-dots-color: var(--drd-dot);
+}
+
+.controls,
+.minimap,
+.legend {
+  overflow: hidden;
+  border: 1px solid var(--drd-border);
+  border-radius: var(--mantine-radius-sm);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+}
+
+/* ---------------------------------------------------------------- nodes */
+.handle {
+  width: 1px;
+  min-width: 0;
+  height: 1px;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.node {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 14px;
+  border: 2px solid var(--drd-accent);
+  background: var(--drd-surface);
+  background-image: linear-gradient(var(--drd-tint), var(--drd-tint));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  transition:
+    box-shadow 120ms ease,
+    opacity 120ms ease,
+    transform 120ms ease;
+  cursor: pointer;
+}
+
+.node:hover,
+.inputWrap:hover .node {
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+}
+
+.decision {
+  --drd-accent: var(--drd-decision);
+  --drd-tint: var(--drd-decision-tint);
+  border-radius: 2px;
+}
+
+.input {
+  --drd-accent: var(--drd-input);
+  --drd-tint: var(--drd-input-tint);
+  height: 56px;
+  padding-inline: 26px;
+  border-radius: 28px; /* the DMN stadium */
+}
+
+.service {
+  --drd-accent: var(--drd-service);
+  --drd-tint: var(--drd-service-tint);
+  justify-content: stretch;
+  gap: 0;
+  padding: 0;
+  border-width: 2.5px;
+  border-radius: 16px;
+}
+
+.serviceTop,
+.serviceBottom {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding-inline: 14px;
+  min-width: 0;
+}
+
+/* The line across a DMN decision service: output decisions above it, encapsulated below. */
+.serviceBottom {
+  border-top: 2px solid var(--drd-accent);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.icon {
+  flex: 0 0 auto;
+  color: var(--drd-accent);
+}
+
+.name {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.caption {
+  color: var(--drd-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.meta {
+  overflow: hidden;
+  color: var(--drd-muted);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.meta em {
+  color: var(--drd-accent);
+  font-style: normal;
+}
+
+.results {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chip,
+.more {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--drd-tint);
+  outline: 1px solid color-mix(in srgb, var(--drd-accent) 25%, transparent);
+  color: var(--mantine-color-text);
+  font-size: 10.5px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.more {
+  flex: 0 0 auto;
+  color: var(--drd-muted);
+}
+
+.inputWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: opacity 120ms ease;
+  cursor: pointer;
+}
+
+.inputWrap > .node {
+  width: 100%;
+}
+
+/* Facts arrive with the input: a tray that hangs below the stadium. */
+.facts {
+  box-sizing: border-box;
+  width: calc(100% - 36px);
+  padding: 4px 10px 6px;
+  border: 1px dashed color-mix(in srgb, var(--drd-facts) 70%, transparent);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: var(--drd-surface);
+}
+
+.factsCaption {
+  color: var(--drd-facts);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.fact {
+  overflow: hidden;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 11px;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.factMark {
+  margin-right: 6px;
+  color: var(--drd-facts);
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- selection */
+.selected.node,
+.selected .node {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--drd-focus) 35%, transparent),
+    0 4px 14px rgb(0 0 0 / 0.12);
+}
+
+.dimmed {
+  opacity: 0.28;
+}
+
+.edgeDimmed :global(.react-flow__edge-path) {
+  opacity: 0.18;
+}
+
+.edgeActive :global(.react-flow__edge-path) {
+  stroke: var(--drd-focus) !important;
+  stroke-width: 2.25px;
+}
+
+/* ---------------------------------------------------------------- edges */
+.information :global(.react-flow__edge-path) {
+  stroke-width: 1.6px;
+}
+
+.owner :global(.react-flow__edge-path) {
+  stroke-dasharray: 2 5;
+  stroke-linecap: round;
+  stroke-width: 1.6px;
+}
+
+/* ---------------------------------------------------------------- legend */
+.legend {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 6px 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--mantine-color-body);
+  font-size: 11.5px;
+}
+
+.legendTitle {
+  grid-column: 1 / -1;
+  color: var(--drd-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.swatch {
+  justify-self: center;
+  box-sizing: border-box;
+  width: 26px;
+  height: 14px;
+  border: 2px solid var(--drd-accent);
+  background: var(--drd-tint);
+}
+
+.swatch.input {
+  height: 14px;
+  padding: 0;
+  border-radius: 7px;
+}
+
+.swatch.service {
+  border-radius: 5px;
+}
+
+.line {
+  width: 30px;
+  height: 10px;
+  color: var(--drd-wire);
+}
+
+/* ---------------------------------------------------------------- empty */
+.emptyPanel {
+  margin-top: 18vh;
+  pointer-events: none;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 360px;
+  padding: 20px 24px;
+  border: 1px solid var(--drd-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+  color: var(--drd-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.empty strong {
+  color: var(--mantine-color-text);
+}

@@ -5,8 +5,9 @@ import type {FlowEditorOpenTarget} from '../flow-editor';
 import type {ProjectDescriptor, ProjectLocator, ProjectOrigin} from '../project-session';
 
 // 'tests' shows the tests of the root path in the Tests Manager; it is the only view of a test. 'preview' shows the
-// rendered Markdown of a document root (`doc:README.md`); only a document root has it.
-export type ShellView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview';
+// rendered Markdown of a document root (`doc:README.md`); only a document root has it. 'drd' shows the Decision
+// Requirements Diagram of the whole model; only the model root has it.
+export type ShellView = 'code' | 'boxed' | 'flow' | 'drd' | 'tests' | 'preview';
 
 // The links of the open project to other projects, the Library and its source example. The host owns the routes.
 export interface ShellNavigation {

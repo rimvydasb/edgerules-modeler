@@ -51,6 +51,18 @@ describe('FlowEditorService of a service', () => {
             expect(service.getParameterNode('quote.missing')).toMatchObject({exists: false});
         });
 
+        it('reads a list parameter of a record type: its item type, with no field pins', () => {
+            const {service} = build(
+                `{ type Client: { id: <string> }; service plan(clients: Client[]): { n: count(clients) } }`,
+                'plan',
+            );
+            expect(service.getParameterNode('plan.clients')).toMatchObject({
+                type: 'Client[]',
+                typePath: 'Client',
+                fields: [],
+            });
+        });
+
         it('wires a record field into a function node by its short name', () => {
             const {service} = build();
             expect(service.getFunctionNode('quote.score').arguments.map((argument) => argument.binding)).toEqual([

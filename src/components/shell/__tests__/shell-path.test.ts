@@ -62,7 +62,7 @@ describe('rootPathSegments of layer declarations', () => {
         expect(rootPathSegments(model, 'PersonFacts')).toEqual([
             {name: 'PersonFacts', path: 'PersonFacts', kind: 'facts'},
         ]);
-        expect(rootViews(rootPathSegments(model, 'PersonFacts'), model)).toEqual(['code', 'boxed']);
+        expect(rootViews(rootPathSegments(model, 'PersonFacts'), model)).toEqual(['code', 'boxed', 'drd']);
         expect(resolveRootPath(model, 'PersonFacts.adult')).toBe('PersonFacts');
         expect(rootPathSegments(model, 'Person')).toEqual([{name: 'Person', path: 'Person', kind: 'type'}]);
     });
@@ -77,24 +77,25 @@ describe('rootPathSegments of layer declarations', () => {
 
 describe('rootViews', () => {
     it.each([
-        ['*', ['code', 'boxed', 'flow', 'tests']],
+        // The DRD view shows the whole model: every model path has it.
+        ['*', ['code', 'boxed', 'flow', 'drd', 'tests']],
         // A context has no Flow view: only a workbook and a service have.
-        ['applicant', ['code', 'boxed']],
-        ['book', ['code', 'boxed', 'flow']],
+        ['applicant', ['code', 'boxed', 'drd']],
+        ['book', ['code', 'boxed', 'flow', 'drd']],
         // A function has no nodes, so no Flow view; a service has its parameters, its body and its result.
-        ['riskScore', ['code', 'boxed', 'tests']],
-        ['quote', ['code', 'boxed', 'flow', 'tests']],
-        ['band', ['code', 'boxed', 'tests']],
-        ['Customer', ['code', 'boxed']],
-        ['applicant.age', ['code', 'boxed']],
+        ['riskScore', ['code', 'boxed', 'drd', 'tests']],
+        ['quote', ['code', 'boxed', 'flow', 'drd', 'tests']],
+        ['band', ['code', 'boxed', 'drd', 'tests']],
+        ['Customer', ['code', 'boxed', 'drd']],
+        ['applicant.age', ['code', 'boxed', 'drd']],
     ])('%s: %o', (path, views) => {
         expect(rootViews(rootPathSegments(model, path), model)).toEqual(views);
     });
 
     it('has no Flow view of the model without a workbook, a service or a README', () => {
         const plain = MutableDecisionService.fromCode('{ applicant: { age: 21 } }').toPortable();
-        expect(rootViews([], plain)).toEqual(['code', 'boxed', 'tests']);
-        expect(rootViews([], plain, true)).toEqual(['code', 'boxed', 'flow', 'tests']);
+        expect(rootViews([], plain)).toEqual(['code', 'boxed', 'drd', 'tests']);
+        expect(rootViews([], plain, true)).toEqual(['code', 'boxed', 'flow', 'drd', 'tests']);
     });
 });
 

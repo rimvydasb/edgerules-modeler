@@ -16,7 +16,7 @@ export interface ParameterNodeModel {
     field: string; // node id: '<service>.<parameter>'
     name: string; // the parameter name
     type: string; // the declared type text, for example 'LoanRequest', 'number' or 'Installment[]'
-    typePath?: string; // the model path of a named record type, for example 'LoanRequest'
+    typePath?: string; // the model path of a named record type, or of the item type of a list: 'Client' for 'Client[]'
     fields: ParameterField[]; // the fields of a record type, one output pin each; empty for any other type
     used: boolean; // the service body reads the parameter; Delete is disabled
     exists: boolean; // false when the service has no such parameter

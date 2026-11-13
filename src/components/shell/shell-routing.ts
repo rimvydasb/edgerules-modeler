@@ -9,6 +9,9 @@ export interface ShellRoute {
     focus?: string; // the field path of a Flow node to select and center
 }
 
+// The Methods section of the Project Explorer: the DRD has no node for them.
+const METHOD_KINDS = new Set<ProjectExplorerOpenTarget['kind']>(['function', 'ruleset', 'loop', 'optimise']);
+
 const NODE_KINDS = new Set<ProjectExplorerOpenTarget['kind']>([
     'input-node',
     'function-node',
@@ -25,7 +28,7 @@ function parentPath(path: string): string {
 /**
  * A document opens in the Preview view. A workbook, a service and the nodes of a workbook always open in the Flow view: a node is centered on the canvas of
  * its workbook. For any other entry the active view stays when `ROOT_VIEWS` gives it to the entry; from the Tests
- * view, or from a view the entry does not have, the entry opens in the Boxed view.
+ * view, from the DRD view to a method (the diagram has no node for it), or from a view the entry does not have, the entry opens in the Boxed view.
  */
 export function explorerRoute(target: ProjectExplorerOpenTarget, view: ShellView, model: unknown): ShellRoute {
     if (target.kind === 'document') return {path: target.path, view: 'preview'};
@@ -33,6 +36,7 @@ export function explorerRoute(target: ProjectExplorerOpenTarget, view: ShellView
     if (target.kind === 'workbook' || target.kind === 'service') return {path: target.path, view: 'flow'};
     if (NODE_KINDS.has(target.kind)) return {path: parentPath(target.path), view: 'flow', focus: target.path};
     if (view === 'tests') return {path: target.path, view: 'boxed'};
+    if (view === 'drd' && METHOD_KINDS.has(target.kind)) return {path: target.path, view: 'boxed'};
     if (!rootViews(rootPathSegments(model, target.path), model).includes(view))
         return {path: target.path, view: 'boxed'};
     return {path: target.path, view};

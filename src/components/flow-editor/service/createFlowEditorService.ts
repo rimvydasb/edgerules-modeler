@@ -242,7 +242,10 @@ export function createFlowEditorService(
         const schemas: CalleeSchema[] = [];
         for (const callable of listCallables(engine)) {
             // A loop and an optimisation are called like a function: named arguments, a typed result.
-            const schema = readSchema({path: callable.path, kind: callable.kind === 'ruleset' ? 'ruleset' : 'function'});
+            const schema = readSchema({
+                path: callable.path,
+                kind: callable.kind === 'ruleset' ? 'ruleset' : 'function',
+            });
             if (schema) schemas.push(schema);
         }
         return schemas;
@@ -954,12 +957,12 @@ export function createFlowEditorService(
                 type: computedRecord
                     ? 'object'
                     : (isRecord(schema) &&
-                        (schema['@kind'] === 'expression'
-                            ? typeText(schema)
-                            : typeof schema.type === 'string'
-                              ? schema.type
-                              : undefined)) ||
-                    'any',
+                          (schema['@kind'] === 'expression'
+                              ? typeText(schema)
+                              : typeof schema.type === 'string'
+                                ? schema.type
+                                : undefined)) ||
+                      'any',
                 expression:
                     !computedRecord && isRecord(schema) && typeof schema.expression === 'string'
                         ? schema.expression
@@ -1094,11 +1097,13 @@ export function createFlowEditorService(
             // A record type: inline, or a type definition of the model by name.
             let definition: unknown = declared;
             let typePath: string | undefined;
-            if (typeof declared === 'string' && !PRIMITIVE_TYPES.has(declared)) {
-                const named = engine.get(declared);
+            // A list of a named type ('Client[]') opens its item type; only a record type itself gets field pins.
+            const item = type.replace(/(\[\])+$/, '');
+            if (/^[A-Za-z_]\w*$/.test(item) && !PRIMITIVE_TYPES.has(item)) {
+                const named = engine.get(item);
                 if (isRecord(named) && named['@kind'] === 'type') {
-                    definition = named;
-                    typePath = declared;
+                    typePath = item;
+                    if (item === type) definition = named;
                 }
             }
             const fields: ParameterField[] = Object.entries(structureFields(definition) ?? {}).map(([key, child]) => ({

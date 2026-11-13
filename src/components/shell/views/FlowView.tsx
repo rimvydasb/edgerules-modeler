@@ -11,6 +11,7 @@ import {
 } from '../../flow-editor';
 import {SinkSheet, useReducedSelection} from '../../flow-editor/internal';
 import {useProjectSession, useProjectSlice} from '../../project-session';
+import {SodasLoader} from '#ui/SodasLoader';
 import * as classes from '../shell.module.css';
 
 export interface FlowViewProps {
@@ -69,23 +70,40 @@ export function FlowView({
         // Once per selected node: the user may close the split screen again while the node stays selected.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selected, reduced]);
+    // Mounting the canvas blocks the main thread for a while: the first frame paints the loader, and the canvas
+    // mounts on the next one. The loader stays until the canvas measured its nodes and laid them out.
+    const [mounted, setMounted] = useState(false);
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        const frame = window.requestAnimationFrame(() => setMounted(true));
+        return () => window.cancelAnimationFrame(frame);
+    }, []);
+    const onReady = useCallback(() => setReady(true), []);
     // The canvas keeps its place in the tree when the split screen opens or closes, so it is never mounted again.
     return (
         <div className={classes.split}>
-            <div className={classes.splitCanvas}>
-                <FlowEditor
-                    service={service}
-                    revision={version}
-                    documentation={session.documentation}
-                    languageService={languageService}
-                    readOnly={readOnly}
-                    onOpenNode={onOpenNode}
-                    defaultLayout={defaultLayout}
-                    onLayoutChange={onLayoutChange}
-                    focusNode={focusNode}
-                    defaultPaletteCollapsed
-                    onSelectionChange={setSelection}
-                />
+            <div className={classes.splitCanvas} data-ready={ready}>
+                {!ready && (
+                    <div className={classes.flowLoading} data-testid="flow-loading">
+                        <SodasLoader label="Loading the flow" />
+                    </div>
+                )}
+                {mounted && (
+                    <FlowEditor
+                        service={service}
+                        revision={version}
+                        documentation={session.documentation}
+                        languageService={languageService}
+                        readOnly={readOnly}
+                        onOpenNode={onOpenNode}
+                        defaultLayout={defaultLayout}
+                        onLayoutChange={onLayoutChange}
+                        focusNode={focusNode}
+                        defaultPaletteCollapsed
+                        onSelectionChange={setSelection}
+                        onReady={onReady}
+                    />
+                )}
             </div>
             {split && selection && (
                 <div className={classes.splitPanel} data-testid="shell-split-panel">

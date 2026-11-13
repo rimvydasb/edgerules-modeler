@@ -107,6 +107,7 @@ const MINIMAP_COLOR: Record<LayoutKind, string> = {
     expression: EXPRESSION_COLOR,
 };
 const ROW = 40;
+const READY_TIMEOUT = 1000; // ms
 const FIT_VIEW = {padding: 0.15, maxZoom: 1};
 const FOCUS_VIEW = {padding: 0.6, maxZoom: 1, duration: 300};
 const WIRE_CLASS: Record<Wire['kind'], string> = {
@@ -278,9 +279,10 @@ function FlowCanvas({
     focusNode,
     defaultPaletteCollapsed = false,
     onSelectionChange,
+    onReady,
 }: Pick<
     FlowEditorProps,
-    'defaultLayout' | 'onLayoutChange' | 'focusNode' | 'defaultPaletteCollapsed' | 'onSelectionChange'
+    'defaultLayout' | 'onLayoutChange' | 'focusNode' | 'defaultPaletteCollapsed' | 'onSelectionChange' | 'onReady'
 >) {
     const {service, readOnly = false} = useFlowEditor();
     const flow = useReactFlow();
@@ -679,6 +681,30 @@ function FlowCanvas({
         autoPlaced.current = false;
         arrange(false);
     }, [measured, arrange]);
+
+    // `onReady` fires once, two frames after the nodes are measured: the auto layout and its fit have run by then. A
+    // canvas that never measures (a hidden tab, a zero-size container) reports ready after `READY_TIMEOUT` anyway, so
+    // the caller never waits for ever.
+    const onReadyRef = useRef(onReady);
+    onReadyRef.current = onReady;
+    const ready = useRef(false);
+    const fireReady = useCallback(() => {
+        if (ready.current) return;
+        ready.current = true;
+        onReadyRef.current?.();
+    }, []);
+    const hasNodes = nodes.length > 0;
+    useEffect(() => {
+        if (ready.current || (hasNodes && !measured)) return;
+        let frame = window.requestAnimationFrame(() => {
+            frame = window.requestAnimationFrame(fireReady);
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [hasNodes, measured, fireReady]);
+    useEffect(() => {
+        const timer = window.setTimeout(fireReady, READY_TIMEOUT);
+        return () => window.clearTimeout(timer);
+    }, [fireReady]);
 
     // The focus selects its node once the node exists, and centers it once xyflow measured the nodes: after the
     // first fit and the auto layout, which both fit the view in the next frame, so the centering waits one more.

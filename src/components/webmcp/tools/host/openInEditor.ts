@@ -6,7 +6,7 @@ import type {ProjectTool} from '../projectTool';
 
 export type {OpenInEditorInput, OpenResult};
 
-const VIEWS: readonly HostView[] = ['code', 'boxed', 'flow', 'tests', 'preview'];
+const VIEWS: readonly HostView[] = ['code', 'boxed', 'flow', 'drd', 'tests', 'preview'];
 
 export const openInEditor: ProjectTool<OpenInEditorInput, OpenResult> = {
     name: 'open-in-editor',

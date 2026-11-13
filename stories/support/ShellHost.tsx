@@ -117,7 +117,7 @@ export const SHELL_HOST_ARG_TYPES: Partial<ArgTypes<ShellHostArgs>> = {
         control: 'text',
         description: 'The path the Shell opens: `*`, `applicant`, `riskScore`…, or the document `doc:README.md`',
     },
-    defaultView: {control: 'inline-radio', options: ['boxed', 'code', 'flow', 'tests', 'preview']},
+    defaultView: {control: 'inline-radio', options: ['boxed', 'code', 'flow', 'drd', 'tests', 'preview']},
     readOnly: {control: 'boolean'},
     defaultExplorerOpen: {control: 'boolean'},
     controlled: {table: {disable: true}},

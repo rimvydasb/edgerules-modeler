@@ -593,10 +593,12 @@ describe('Shell view switch', () => {
         expect(screen.getByRole('button', {name: 'Model settings'})).toHaveFocus();
         await user.tab();
         expect(screen.getByRole('radio', {name: 'Code'})).toHaveFocus();
-        // Flow, Boxed, Code; the Tests cell of a subject without tests opens a menu and is skipped.
+        // Flow, DRD, Boxed, Code; the Tests cell of a subject without tests opens a menu and is skipped.
         await user.keyboard('{ArrowLeft}');
         expect(onViewChange).toHaveBeenLastCalledWith('boxed');
         expect(screen.getByRole('radio', {name: 'Boxed'})).toHaveFocus();
+        await user.keyboard('{ArrowLeft}');
+        expect(onViewChange).toHaveBeenLastCalledWith('drd');
         await user.keyboard('{ArrowLeft}');
         expect(onViewChange).toHaveBeenLastCalledWith('flow');
         await user.keyboard('{ArrowLeft}');
@@ -1025,6 +1027,17 @@ describe('Shell split screen', () => {
         expect(toggle).toHaveAttribute('aria-pressed', 'false');
     });
 
+    it('shows a loader until the flow canvas is measured and laid out', async () => {
+        const session = await openWorkbook();
+        await renderShell({defaultPath: 'loanBook', defaultView: 'flow'}, session);
+        // The first frame paints the loader alone; the canvas mounts on the next frame.
+        expect(screen.getByTestId('flow-loading')).toBeInTheDocument();
+        expect(screen.queryByTestId('flow-editor')).toBeNull();
+        await screen.findByTestId('function-node-loanBook.decision');
+        // jsdom measures no node: the canvas reports ready by its timeout.
+        await waitFor(() => expect(screen.queryByTestId('flow-loading')).toBeNull(), {timeout: 3000});
+    });
+
     it('shows the callee of a function node and an input node in a Boxed Editor, follows the selection and closes on a canvas click', async () => {
         const session = await openWorkbook();
         const user = userEvent.setup();
@@ -1057,6 +1070,8 @@ describe('Shell split screen', () => {
         const session = await openWorkbook();
         await renderShell({defaultPath: 'loanBook', defaultView: 'flow'}, session);
 
+        // The canvas mounts a frame after the loader paints.
+        await screen.findByTestId('output-node-output');
         fireEvent.click(nodeOf('output-node-output'));
         const sheet = await screen.findByTestId('sink-sheet');
         expect(within(sheet).getByText('Decision')).toBeInTheDocument();
@@ -1204,9 +1219,9 @@ describe('Shell README document', () => {
         expect(screen.getByRole('button', {name: 'Open in the Preview view'})).toBeInTheDocument();
     });
 
-    it('shows Flow, Boxed, Code and Tests at a model path, without Preview', async () => {
+    it('shows Flow, DRD, Boxed, Code and Tests at a model path, without Preview', async () => {
         await renderShell();
-        expect(viewCells()).toEqual(['Overview', 'Boxed', 'Code', 'Tests']);
+        expect(viewCells()).toEqual(['Overview', 'DRD', 'Boxed', 'Code', 'Tests']);
     });
 
     it.each(['flow', 'boxed', 'tests'] as const)('falls back from %s to Preview at a document root', async (view) => {
@@ -1361,5 +1376,54 @@ describe('Shell model root README', () => {
         expect(
             within(screen.getByRole('region', {name: 'Service Methods'})).getByRole('button', {name: 'quote(...)'}),
         ).toBeInTheDocument();
+    });
+});
+
+describe('Shell DRD view', () => {
+    const DECISION_MODEL = `{
+        type Applicant: { income: <number> }
+        decision Score(applicant: Applicant): { score: applicant.income / 100 }
+        service rate(applicant: Applicant): { return: applicant.Score.score }
+    }`;
+
+    it('draws the Decision Requirements Diagram of the model and opens a decision on a double click', async () => {
+        const {session} = await openFixtureProject({model: {dsl: DECISION_MODEL}});
+        const {onPathChange, onViewChange} = await renderShell({defaultView: 'drd'}, session);
+        expect(screen.getByRole('radio', {name: 'DRD'})).toBeEnabled();
+        const score = await screen.findByTestId('drd-node-Score');
+        expect(screen.getByTestId('drd-node-type:Applicant')).toBeInTheDocument();
+        expect(screen.getByTestId('drd-node-rate')).toBeInTheDocument();
+        fireEvent.doubleClick(score);
+        expect(onPathChange).toHaveBeenLastCalledWith('Score');
+        expect(onViewChange).toHaveBeenLastCalledWith('boxed');
+    });
+
+    it('shows the clicked decision and input data in the split screen, and closes it with the toggle', async () => {
+        const user = userEvent.setup();
+        const {session} = await openFixtureProject({model: {dsl: DECISION_MODEL}});
+        await renderShell({defaultView: 'drd'}, session);
+        const toggle = screen.getByRole('button', {name: 'Split view'});
+        expect(toggle).toBeEnabled();
+        expect(screen.queryByTestId('shell-split-panel')).toBeNull();
+        fireEvent.click(await screen.findByTestId('drd-node-Score'));
+        const panel = await screen.findByTestId('shell-split-panel');
+        expect(panel).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('drd-node-type:Applicant'));
+        await waitFor(() => expect(screen.getByTestId('shell-split-panel')).toBeInTheDocument());
+        await user.click(toggle);
+        expect(screen.queryByTestId('shell-split-panel')).toBeNull();
+    });
+
+    it('offers DRD on every model path, also of a model without a decision or a service', async () => {
+        const {onViewChange} = await renderShell({defaultPath: 'riskScore', defaultView: 'drd'});
+        expect(screen.getByRole('radio', {name: 'DRD'})).toBeEnabled();
+        expect(screen.getByTestId('drd-empty')).toBeInTheDocument();
+        expect(onViewChange).not.toHaveBeenCalled();
+    });
+
+    it('selects the decision of the root path in the diagram', async () => {
+        const {session} = await openFixtureProject({model: {dsl: DECISION_MODEL}});
+        await renderShell({defaultPath: 'Score', defaultView: 'drd'}, session);
+        await waitFor(() => expect(screen.getByTestId('drd-node-Score').className).toMatch(/selected/));
     });
 });

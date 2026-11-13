@@ -6,16 +6,20 @@ import * as classes from './shell.module.css';
 
 export interface ShellSplitToggleProps {
     open: boolean;
-    disabled: boolean; // only the Flow view has a split screen
+    disabled: boolean; // only the Flow and DRD views have a split screen
     onToggle: () => void;
 }
 
 /**
- * The header cell right of the view switch that splits the Flow view: the canvas on the left, the selected node on
- * the right. It is on by default and disabled in the other views.
+ * The header cell right of the view switch that splits the Flow or the DRD view: the canvas on the left, the selected
+ * node on the right. It is on by default and disabled in the other views.
  */
 export function ShellSplitToggle({open, disabled, onToggle}: ShellSplitToggleProps): ReactElement {
-    const label = disabled ? 'Split view is available in the Flow view' : open ? 'Close split view' : 'Split view';
+    const label = disabled
+        ? 'Split view is available in the Flow and DRD views'
+        : open
+          ? 'Close split view'
+          : 'Split view';
     return (
         <Tooltip label={label} position="bottom-end" withArrow>
             <button

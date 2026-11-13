@@ -69,11 +69,7 @@ export function testCaseActionsFor(
 
 // The row menu (three-dots revealed on hover in the Path cell). `rerun` runs the cases again after an action adds a path
 // the last run did not read, so the new row shows its actual value at once.
-export function rowActionsFor(
-    row: TestRow,
-    testCasesService: TestCasesService,
-    rerun?: () => void,
-): TestsMenuAction[] {
+export function rowActionsFor(row: TestRow, testCasesService: TestCasesService, rerun?: () => void): TestsMenuAction[] {
     const actions: TestsMenuAction[] = [];
 
     // Only an indexed path can be duplicated: a duplicate is one more element of a list the model

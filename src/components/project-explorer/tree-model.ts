@@ -154,7 +154,11 @@ function serviceNodes(servicePath: string, service: Record<string, unknown>): Ex
     }));
     const body = fields(service.body).map(([name, node]): ExplorerEntry => {
         const kind: ExplorerEntryKind =
-            name === 'return' ? 'output-node' : isRecord(node) && kindOf(node) === 'invocation' ? 'function-node' : 'node';
+            name === 'return'
+                ? 'output-node'
+                : isRecord(node) && kindOf(node) === 'invocation'
+                  ? 'function-node'
+                  : 'node';
         return {kind, path: joinPath(servicePath, name), label: name};
     });
     return [...inputs, ...body];

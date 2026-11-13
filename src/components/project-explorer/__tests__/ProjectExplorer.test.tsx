@@ -257,14 +257,18 @@ describe('ProjectExplorer create', () => {
     });
 
     it('creates a fact for a record type picked in the dialog, named after the type', async () => {
-        const service = buildService('{ type Person: { age: <number> }\n type Loan: { amount: <number> }\n type Names: <string[]> }');
+        const service = buildService(
+            '{ type Person: { age: <number> }\n type Loan: { amount: <number> }\n type Names: <string[]> }',
+        );
         const onOpen = vi.fn();
         const user = userEvent.setup();
         render(<ProjectExplorer service={service} onOpen={onOpen} />);
 
         await user.click(screen.getByRole('button', {name: 'Add to Facts Library'}));
         // Record types only, by name: the alias `Names` has no fields to derive from. The first one is picked.
-        const typeSelect = (await screen.findAllByDisplayValue<HTMLInputElement>('Loan')).find((input) => input.type !== 'hidden')!;
+        const typeSelect = (await screen.findAllByDisplayValue<HTMLInputElement>('Loan')).find(
+            (input) => input.type !== 'hidden',
+        )!;
         expect(screen.getByRole('textbox', {name: 'Name'})).toHaveValue('LoanFacts');
         await user.click(typeSelect);
         expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual(['Loan', 'Person']);

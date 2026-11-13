@@ -20,7 +20,7 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
 - [x] [EdgeRules Decision Table Editor](docs/decision-table-story.md) (DMN-style grid over a `ruleset`: decision tables,
       boolean-expression rules, and scorecards; statically highlighted display cells with a single CodeEditorCell on the
       active cell)
-- [ ] EdgeRules Flow Editor (ReactFlow-based)
+- [x] EdgeRules Flow Editor (ReactFlow-based)
   - [x] FlowEditor canvas ([spec](docs/stories/completed/flow-editor-story.md#flow-editor-canvas)): node palette with
         drag or click to add, wires from the model, automatic layout, zoom, minimap. The host imports
         `@xyflow/react/dist/style.css`.
@@ -37,10 +37,17 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
   - [x] ChartNode ([spec](docs/stories/completed/flow-editor-story.md#flow-editor-chartnode)): a TanStack Charts line,
         area or bar chart of the wired list or record; configures itself from the data, Configure flips it to its config
         form, resizable from its bottom-right corner. Needs the `@tanstack/charts` peer.
+- [x] Decision Requirements Diagram (`DecisionRequirementsDiagram` of `edgerules-react/drd-view`, the DRD view of the
+      Shell): the DMN DRD of the whole model, drawn from the linked `get('*')`. Decisions are rectangles, the structure
+      types they read are input data stadiums with their facts, a `service` is a decision service. Arrows are the
+      information requirements of each `requires`; a dotted line joins a child type to its `owner`. A layered layout
+      routes long requirements beside the nodes; a click highlights the requirement chain of a node and shows it in the
+      split screen, a double click opens it. Knowledge requirements (calls of a `func`, `ruleset`, `loop` or `optimise`)
+      are out of scope.
 - [x] [EdgeRules Tests Manager](docs/specs/tests-manager-spec.md) (Inputs/Assertions/Validations grid over a model or
       any fully typed `func`/`ruleset`/`optimise`/`loop`, backed by the engine-free `test-cases-service` package and the
       `TestRunner` execution service)
-- [ ] EdgeRules Types Editor
+- [x] EdgeRules Types Editor
 - [EdgeRules Project Explorer](docs/stories/completed/project-explorer-story.md): Documents, Types, Methods, Service
   Methods, Variables, Workbooks and Tests. The host lists the documents (`documents={['README.md']}`); an entry opens as
   `doc:README.md`

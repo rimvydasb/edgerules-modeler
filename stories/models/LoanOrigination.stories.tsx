@@ -43,6 +43,12 @@ export const OriginationBook: Story = {args: {defaultPath: 'originationBook', de
 /** The `capacityBook` workbook: the largest affordable loan of a household for each term. */
 export const CapacityBook: Story = {args: {defaultPath: 'capacityBook', defaultView: 'flow'}};
 
+/**
+ * The Decision Requirements Diagram of the whole model: the input data with their facts, the decisions and the
+ * `loanOriginationDecision` service, joined by their information requirements.
+ */
+export const Drd: Story = {args: {defaultPath: '*', defaultView: 'drd'}};
+
 /** The tests of the `loanOriginationDecision` service: joint and single applications, one per outcome. Run all to check every case. */
 /** The tests of the whole model: its own rows, and the rows its workbooks add when a run reaches them. */
 export const ModelTests: Story = {args: {defaultPath: '*', defaultView: 'tests'}};
