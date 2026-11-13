@@ -1,5 +1,14 @@
 import {Menu} from '@mantine/core';
-import {IconCode, IconEye, IconFlask, IconPlus, IconSchema, IconTable, type Icon} from '@tabler/icons-react';
+import {
+    IconCode,
+    IconEye,
+    IconFlask,
+    IconHierarchy,
+    IconPlus,
+    IconSchema,
+    IconTable,
+    type Icon,
+} from '@tabler/icons-react';
 import {Fragment, type KeyboardEvent, type ReactElement} from 'react';
 import {cx} from '#ui/cx';
 import type {ShellView} from './shell-types';
@@ -14,6 +23,7 @@ interface ViewCell {
 // The cells of a model or entity root path.
 const MODEL_VIEWS: ViewCell[] = [
     {label: 'Flow', value: 'flow', icon: IconSchema},
+    {label: 'DRD', value: 'drd', icon: IconHierarchy},
     {label: 'Boxed', value: 'boxed', icon: IconTable},
     {label: 'Code', value: 'code', icon: IconCode},
     {label: 'Tests', value: 'tests', icon: IconFlask},

@@ -17,7 +17,7 @@ export function defaultView(path: string | undefined): ShellView {
     return !path || path === '*' ? 'flow' : 'boxed';
 }
 
-export const SHELL_VIEWS: readonly ShellView[] = ['flow', 'boxed', 'code', 'tests', 'preview'];
+export const SHELL_VIEWS: readonly ShellView[] = ['flow', 'drd', 'boxed', 'code', 'tests', 'preview'];
 
 /** The industry segment of a details URL when the industry is not known yet. */
 export const ANY_INDUSTRY = 'all';

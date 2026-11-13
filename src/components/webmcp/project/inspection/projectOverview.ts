@@ -5,7 +5,7 @@ import type {RegressionMonitor} from '../regression/regressionMonitor';
 import {buildOutline, MODEL_SECTIONS} from './modelOutline';
 
 /** A Shell view; the same values as `ProjectToolsView`. */
-export type OverviewView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview';
+export type OverviewView = 'code' | 'boxed' | 'flow' | 'drd' | 'tests' | 'preview';
 
 /** What the host knows and the session does not: the options of `registerProjectTools`. */
 export interface InspectionHostState {

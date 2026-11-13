@@ -127,7 +127,7 @@ describe('open-in-editor', () => {
             error: expect.objectContaining({
                 code: 'InvalidInput',
                 path: 'applicant',
-                hint: "The views of 'applicant': code, boxed.",
+                hint: "The views of 'applicant': code, boxed, drd.",
             }),
         });
         const flow = await call('open-in-editor', {path: 'risk', view: 'flow'});

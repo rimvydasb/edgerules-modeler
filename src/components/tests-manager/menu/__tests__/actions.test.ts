@@ -144,7 +144,13 @@ describe('rowActionsFor: assertions of a list result', () => {
     it('Duplicate runs the cases again, so the new row shows its actual value', async () => {
         const service = createTestCasesService('function', 'borrowingCapacity', {dbName: uniqueDbName()});
         await waitForHydration(service);
-        const row: TestRow = {path: 'result[0].maxLoan', section: 'assertions', order: 0, type: 'number', present: true};
+        const row: TestRow = {
+            path: 'result[0].maxLoan',
+            section: 'assertions',
+            order: 0,
+            type: 'number',
+            present: true,
+        };
         service.syncRows([row]);
         const rerun = vi.fn();
 

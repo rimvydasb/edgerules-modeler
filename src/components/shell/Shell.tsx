@@ -9,7 +9,12 @@ import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
 import {sheetClasses} from '#ui/sheet';
 import {createBoxedEditorService, type BoxedEditorOpenTarget} from '../boxed-editor';
-import {createFlowEditorService, type FlowEditorOpenTarget, type FlowFocusRequest} from '../flow-editor';
+import {
+    createFlowEditorService,
+    type DrdOpenTarget,
+    type FlowEditorOpenTarget,
+    type FlowFocusRequest,
+} from '../flow-editor';
 import {ProjectExplorer} from '../project-explorer';
 import {buildSections, CREATE_OPTIONS} from '../project-explorer/internal';
 import {useProjectSession, useProjectSlice, useProjectSnapshot} from '../project-session';
@@ -45,6 +50,7 @@ import {ShellViewSwitch} from './ShellViewSwitch';
 import {BoxedView} from './views/BoxedView';
 import {CodeView, type CodeDraft} from './views/CodeView';
 import {DocumentCode, DocumentPreview} from './views/DocumentView';
+import {DrdView} from './views/DrdView';
 import {FlowView} from './views/FlowView';
 import {TestsOverview} from './views/TestsOverview';
 import {TestsView} from './views/TestsView';
@@ -297,6 +303,9 @@ export function Shell({
         navigate({path: shown, view: primaryRootView(shownViews)});
     };
 
+    // A double click in the DRD view opens the decision, the service or the input type in its main view.
+    const openDrdElement = (target: DrdOpenTarget) => showTarget(target.path);
+
     const setExplorerOpen = (open: boolean) => {
         if (explorerOpenProp === undefined) setOwnExplorerOpen(open);
         onExplorerOpenChange?.(open);
@@ -447,7 +456,7 @@ export function Shell({
                     <div
                         className={cx(
                             classes.body,
-                            !(view === 'flow' && root !== '*') && classes.bodyPage,
+                            !(view === 'flow' && root !== '*') && view !== 'drd' && classes.bodyPage,
                             view === 'tests' && !isTestsOverview && classes.bodyTests,
                         )}
                     >
@@ -517,6 +526,7 @@ export function Shell({
                                 onExpand={(next) => navigate({path: next, view: 'boxed', from: root})}
                             />
                         )}
+                        {view === 'drd' && <DrdView root={root} version={version} onOpen={openDrdElement} />}
                         {view === 'tests' && isTestsOverview && (
                             <TestsOverview
                                 modelLabel={rootLabel}

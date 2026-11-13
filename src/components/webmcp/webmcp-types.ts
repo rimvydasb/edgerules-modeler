@@ -3,7 +3,7 @@ import type {ModelContextLike} from './platform/modelContext';
 import type {AgentActivityLog} from './project/changes/agentActivityLog';
 
 /** A Shell view. The same values as `ShellView` of `edgerules-react/shell`, which this component does not import. */
-export type ProjectToolsView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview';
+export type ProjectToolsView = 'code' | 'boxed' | 'flow' | 'drd' | 'tests' | 'preview';
 
 /** Implemented by the host from its routes; the Shell path and view stay controlled by the host. */
 export interface ProjectToolsNavigation {

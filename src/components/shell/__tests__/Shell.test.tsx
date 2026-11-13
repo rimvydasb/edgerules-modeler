@@ -593,10 +593,12 @@ describe('Shell view switch', () => {
         expect(screen.getByRole('button', {name: 'Model settings'})).toHaveFocus();
         await user.tab();
         expect(screen.getByRole('radio', {name: 'Code'})).toHaveFocus();
-        // Flow, Boxed, Code; the Tests cell of a subject without tests opens a menu and is skipped.
+        // Flow, DRD, Boxed, Code; the Tests cell of a subject without tests opens a menu and is skipped.
         await user.keyboard('{ArrowLeft}');
         expect(onViewChange).toHaveBeenLastCalledWith('boxed');
         expect(screen.getByRole('radio', {name: 'Boxed'})).toHaveFocus();
+        await user.keyboard('{ArrowLeft}');
+        expect(onViewChange).toHaveBeenLastCalledWith('drd');
         await user.keyboard('{ArrowLeft}');
         expect(onViewChange).toHaveBeenLastCalledWith('flow');
         await user.keyboard('{ArrowLeft}');
@@ -1204,9 +1206,9 @@ describe('Shell README document', () => {
         expect(screen.getByRole('button', {name: 'Open in the Preview view'})).toBeInTheDocument();
     });
 
-    it('shows Flow, Boxed, Code and Tests at a model path, without Preview', async () => {
+    it('shows Flow, DRD, Boxed, Code and Tests at a model path, without Preview', async () => {
         await renderShell();
-        expect(viewCells()).toEqual(['Overview', 'Boxed', 'Code', 'Tests']);
+        expect(viewCells()).toEqual(['Overview', 'DRD', 'Boxed', 'Code', 'Tests']);
     });
 
     it.each(['flow', 'boxed', 'tests'] as const)('falls back from %s to Preview at a document root', async (view) => {
@@ -1361,5 +1363,38 @@ describe('Shell model root README', () => {
         expect(
             within(screen.getByRole('region', {name: 'Service Methods'})).getByRole('button', {name: 'quote(...)'}),
         ).toBeInTheDocument();
+    });
+});
+
+describe('Shell DRD view', () => {
+    const DECISION_MODEL = `{
+        type Applicant: { income: <number> }
+        decision Score(applicant: Applicant): { score: applicant.income / 100 }
+        service rate(applicant: Applicant): { return: applicant.Score.score }
+    }`;
+
+    it('draws the Decision Requirements Diagram of the model and opens a decision on a double click', async () => {
+        const {session} = await openFixtureProject({model: {dsl: DECISION_MODEL}});
+        const {onPathChange, onViewChange} = await renderShell({defaultView: 'drd'}, session);
+        expect(screen.getByRole('radio', {name: 'DRD'})).toBeEnabled();
+        const score = await screen.findByTestId('drd-node-Score');
+        expect(screen.getByTestId('drd-node-type:Applicant')).toBeInTheDocument();
+        expect(screen.getByTestId('drd-node-rate')).toBeInTheDocument();
+        fireEvent.doubleClick(score);
+        expect(onPathChange).toHaveBeenLastCalledWith('Score');
+        expect(onViewChange).toHaveBeenLastCalledWith('boxed');
+    });
+
+    it('offers DRD on every model path, also of a model without a decision or a service', async () => {
+        const {onViewChange} = await renderShell({defaultPath: 'riskScore', defaultView: 'drd'});
+        expect(screen.getByRole('radio', {name: 'DRD'})).toBeEnabled();
+        expect(screen.getByTestId('drd-empty')).toBeInTheDocument();
+        expect(onViewChange).not.toHaveBeenCalled();
+    });
+
+    it('selects the decision of the root path in the diagram', async () => {
+        const {session} = await openFixtureProject({model: {dsl: DECISION_MODEL}});
+        await renderShell({defaultPath: 'Score', defaultView: 'drd'}, session);
+        await waitFor(() => expect(screen.getByTestId('drd-node-Score').className).toMatch(/selected/));
     });
 });

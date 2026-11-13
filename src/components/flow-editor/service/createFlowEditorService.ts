@@ -242,7 +242,10 @@ export function createFlowEditorService(
         const schemas: CalleeSchema[] = [];
         for (const callable of listCallables(engine)) {
             // A loop and an optimisation are called like a function: named arguments, a typed result.
-            const schema = readSchema({path: callable.path, kind: callable.kind === 'ruleset' ? 'ruleset' : 'function'});
+            const schema = readSchema({
+                path: callable.path,
+                kind: callable.kind === 'ruleset' ? 'ruleset' : 'function',
+            });
             if (schema) schemas.push(schema);
         }
         return schemas;
@@ -954,12 +957,12 @@ export function createFlowEditorService(
                 type: computedRecord
                     ? 'object'
                     : (isRecord(schema) &&
-                        (schema['@kind'] === 'expression'
-                            ? typeText(schema)
-                            : typeof schema.type === 'string'
-                              ? schema.type
-                              : undefined)) ||
-                    'any',
+                          (schema['@kind'] === 'expression'
+                              ? typeText(schema)
+                              : typeof schema.type === 'string'
+                                ? schema.type
+                                : undefined)) ||
+                      'any',
                 expression:
                     !computedRecord && isRecord(schema) && typeof schema.expression === 'string'
                         ? schema.expression

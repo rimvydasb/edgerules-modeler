@@ -4,7 +4,7 @@ import {authoredEntries, fieldsOf, isRecord} from './portableUtils';
 // both read these rules, so they live here and not in either component.
 
 /** A Shell view; the same values as `ShellView` of the Shell. */
-export type RootView = 'code' | 'boxed' | 'flow' | 'tests' | 'preview';
+export type RootView = 'code' | 'boxed' | 'flow' | 'drd' | 'tests' | 'preview';
 
 /** What a root path segment is; it picks the icon of the header and the views that can show it. */
 export type RootPathKind =
@@ -88,23 +88,25 @@ export type RootKind = 'model' | 'document' | RootPathKind;
  *   result. The Flow view of the model shows its README, workbooks and services: only a model with a workbook, a
  *   service or a README has it (see `rootViews`). Another context, a function, a ruleset, a type and a plain field have
  *   no Flow view.
+ * - DRD is the Decision Requirements Diagram of the whole model. There is only one, so every model path has it; the
+ *   entity of the root path is selected in it.
  * - Preview and Code show a document: its rendered Markdown and its source. Only a document has Preview.
  * - Tests are the tests of a callable: the model, a function, a decision, a service or a ruleset. A facts declaration
  *   is not a test subject: it needs the owner of the instance. A function is a test subject only
  *   when every argument has a type (see `untypedParameters`).
  */
 export const ROOT_VIEWS: Record<RootKind, readonly RootView[]> = {
-    model: ['code', 'boxed', 'flow', 'tests'],
+    model: ['code', 'boxed', 'flow', 'drd', 'tests'],
     document: ['preview', 'code'],
-    workbook: ['code', 'boxed', 'flow'],
-    context: ['code', 'boxed'],
-    function: ['code', 'boxed', 'tests'],
-    decision: ['code', 'boxed', 'tests'],
-    facts: ['code', 'boxed'],
-    service: ['code', 'boxed', 'flow', 'tests'],
-    ruleset: ['code', 'boxed', 'tests'],
-    type: ['code', 'boxed'],
-    field: ['code', 'boxed'],
+    workbook: ['code', 'boxed', 'flow', 'drd'],
+    context: ['code', 'boxed', 'drd'],
+    function: ['code', 'boxed', 'drd', 'tests'],
+    decision: ['code', 'boxed', 'drd', 'tests'],
+    facts: ['code', 'boxed', 'drd'],
+    service: ['code', 'boxed', 'flow', 'drd', 'tests'],
+    ruleset: ['code', 'boxed', 'drd', 'tests'],
+    type: ['code', 'boxed', 'drd'],
+    field: ['code', 'boxed', 'drd'],
 };
 
 export function rootKind(segments: RootPathSegment[]): RootKind {
@@ -132,14 +134,20 @@ export function hasModelFlow(model: unknown, readme: boolean): boolean {
     return readme || modelWorkbooks(model).length > 0 || hasService(model);
 }
 
-// A `service` declaration anywhere in the contexts of the model, as the Service Methods of the Project Explorer.
-function hasService(node: unknown): boolean {
+// A declaration of one of `kinds` anywhere in the contexts of the model.
+function hasKind(node: unknown, kinds: ReadonlySet<unknown>): boolean {
     return authoredEntries(node).some(([, child]) => {
         if (!isRecord(child)) return false;
-        const kind = child['@kind'];
-        if (kind === 'service' || kind === 'service-interface') return true;
-        return kind === 'context' && hasService(child);
+        if (kinds.has(child['@kind'])) return true;
+        return child['@kind'] === 'context' && hasKind(child, kinds);
     });
+}
+
+const SERVICE_KINDS = new Set(['service', 'service-interface']);
+
+// A `service` declaration anywhere in the contexts of the model, as the Service Methods of the Project Explorer.
+function hasService(node: unknown): boolean {
+    return hasKind(node, SERVICE_KINDS);
 }
 
 /** The names of the workbooks that are direct fields of the model. */
