@@ -1097,11 +1097,13 @@ export function createFlowEditorService(
             // A record type: inline, or a type definition of the model by name.
             let definition: unknown = declared;
             let typePath: string | undefined;
-            if (typeof declared === 'string' && !PRIMITIVE_TYPES.has(declared)) {
-                const named = engine.get(declared);
+            // A list of a named type ('Client[]') opens its item type; only a record type itself gets field pins.
+            const item = type.replace(/(\[\])+$/, '');
+            if (/^[A-Za-z_]\w*$/.test(item) && !PRIMITIVE_TYPES.has(item)) {
+                const named = engine.get(item);
                 if (isRecord(named) && named['@kind'] === 'type') {
-                    definition = named;
-                    typePath = declared;
+                    typePath = item;
+                    if (item === type) definition = named;
                 }
             }
             const fields: ParameterField[] = Object.entries(structureFields(definition) ?? {}).map(([key, child]) => ({
