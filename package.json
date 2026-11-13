@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Reusable React components and hooks for building applications that integrate with the EdgeRules decision engine.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rimvydasb/edgerules-modeler.git"
+  },
+  "homepage": "https://github.com/rimvydasb/edgerules-modeler#readme",
+  "bugs": {
+    "url": "https://github.com/rimvydasb/edgerules-modeler/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "files": [

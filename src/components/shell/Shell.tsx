@@ -432,7 +432,9 @@ export function Shell({
                         untypedArguments={untypedArguments}
                         hasTests={testSubjects.includes(root)}
                         onCreateTests={readOnly ? undefined : createTests}
-                        onChange={(next) => navigate({view: next})}
+                        onChange={(next) =>
+                            next === 'tests' && root === '*' ? openTestsOverview() : navigate({view: next})
+                        }
                         document={isDocument}
                         overview={root === '*'}
                     />
