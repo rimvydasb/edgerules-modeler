@@ -108,6 +108,7 @@ module.exports = {
     componentAllowlist('code-editor-cell', ['code-editor'], 'Main React components'),
     componentAllowlist('project-explorer', [], 'Shell owns cross-editor navigation'),
     componentAllowlist('markdown-view', [], 'Main React components', ['code-editor/language/']),
+    componentAllowlist('drd-view', [], 'Main React components'),
     componentAllowlist('documentation-service', [], 'Main React components'),
     componentAllowlist('test-cases-service', [], 'Main React components'),
     componentAllowlist('decision-table', ['code-editor', 'code-editor-cell'], 'Main React components'),
@@ -153,6 +154,7 @@ module.exports = {
         'markdown-view',
         'boxed-editor',
         'flow-editor',
+        'drd-view',
         'project-explorer',
         'project-session',
         'documentation-service',
@@ -255,8 +257,8 @@ module.exports = {
     packageOwner(
       'peer-xyflow-only-in-flow-editor',
       '@xyflow/',
-      ['src/components/flow-editor/'],
-      'it is an optional peer dependency of the flow-editor subpath; importing it elsewhere makes every ' +
+      ['src/components/flow-editor/', 'src/components/drd-view/'],
+      'it is an optional peer dependency of the flow-editor and drd-view subpaths; importing it elsewhere makes every ' +
         'consumer of that other subpath install it.',
     ),
     packageOwner(

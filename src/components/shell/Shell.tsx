@@ -9,12 +9,8 @@ import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
 import {sheetClasses} from '#ui/sheet';
 import {createBoxedEditorService, type BoxedEditorOpenTarget} from '../boxed-editor';
-import {
-    createFlowEditorService,
-    type DrdOpenTarget,
-    type FlowEditorOpenTarget,
-    type FlowFocusRequest,
-} from '../flow-editor';
+import {createFlowEditorService, type FlowEditorOpenTarget, type FlowFocusRequest} from '../flow-editor';
+import type {DrdOpenTarget} from '../drd-view';
 import {ProjectExplorer} from '../project-explorer';
 import {buildSections, CREATE_OPTIONS} from '../project-explorer/internal';
 import {useProjectSession, useProjectSlice, useProjectSnapshot} from '../project-session';
@@ -112,7 +108,7 @@ export function Shell({
     const [ownPath, setOwnPath] = useState(defaultPath);
     const [ownView, setOwnView] = useState<ShellView>(defaultView);
     const [ownExplorerOpen, setOwnExplorerOpen] = useState(defaultExplorerOpen);
-    // The split screen of the Flow view: on by default.
+    // The split screen of the Flow and DRD views: on by default.
     const [split, setSplit] = useState(true);
     // The Flow view root that opened the root path in the Boxed Editor: the breadcrumbs lead back to it.
     const [origin, setOrigin] = useState<{flow: string; path: string} | undefined>();
@@ -448,7 +444,11 @@ export function Shell({
                         overview={root === '*'}
                     />
                 )}
-                <ShellSplitToggle open={split} disabled={view !== 'flow'} onToggle={() => setSplit(!split)} />
+                <ShellSplitToggle
+                    open={split}
+                    disabled={view !== 'flow' && view !== 'drd'}
+                    onToggle={() => setSplit(!split)}
+                />
             </div>
             <div className={classes.content}>
                 {explorer}
@@ -526,7 +526,19 @@ export function Shell({
                                 onExpand={(next) => navigate({path: next, view: 'boxed', from: root})}
                             />
                         )}
-                        {view === 'drd' && <DrdView root={root} version={version} onOpen={openDrdElement} />}
+                        {view === 'drd' && (
+                            <DrdView
+                                root={root}
+                                version={version}
+                                boxedService={boxedService}
+                                languageService={languageService}
+                                readOnly={readOnly}
+                                split={split}
+                                onOpen={openDrdElement}
+                                onOpenNode={openNode}
+                                onExpand={(next) => navigate({path: next, view: 'boxed'})}
+                            />
+                        )}
                         {view === 'tests' && isTestsOverview && (
                             <TestsOverview
                                 modelLabel={rootLabel}

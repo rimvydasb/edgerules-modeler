@@ -1,7 +1,7 @@
 import {MutableDecisionService} from '@edgerules/node/mutable';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
-import {DRD_MODEL} from '../../testing/drdModel';
+import {DRD_MODEL} from '../testing/drdModel';
 import {DecisionRequirementsDiagram} from '../DecisionRequirementsDiagram';
 
 function renderDiagram(dsl: string, onOpen = vi.fn(), focus?: string) {

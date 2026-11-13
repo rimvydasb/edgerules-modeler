@@ -160,6 +160,16 @@
         "default": "./dist/components/flow-editor/index.cjs"
       }
     },
+    "./drd-view": {
+      "import": {
+        "types": "./dist/components/drd-view/index.d.ts",
+        "default": "./dist/components/drd-view/index.js"
+      },
+      "require": {
+        "types": "./dist/components/drd-view/index.d.cts",
+        "default": "./dist/components/drd-view/index.cjs"
+      }
+    },
     "./project-session": {
       "import": {
         "types": "./dist/components/project-session/index.d.ts",

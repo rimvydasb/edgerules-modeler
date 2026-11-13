@@ -1398,6 +1398,22 @@ describe('Shell DRD view', () => {
         expect(onViewChange).toHaveBeenLastCalledWith('boxed');
     });
 
+    it('shows the clicked decision and input data in the split screen, and closes it with the toggle', async () => {
+        const user = userEvent.setup();
+        const {session} = await openFixtureProject({model: {dsl: DECISION_MODEL}});
+        await renderShell({defaultView: 'drd'}, session);
+        const toggle = screen.getByRole('button', {name: 'Split view'});
+        expect(toggle).toBeEnabled();
+        expect(screen.queryByTestId('shell-split-panel')).toBeNull();
+        fireEvent.click(await screen.findByTestId('drd-node-Score'));
+        const panel = await screen.findByTestId('shell-split-panel');
+        expect(panel).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('drd-node-type:Applicant'));
+        await waitFor(() => expect(screen.getByTestId('shell-split-panel')).toBeInTheDocument());
+        await user.click(toggle);
+        expect(screen.queryByTestId('shell-split-panel')).toBeNull();
+    });
+
     it('offers DRD on every model path, also of a model without a decision or a service', async () => {
         const {onViewChange} = await renderShell({defaultPath: 'riskScore', defaultView: 'drd'});
         expect(screen.getByRole('radio', {name: 'DRD'})).toBeEnabled();

@@ -1,6 +1,5 @@
 export {createFlowEditorService} from './service/createFlowEditorService';
 export {ChartNode} from './chart-node/ChartNode';
-export {DecisionRequirementsDiagram} from './drd/DecisionRequirementsDiagram';
 export {FlowEditor} from './editor/FlowEditor';
 export {ExpressionNode} from './expression-node/ExpressionNode';
 export {FlowEditorProvider} from './FlowEditorProvider';
@@ -12,8 +11,6 @@ export {ParameterNode} from './parameter-node/ParameterNode';
 export {ReturnNode} from './return-node/ReturnNode';
 export {ValueInputNode} from './value-input-node/ValueInputNode';
 export type {ChartConfig, ChartKind, ChartNodeData} from './chart-node/types';
-export type {DecisionRequirementsDiagramProps, DrdOpenTarget} from './drd/DecisionRequirementsDiagram';
-export type {DrdElementKind} from './drd/requirementsGraph';
 export type {FlowChart, FlowEditorProps, FlowFocusRequest, FlowLayout, FlowOutput, FlowSelection} from './editor/types';
 export type {ExpressionNodeData, ExpressionNodeModel} from './expression-node/types';
 export type {FlowEditorOpenTarget, FlowEditorProviderProps, FlowEditorService, FlowNodeRef} from './flow-editor-types';

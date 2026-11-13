@@ -94,6 +94,7 @@ export default defineConfig({
         'components/documentation-service/index': 'src/components/documentation-service/index.ts',
         'components/tests-manager/index': 'src/components/tests-manager/index.ts',
         'components/flow-editor/index': 'src/components/flow-editor/index.ts',
+        'components/drd-view/index': 'src/components/drd-view/index.ts',
         'components/project-session/index': 'src/components/project-session/index.ts',
         'components/shell/index': 'src/components/shell/index.ts',
         'components/example-library/index': 'src/components/example-library/index.ts',

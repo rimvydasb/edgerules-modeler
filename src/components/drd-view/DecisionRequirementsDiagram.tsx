@@ -15,7 +15,7 @@ import {
     type Edge,
     type NodeChange,
 } from '@xyflow/react';
-import {useEffect, useMemo, useState, type CSSProperties, type ReactElement} from 'react';
+import {useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement} from 'react';
 import {cx} from '#ui/cx';
 import {KIND_COLORS} from '#ui/kindColors';
 import {layoutDrd, type DrdLayout} from './drdLayout';
@@ -37,6 +37,8 @@ export interface DecisionRequirementsDiagramProps {
     focus?: string;
     /** A double click on a node. */
     onOpen?: (target: DrdOpenTarget) => void;
+    /** The selected node changed, by a click or by `focus`; `undefined` when nothing is selected. */
+    onSelectionChange?: (target: DrdOpenTarget | undefined) => void;
     className?: string;
     style?: CSSProperties;
 }
@@ -119,7 +121,14 @@ function Legend({graph}: {graph: DrdGraph}): ReactElement {
     );
 }
 
-function Diagram({model, focus, onOpen, className, style}: DecisionRequirementsDiagramProps): ReactElement {
+function Diagram({
+    model,
+    focus,
+    onOpen,
+    onSelectionChange,
+    className,
+    style,
+}: DecisionRequirementsDiagramProps): ReactElement {
     const colorScheme = useComputedColorScheme('light');
     const flow = useReactFlow();
     const graph = useMemo(() => buildRequirementsGraph(model), [model]);
@@ -154,6 +163,16 @@ function Diagram({model, focus, onOpen, className, style}: DecisionRequirementsD
         const element = graph.elements.find((candidate) => candidate.id === focus || candidate.id === `type:${focus}`);
         setSelected(element?.id);
     }, [graph, focus]);
+
+    // The latest callback: a new function from the host must not report the same selection again.
+    const reportSelection = useRef(onSelectionChange);
+    reportSelection.current = onSelectionChange;
+    useEffect(() => {
+        const element = graph.elements.find((candidate) => candidate.id === selected);
+        reportSelection.current?.(
+            element && {path: element.kind === 'input' ? element.name : element.id, kind: element.kind},
+        );
+    }, [graph, selected]);
 
     const chain = useMemo(() => (selected ? lineage(graph, selected) : undefined), [graph, selected]);
     const related = useMemo(() => chain && new Set([...chain.up, ...chain.down]), [chain]);
@@ -297,7 +316,7 @@ function Diagram({model, focus, onOpen, className, style}: DecisionRequirementsD
  * The Decision Requirements Diagram (DMN DRD) of a whole model: the decisions as rectangles, the structure types they
  * read as input data stadiums with their facts, and the services as decision services. An arrow points from the
  * required element to the requiring one; a dotted line joins a child input type to its owner. Read only: a click
- * highlights the requirement chain of a node, a double click opens it. The host imports `@xyflow/react/dist/style.css`.
+ * highlights the requirement chain of a node and reports it, a double click opens it. The host imports `@xyflow/react/dist/style.css`.
  */
 export function DecisionRequirementsDiagram(props: DecisionRequirementsDiagramProps): ReactElement {
     return (

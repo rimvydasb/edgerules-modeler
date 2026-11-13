@@ -2,8 +2,8 @@ import '@xyflow/react/dist/style.css';
 import type {ReactElement} from 'react';
 import type {Meta, StoryObj} from '@storybook/react-vite';
 import {init, MutableDecisionService} from '@edgerules/web/mutable';
-import {DecisionRequirementsDiagram} from '../../../src/components/flow-editor';
-import {DRD_MODEL} from '../../../src/components/flow-editor/testing/drdModel';
+import {DecisionRequirementsDiagram} from '../../../src/components/drd-view';
+import {DRD_MODEL} from '../../../src/components/drd-view/testing/drdModel';
 import {LOAN_ORIGINATION_DSL} from '../../../models/loan-origination';
 
 interface DiagramArgs {
@@ -27,7 +27,7 @@ function Diagram({model}: {model: unknown}): ReactElement {
 }
 
 const meta: Meta<DiagramArgs> = {
-    title: 'Components/Flow Editor/Decision Requirements Diagram',
+    title: 'Components/DRD View/Decision Requirements Diagram',
     parameters: {layout: 'fullscreen'},
     loaders: [async ({args}) => ({model: await linkedModel(args.dsl)})],
     render: (_args, {loaded}) => <Diagram model={loaded.model} />,

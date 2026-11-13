@@ -3,7 +3,7 @@ import {describe, expect, it} from 'vitest';
 import {rootPathSegments, rootViews} from '#lib/rootViews';
 import {layoutDrd} from '../drdLayout';
 import {buildRequirementsGraph} from '../requirementsGraph';
-import {DRD_MODEL} from '../../testing/drdModel';
+import {DRD_MODEL} from '../testing/drdModel';
 
 const linked = (dsl: string) => {
     const service = MutableDecisionService.fromCode(dsl);

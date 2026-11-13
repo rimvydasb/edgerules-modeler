@@ -38,6 +38,9 @@ describe('explorerRoute', () => {
         ['flow', {kind: 'variable', path: 'limit'}, {path: 'limit', view: 'boxed'}],
         // From the Tests view: the Boxed view.
         ['tests', {kind: 'function', path: 'riskScore'}, {path: 'riskScore', view: 'boxed'}],
+        // The DRD has no node for a method: Boxed. A decision, a type and a service stay in the DRD or the Flow view.
+        ['drd', {kind: 'function', path: 'riskScore'}, {path: 'riskScore', view: 'boxed'}],
+        ['drd', {kind: 'type', path: 'Customer'}, {path: 'Customer', view: 'drd'}],
         // A test always opens in the Tests view.
         ['code', {kind: 'test', path: '*'}, {path: '*', view: 'tests'}],
         // A document always opens in the Preview view; from it, a model entry opens in the Boxed view.
