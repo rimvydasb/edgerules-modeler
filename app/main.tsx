@@ -1,3 +1,5 @@
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import {StrictMode, useEffect, useState, type ReactElement} from 'react';
@@ -7,6 +9,7 @@ import {Notifications} from '@mantine/notifications';
 import {RouterProvider} from '@tanstack/react-router';
 import {init, MutableDecisionService} from '@edgerules/web/mutable';
 import {createLocalProjectRepository, createProjectFactory} from '../src/components/project-session';
+import {initAnalytics} from './analytics';
 import {createModelerRouter} from './router';
 import {modelerTheme} from './theme';
 
@@ -32,6 +35,8 @@ function App(): ReactElement {
         <Loader size="sm" aria-label="Loading the engine" style={{margin: 48}} />
     );
 }
+
+initAnalytics();
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

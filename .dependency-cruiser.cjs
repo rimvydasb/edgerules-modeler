@@ -241,6 +241,15 @@ module.exports = {
       from: {path: '^src/'},
       to: {path: '^node_modules/@tanstack/react-router'},
     },
+    {
+      name: 'no-analytics-in-library',
+      comment:
+        'The npm package must not track its users. posthog-js is a dev dependency of the hosted Modeler in app/ ' +
+        'only (app/analytics.ts); move the tracking call to the host.',
+      severity: 'error',
+      from: {path: '^(src|stories)/'},
+      to: {path: '^node_modules/(posthog-js|@posthog/)'},
+    },
 
     // --- Optional peer dependencies stay inside their component ---------------------------------------------------
     packageOwner(

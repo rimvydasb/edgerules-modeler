@@ -35,6 +35,8 @@ jobs:
         run: npm run app:build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # PostHog project token (public, write-only key). Unset → the app is built without analytics.
+          POSTHOG_PROJECT_TOKEN: ${{ vars.POSTHOG_PROJECT_TOKEN }}
 
       # GitHub Pages has no SPA fallback: it serves 404.html for unknown paths, so a deep link such as
       # /<repo>/project/x loads the app, whose router then reads the URL.
