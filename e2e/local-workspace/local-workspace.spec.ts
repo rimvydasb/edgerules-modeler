@@ -22,13 +22,13 @@ test('copies an example, renames, duplicates and deletes it, and keeps the proje
         .getByRole('button', {name: 'Copy and open'})
         .click(SLOW);
     // The copy opens in the Shell first; only then go to the Workspace from the top bar.
-    await expect(page.getByRole('button', {name: 'Project menu: Loan repayment'})).toBeVisible(SLOW);
+    await expect(page.getByRole('button', {name: /^Project menu: Loan repayment$/i})).toBeVisible(SLOW);
     await page.getByTestId('modeler-app').getByRole('button', {name: 'Workspace', exact: true}).click(SLOW);
-    await expect(panelTitles(page)).toHaveText(['Loan repayment']);
+    await expect(panelTitles(page)).toHaveText([/^Loan repayment$/i]);
     await expect(page.getByTestId('project-panel')).toContainText('loan-repayment@');
 
     // Rename.
-    await page.getByRole('button', {name: 'Menu of Loan repayment'}).click();
+    await page.getByRole('button', {name: /^Menu of Loan repayment$/i}).click();
     await page.getByRole('menuitem', {name: 'Rename'}).click();
     await page.getByRole('textbox', {name: 'Name'}).fill('My loans');
     await page.getByRole('button', {name: 'Save'}).click();

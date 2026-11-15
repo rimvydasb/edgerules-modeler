@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import {describe, expect, it} from 'vitest';
 import {createProjectFactory} from '../../project-session';
 import {nodeEngine} from '../../project-session/testing/sessionFixture';
-import {createLibraryClient, validateLibraryIndex} from '../createLibraryClient';
+import {createLibraryClient, INDEX_MAX_AGE_MS, validateLibraryIndex} from '../createLibraryClient';
 import {
     FIXTURE_SOURCE,
     NEWEST_REF,
@@ -24,6 +24,25 @@ describe('createLibraryClient', () => {
         expect(client.resolve({id: 'loan-repayment', version: '1.3.0'})?.ref).toBe(NEWEST_REF);
         expect(client.resolve({id: 'loan-repayment', version: '1.2.0'})?.ref).toBe(OLDEST_REF);
         expect(client.resolve({id: 'loan-repayment', version: '9.9.9'})).toBeUndefined();
+    });
+
+    it('refetches the index after 6 hours and revalidates the browser cache', async () => {
+        let time = 0;
+        const {fetch: inner, requests} = createFixtureFetch();
+        const modes: (RequestCache | undefined)[] = [];
+        const fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+            if (String(input) === FIXTURE_SOURCE.indexUrl) modes.push(init?.cache);
+            return inner(input, init);
+        }) as typeof inner;
+        const client = createLibraryClient(FIXTURE_SOURCE, {fetch, now: () => time});
+        await client.loadIndex();
+        time = INDEX_MAX_AGE_MS - 1;
+        await client.loadIndex();
+        expect(requests.filter((url) => url === FIXTURE_SOURCE.indexUrl)).toHaveLength(1);
+        time = INDEX_MAX_AGE_MS;
+        await client.loadIndex();
+        expect(requests.filter((url) => url === FIXTURE_SOURCE.indexUrl)).toHaveLength(2);
+        expect(modes).toEqual(['no-cache', 'no-cache']);
     });
 
     it('retries after an index failure', async () => {

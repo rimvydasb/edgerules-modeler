@@ -150,3 +150,5 @@ playwright-report/
 test-results/
 
 .idea
+
+docs/bugs/

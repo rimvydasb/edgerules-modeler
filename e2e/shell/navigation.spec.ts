@@ -37,7 +37,7 @@ test('the header shows the settings, then Overview, Boxed, Code and Tests, then 
 }) => {
     await openStory(page, 'models-loan-repayment--overview');
     const views = page.getByRole('radiogroup', {name: 'View'}).getByRole('radio');
-    await expect(views).toHaveText(['Overview', 'Boxed', 'Code', 'Tests'], SLOW);
+    await expect(views).toHaveText(['Overview', 'DRD', 'Boxed', 'Code', 'Tests'], SLOW);
 
     const settings = await page.getByRole('button', {name: 'Model settings'}).boundingBox();
     const flow = await views.first().boundingBox();

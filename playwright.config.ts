@@ -5,9 +5,15 @@ const appPort = Number(process.env.APP_PORT ?? 5180);
 
 export default defineConfig({
     testDir: './e2e',
+    // Tests share no state (every test has its own browser context), so tests of one file run on idle workers too.
+    fullyParallel: true,
+    workers: process.env.CI ? 2 : '70%',
+    // Fonts and engine start slowly while most cores are busy: assertions (and screenshots) wait longer than 5 s.
+    expect: {timeout: 15_000},
+    reporter: process.env.CI ? 'github' : 'list',
     webServer: [
         {
-            command: `npm run storybook:build && npx http-server storybook-static -p ${storybookPort} -s`,
+            command: `node scripts/serve-storybook-static.mjs ${storybookPort}`,
             port: storybookPort,
             reuseExistingServer: !process.env.CI,
             timeout: 120_000,

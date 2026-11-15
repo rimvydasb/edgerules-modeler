@@ -11,7 +11,11 @@ import type {
 
 export interface LibraryClientOptions {
     fetch?: typeof fetch; // defaults to the global fetch
+    now?: () => number; // clock in ms, defaults to Date.now
 }
+
+/** The index is never served from a cache older than this: in memory, and (via revalidation) in the browser. */
+export const INDEX_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
 const MANIFEST_FILE = 'edgerules.project.json';
 const README_FILE = 'README.md';
@@ -61,14 +65,16 @@ export function validateLibraryIndex(value: unknown): LibraryIndex {
     };
 }
 
-/** A client of one library: the index is fetched once per session, the files of an example in parallel. */
+/** A client of one library: the index is refetched after `INDEX_MAX_AGE_MS`, the files of an example in parallel. */
 export function createLibraryClient(source: LibrarySource, options: LibraryClientOptions = {}): LibraryClient {
     const fetcher = options.fetch ?? ((...args: Parameters<typeof fetch>) => globalThis.fetch(...args));
+    const now = options.now ?? Date.now;
     let index: LibraryIndex | undefined;
+    let loadedAt = 0;
     let pending: Promise<LibraryIndex> | undefined;
 
-    async function fetchText(url: string, label: string): Promise<string> {
-        const response = await fetcher(url);
+    async function fetchText(url: string, label: string, init?: RequestInit): Promise<string> {
+        const response = await fetcher(url, init);
         if (!response.ok) throw new Error(`${label}: HTTP ${response.status}`);
         return response.text();
     }
@@ -85,10 +91,14 @@ export function createLibraryClient(source: LibrarySource, options: LibraryClien
 
     return {
         loadIndex() {
-            if (index) return Promise.resolve(index);
-            pending ??= fetchText(source.indexUrl, 'library.json')
+            if (index && now() - loadedAt < INDEX_MAX_AGE_MS) return Promise.resolve(index);
+            // `no-cache` makes the browser revalidate: a copy cached by the HTTP cache is never used unchecked.
+            pending ??= fetchText(source.indexUrl, 'library.json', {cache: 'no-cache'})
                 .then((text) => validateLibraryIndex(JSON.parse(text)))
-                .then((loaded) => (index = loaded))
+                .then((loaded) => {
+                    loadedAt = now();
+                    return (index = loaded);
+                })
                 .finally(() => {
                     pending = undefined; // a failure can be retried
                 });

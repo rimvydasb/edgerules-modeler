@@ -70,8 +70,8 @@ test.describe('canvas', () => {
         await expect(page.getByTestId('function-node-eligibility')).toBeVisible();
         await expect(page.getByTestId('output-node-output')).toContainText("'high'");
         await expect(page.getByTestId('output-node-output2')).toContainText('371');
-        // decision: 3 arguments, score: 2 arguments, eligibility: 1 argument, 2 outputs; payment binds a value.
-        await expect(page.locator('.react-flow__edge')).toHaveCount(8);
+        // decision: 3 arguments, score: 2 arguments, eligibility: 1 argument, payment: 1 bound field, 2 outputs.
+        await expect(page.locator('.react-flow__edge')).toHaveCount(9);
         await expect(page.getByTestId('flow-editor-empty')).toHaveCount(0);
     });
 
@@ -294,7 +294,7 @@ test.describe('removing', () => {
 
         await expect(node(page, 'applicant')).toBeVisible();
         await expect(page.getByTestId('output-node-output')).toContainText("'high'");
-        await expect(page.locator('.react-flow__edge')).toHaveCount(8);
+        await expect(page.locator('.react-flow__edge')).toHaveCount(9);
     });
 
     test('deleting a wire unbinds the argument and the node turns into a draft', async ({page}) => {

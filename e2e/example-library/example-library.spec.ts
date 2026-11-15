@@ -4,13 +4,14 @@ import {openStory} from '../support/storybook';
 // The Examples page of the Modeler stories (docs/stories/examples-library-story.md), against the published
 // `rimvydasb/edgerules-examples` repository: search, the details preview, "Copy and open" into the Shell.
 
-// The index loads from jsDelivr and the engine loads before the Shell shows: the first lookups wait longer.
+// The index loads from the network and the engine loads before the Shell shows: the first lookups wait longer.
 const SLOW = {timeout: 30_000};
 
 test('searches the gallery as the user types', async ({page}) => {
     await openStory(page, 'modeler--examples');
     const panels = page.getByTestId('example-panel');
     await expect(panels.first()).toBeVisible(SLOW);
+    await expect(page.getByRole('alert').filter({hasText: 'The example library did not load'})).toHaveCount(0);
     const all = await panels.count();
 
     await page.getByLabel('Search examples').fill('loan');
