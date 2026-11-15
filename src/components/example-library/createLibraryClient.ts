@@ -11,7 +11,11 @@ import type {
 
 export interface LibraryClientOptions {
     fetch?: typeof fetch; // defaults to the global fetch
+    now?: () => number; // clock in ms, defaults to Date.now
 }
+
+/** The index is never served from a cache older than this: in memory, and (via revalidation) in the browser. */
+export const INDEX_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
 const MANIFEST_FILE = 'edgerules.project.json';
 const README_FILE = 'README.md';
@@ -25,7 +29,7 @@ function isStringArray(value: unknown): value is string[] {
     return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-function validateEntry(entry: unknown, position: number): LibraryEntry {
+function validateEntry(entry: unknown, position: number): LibraryEntry | undefined {
     const where = `examples[${position}]`;
     if (!isRecord(entry)) throw new Error(`${where} is not an object`);
     for (const key of ['id', 'path', 'name', 'description', 'industry', 'engine'] as const) {
@@ -33,14 +37,17 @@ function validateEntry(entry: unknown, position: number): LibraryEntry {
     }
     if (!LEVELS.has(entry.level as string)) throw new Error(`${where}.level is not a known level`);
     if (!isStringArray(entry.features)) throw new Error(`${where}.features must be a string array`);
-    const versions = entry.versions;
-    if (!Array.isArray(versions) || versions.length === 0) throw new Error(`${where}.versions must not be empty`);
-    for (const version of versions) {
-        if (!isRecord(version) || typeof version.version !== 'string' || typeof version.ref !== 'string') {
-            throw new Error(`${where}.versions: every version needs "version" and "ref"`);
+    if (!Array.isArray(entry.versions)) throw new Error(`${where}.versions must be an array`);
+    // A version without a `ref` is a draft that is not released yet: it cannot be loaded, so it is left out instead of
+    // failing the whole library. A malformed (non-object, or `version` is not a string) version is still an error.
+    const versions = entry.versions.filter((version) => {
+        if (!isRecord(version) || typeof version.version !== 'string') {
+            throw new Error(`${where}.versions: every version needs "version"`);
         }
-    }
-    return entry as unknown as LibraryEntry;
+        return typeof version.ref === 'string' && version.ref !== '';
+    });
+    if (versions.length === 0) return undefined; // nothing released yet: the example is not listed
+    return {...entry, versions} as unknown as LibraryEntry;
 }
 
 /** Checks the shape of `library.json`; throws an `Error` that names the first wrong member. */
@@ -50,21 +57,24 @@ export function validateLibraryIndex(value: unknown): LibraryIndex {
         throw new Error(`Unsupported library.json schemaVersion ${String(value.schemaVersion)}`);
     if (!Array.isArray(value.industries)) throw new Error('industries must be an array');
     if (!Array.isArray(value.examples)) throw new Error('examples must be an array');
-    value.examples.forEach(validateEntry);
+    const examples = value.examples.map(validateEntry).filter((entry): entry is LibraryEntry => entry !== undefined);
     return {
         ...(value as unknown as LibraryIndex),
+        examples,
         featured: isStringArray(value.featured) ? value.featured : [],
     };
 }
 
-/** A client of one library: the index is fetched once per session, the files of an example in parallel. */
+/** A client of one library: the index is refetched after `INDEX_MAX_AGE_MS`, the files of an example in parallel. */
 export function createLibraryClient(source: LibrarySource, options: LibraryClientOptions = {}): LibraryClient {
     const fetcher = options.fetch ?? ((...args: Parameters<typeof fetch>) => globalThis.fetch(...args));
+    const now = options.now ?? Date.now;
     let index: LibraryIndex | undefined;
+    let loadedAt = 0;
     let pending: Promise<LibraryIndex> | undefined;
 
-    async function fetchText(url: string, label: string): Promise<string> {
-        const response = await fetcher(url);
+    async function fetchText(url: string, label: string, init?: RequestInit): Promise<string> {
+        const response = await fetcher(url, init);
         if (!response.ok) throw new Error(`${label}: HTTP ${response.status}`);
         return response.text();
     }
@@ -81,10 +91,14 @@ export function createLibraryClient(source: LibrarySource, options: LibraryClien
 
     return {
         loadIndex() {
-            if (index) return Promise.resolve(index);
-            pending ??= fetchText(source.indexUrl, 'library.json')
+            if (index && now() - loadedAt < INDEX_MAX_AGE_MS) return Promise.resolve(index);
+            // `no-cache` makes the browser revalidate: a copy cached by the HTTP cache is never used unchecked.
+            pending ??= fetchText(source.indexUrl, 'library.json', {cache: 'no-cache'})
                 .then((text) => validateLibraryIndex(JSON.parse(text)))
-                .then((loaded) => (index = loaded))
+                .then((loaded) => {
+                    loadedAt = now();
+                    return (index = loaded);
+                })
                 .finally(() => {
                     pending = undefined; // a failure can be retried
                 });

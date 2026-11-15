@@ -157,6 +157,8 @@ test('the rows a run discovers stay valid when the Tests view is left and opened
     await page.getByRole('radio', {name: 'Boxed'}).click();
     await expect(page.getByTestId('tests-grid')).toHaveCount(0);
     await page.getByRole('radio', {name: 'Tests'}).click();
+    // The Tests view opens on its overview: open the suite of the model again.
+    await page.getByRole('button', {name: 'Open tests of Mortgage Origination'}).click(SLOW);
 
     // The bug: opening the view again derived the schema rows only, and flagged every discovered row as dropped.
     await expect(discovered).toBeVisible(SLOW);

@@ -19,15 +19,25 @@ async function centerY(locator: ReturnType<Page['locator']>): Promise<number> {
     return box.y + box.height / 2;
 }
 
-// The wire of `name` must start at its output pin and end at its argument pin, wherever the rows are now.
+// The wire of `name` must start at its output pin and end at its argument pin, wherever the rows are now. The wire is
+// redrawn after the rows move, so the geometry is polled instead of read once.
 async function expectWireAtPins(page: Page, name: string) {
     const path = page.locator(`[data-testid="rf__edge-applicant.${name}->${name}"] .react-flow__edge-path`).first();
-    const wire = await path.boundingBox();
-    if (!wire) throw new Error(`no wire for ${name}`);
-    const source = await centerY(handle(page, 'applicant', `out:${name}`));
-    const target = await centerY(handle(page, 'decision', `in:${name}`));
-    expect(wire.y).toBeCloseTo(Math.min(source, target), -1);
-    expect(wire.y + wire.height).toBeCloseTo(Math.max(source, target), -1);
+    await expect
+        .poll(
+            async () => {
+                const wire = await path.boundingBox();
+                if (!wire) return 'no wire';
+                const source = await centerY(handle(page, 'applicant', `out:${name}`));
+                const target = await centerY(handle(page, 'decision', `in:${name}`));
+                return [
+                    Math.abs(wire.y - Math.min(source, target)) < 5,
+                    Math.abs(wire.y + wire.height - Math.max(source, target)) < 5,
+                ].join();
+            },
+            {message: `wire of ${name} ends at its pins`},
+        )
+        .toBe('true,true');
 }
 
 async function fieldMenu(page: Page, name: string) {
@@ -72,7 +82,8 @@ test('the value pin stays on the right edge of the node', async ({page}) => {
     const pin = await handle(page, 'applicant', 'out:age').boundingBox();
     const value = await page.getByRole('button', {name: 'Value of age'}).boundingBox();
     if (!node || !pin || !value) throw new Error('no box');
-    expect(pin.x + pin.width / 2).toBeCloseTo(node.x + node.width, -1);
+    // The pin sits on the right edge: its centre is within the pin's own width of it.
+    expect(Math.abs(pin.x + pin.width / 2 - (node.x + node.width))).toBeLessThanOrEqual(12);
     expect(value.x + value.width).toBeLessThanOrEqual(node.x + node.width);
 });
 
