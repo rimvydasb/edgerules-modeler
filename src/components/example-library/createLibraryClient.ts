@@ -25,7 +25,7 @@ function isStringArray(value: unknown): value is string[] {
     return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-function validateEntry(entry: unknown, position: number): LibraryEntry {
+function validateEntry(entry: unknown, position: number): LibraryEntry | undefined {
     const where = `examples[${position}]`;
     if (!isRecord(entry)) throw new Error(`${where} is not an object`);
     for (const key of ['id', 'path', 'name', 'description', 'industry', 'engine'] as const) {
@@ -33,14 +33,17 @@ function validateEntry(entry: unknown, position: number): LibraryEntry {
     }
     if (!LEVELS.has(entry.level as string)) throw new Error(`${where}.level is not a known level`);
     if (!isStringArray(entry.features)) throw new Error(`${where}.features must be a string array`);
-    const versions = entry.versions;
-    if (!Array.isArray(versions) || versions.length === 0) throw new Error(`${where}.versions must not be empty`);
-    for (const version of versions) {
-        if (!isRecord(version) || typeof version.version !== 'string' || typeof version.ref !== 'string') {
-            throw new Error(`${where}.versions: every version needs "version" and "ref"`);
+    if (!Array.isArray(entry.versions)) throw new Error(`${where}.versions must be an array`);
+    // A version without a `ref` is a draft that is not released yet: it cannot be loaded, so it is left out instead of
+    // failing the whole library. A malformed (non-object, or `version` is not a string) version is still an error.
+    const versions = entry.versions.filter((version) => {
+        if (!isRecord(version) || typeof version.version !== 'string') {
+            throw new Error(`${where}.versions: every version needs "version"`);
         }
-    }
-    return entry as unknown as LibraryEntry;
+        return typeof version.ref === 'string' && version.ref !== '';
+    });
+    if (versions.length === 0) return undefined; // nothing released yet: the example is not listed
+    return {...entry, versions} as unknown as LibraryEntry;
 }
 
 /** Checks the shape of `library.json`; throws an `Error` that names the first wrong member. */
@@ -50,9 +53,10 @@ export function validateLibraryIndex(value: unknown): LibraryIndex {
         throw new Error(`Unsupported library.json schemaVersion ${String(value.schemaVersion)}`);
     if (!Array.isArray(value.industries)) throw new Error('industries must be an array');
     if (!Array.isArray(value.examples)) throw new Error('examples must be an array');
-    value.examples.forEach(validateEntry);
+    const examples = value.examples.map(validateEntry).filter((entry): entry is LibraryEntry => entry !== undefined);
     return {
         ...(value as unknown as LibraryIndex),
+        examples,
         featured: isStringArray(value.featured) ? value.featured : [],
     };
 }

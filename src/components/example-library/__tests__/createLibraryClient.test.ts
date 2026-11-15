@@ -45,6 +45,22 @@ describe('createLibraryClient', () => {
         );
     });
 
+    it('skips unreleased versions (no ref) and examples without a released version', () => {
+        const index = fixtureIndex();
+        const [first] = index.examples;
+        const released = first.versions[0];
+        const loaded = validateLibraryIndex({
+            ...index,
+            examples: [
+                {...first, versions: [{version: '9.0.0'}, released]},
+                {...first, id: 'draft-only', versions: [{version: '1.0.0'}]},
+            ],
+        });
+        expect(loaded.examples.map((entry) => entry.id)).toEqual([first.id]);
+        expect(loaded.examples[0].versions).toEqual([released]);
+        expect(() => validateLibraryIndex({...index, examples: [{...first, versions: [null]}]})).toThrow(/versions/);
+    });
+
     it('loads the README of a version at its ref', async () => {
         const client = createFixtureClient();
         const index = await client.loadIndex();
