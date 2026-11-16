@@ -1,0 +1,6 @@
+{
+  "//": "vitest.config.ts imports the browser provider, whose types replace the jest-dom matchers of the unit tests: it is checked on its own.",
+  "extends": "./tsconfig.json",
+  "include": ["vitest.config.ts"],
+  "exclude": []
+}

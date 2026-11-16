@@ -138,7 +138,8 @@ the last save stored (pass a fresh `key` through the story args, `&args=projectK
 - ReactFlow for flow-based visual programming.
 - CodeMirror for code editing.
 - TypeScript, React
-- Vitest and React Testing Library for unit/component testing; Playwright for end-to-end testing of the app.
+- Vitest and React Testing Library for unit/component testing; `@storybook/addon-vitest` runs every story as a test;
+  Playwright for end-to-end testing of the app.
 - tsdown for building the published npm package (dual ESM/CJS output with generated type declarations).
 - Storybook for isolated component development and documentation.
 
@@ -196,7 +197,11 @@ since they exercise the running app rather than isolated units.
 
 The tests and Storybook are separate:
 
-- **Storybook**: the stories and their own tests (play functions). No Playwright spec opens Storybook.
+- **Unit tests and stories** (`npm test`): Vitest runs two projects (`vitest.config.ts`). `unit` runs the React Testing
+  Library and model tests in jsdom. `storybook` runs every story of `stories/` in a headless Chromium
+  (`@storybook/addon-vitest`): the story must render, and its play function must pass. `npx vitest run --project unit`
+  or `--project storybook` runs one of them. The stories of the Modeler and the Example Library read the published
+  example library, so they need network access. No Playwright spec opens Storybook.
 - **Playwright** (`npm run e2e`): only `e2e/`, only against the app at http://localhost:5173. A running `npm run dev` is
   used; otherwise Playwright starts one. Set `APP_URL` to test another instance.
 
