@@ -134,3 +134,22 @@ the editor reported an error. `createBoxedEditorService` now writes only the cha
 
 **Expected behaviour:** `set('*', root)` accepts a root context that holds workbook declarations, as `fromPortable`
 does.
+
+## [VALID] A `type` accepts two fields with the same name; an object rejects them
+
+**What is wrong:** a `type` declaration with a repeated field name loads and links without any diagnostic. The same
+repetition in an object is rejected with `DuplicateEntryName`:
+
+```ts
+const {MutableDecisionService} = await import('@edgerules/node/mutable');
+MutableDecisionService.fromCode('{ type A: { x: <number>\n x: <string> } }'); // loads, diagnostics() is []
+MutableDecisionService.fromCode('{ a: 1\n a: 2 }'); // throws "parse error: Parse errors: DuplicateEntryName at 8"
+```
+
+An `owner` field repeated in a child type is accepted the same way (`owner p: <P>` twice in `type C`). Found while
+re-entering the Loan Origination model through the GUI: the Code view applied a type with two `owner application` lines
+and the saved model kept both.
+
+**Reproduces on:** `@edgerules/node` `0.2.8-alpha.202611121551` (the latest published, 2026-11-16).
+
+**Expected behaviour:** a duplicate field name in a `type` is a parse error like it is in an object.

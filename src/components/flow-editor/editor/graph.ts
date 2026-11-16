@@ -49,16 +49,21 @@ const GAP_X = 120;
 const GAP_Y = 40;
 const GRID = 20;
 
-/** The node and the output pin that a path binding reads, when that node is on the canvas. */
+/**
+ * The node and the output pin that a path binding reads, when that node is on the canvas. A `single` node has the
+ * whole-value pin only (an expression node): a read of `application.applicants` leaves from that pin, as there is no
+ * pin `out:applicants` to draw a wire from.
+ */
 export function resolveSource(
     text: string,
-    nodes: ReadonlyMap<string, {whole?: boolean}>,
+    nodes: ReadonlyMap<string, {whole?: boolean; single?: boolean}>,
 ): {node: string; handle: string} | undefined {
     let best: string | undefined;
     for (const id of nodes.keys()) {
         if ((text === id || text.startsWith(`${id}.`)) && (!best || id.length > best.length)) best = id;
     }
     if (!best) return undefined;
+    if (nodes.get(best)?.single) return {node: best, handle: 'out:*'};
     const rest = text.slice(best.length + 1);
     if (rest === '') {
         // An unnamed return has its own pin; a record result or an input record uses the whole-value pin.
@@ -95,10 +100,16 @@ export function modelWires(
     const models = new Map(
         refs.filter((ref) => ref.kind === 'function').map((ref) => [ref.field, functionModel(ref.field)]),
     );
-    const sources = new Map<string, {whole?: boolean}>(
+    const sources = new Map<string, {whole?: boolean; single?: boolean}>(
         refs
             .filter((ref) => ref.kind !== 'return')
-            .map((ref) => [ref.field, {whole: models.get(ref.field)?.results.some((result) => result.whole)}]),
+            .map((ref) => [
+                ref.field,
+                {
+                    whole: models.get(ref.field)?.results.some((result) => result.whole),
+                    single: ref.kind === 'expression',
+                },
+            ]),
     );
     // The pins of a parameter node are the fields of its record type. A read of a derived member (a fact or a decision
     // of the type) or a deeper path comes from the nearest pin on its path, or else from the whole-value pin.

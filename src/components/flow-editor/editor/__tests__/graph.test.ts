@@ -6,15 +6,22 @@ import {SERVICE_MODEL} from '../../testing/serviceModel';
 import {autoLayout, findFreeSpot, modelWires, outputWires, qualifyBinding, resolveSource} from '../graph';
 
 describe('resolveSource', () => {
-    const nodes = new Map<string, {whole?: boolean}>([
+    const nodes = new Map<string, {whole?: boolean; single?: boolean}>([
         ['applicant', {}],
         ['decision', {whole: false}],
         ['payment', {whole: true}],
+        ['application', {single: true}],
     ]);
 
     it('maps a field path to the output pin of that field', () => {
         expect(resolveSource('applicant.age', nodes)).toEqual({node: 'applicant', handle: 'out:age'});
         expect(resolveSource('decision.level', nodes)).toEqual({node: 'decision', handle: 'out:level'});
+    });
+
+    it('leaves an expression node from its only pin, whatever path is read from it', () => {
+        expect(resolveSource('application.applicants', nodes)).toEqual({node: 'application', handle: 'out:*'});
+        expect(resolveSource('application.ApplicationApproval', nodes)).toEqual({node: 'application', handle: 'out:*'});
+        expect(resolveSource('application', nodes)).toEqual({node: 'application', handle: 'out:*'});
     });
 
     it('maps a whole node to its unnamed return or to the whole-value pin', () => {
@@ -23,7 +30,7 @@ describe('resolveSource', () => {
     });
 
     it('has no source for a path off the canvas or deeper than one field', () => {
-        expect(resolveSource('application.amount', nodes)).toBeUndefined();
+        expect(resolveSource('applicationX.amount', nodes)).toBeUndefined();
         expect(resolveSource('applicant.address.city', nodes)).toBeUndefined();
         expect(resolveSource('applicantX', nodes)).toBeUndefined();
     });

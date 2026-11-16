@@ -445,6 +445,25 @@ describe('commands: function arguments', () => {
         });
     });
 
+    it('Add argument on a service adds a typed argument: the engine refuses an untyped service parameter (E358)', async () => {
+        const user = userEvent.setup();
+        const mutable = MutableDecisionService.fromCode(
+            '{ type Application: { amount: <number> }\n service check(application: Application): { big: application.amount > 100 } }',
+        );
+        const service = createBoxedEditorService(mutable);
+
+        render(<BoxedEditor service={service} path="*" languageService={languageService} />);
+        // Row order: model, Application, amount, check, big.
+        await chooseAction(user, 3, 'Add argument');
+
+        expect(service.getBoxedRowData('check')).toMatchObject({
+            parameters: [
+                {name: 'application', type: 'Application'},
+                {name: 'arg', type: 'string'},
+            ],
+        });
+    });
+
     it('Delete "‹argument›" Argument removes an unreferenced argument from the signature', async () => {
         const user = userEvent.setup();
         // `unused` isn't referenced by the body — removing an argument the body *does* reference is
