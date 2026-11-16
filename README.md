@@ -11,15 +11,11 @@ engine via [`@edgerules/web`](https://www.npmjs.com/package/@edgerules/web), pub
 - [x] Markdown View (`edgerules-react/markdown-view`): read-only GitHub Flavored Markdown with `@tanstack/markdown`,
       such as the project README. Raw HTML is dropped; only `https`, `mailto`, `model:` and relative URLs are kept;
       `edgerules` fences are highlighted; a `model:` link calls `onModelLink(path)`
-- [x] EdgeRules Code Editor Cell (the same language tooling in a compact cell control for the Boxed and Decision Table
-      editors; commits on Enter/blur, cancels on Escape, analyzes the cell in the scope of its surrounding model via an
-      embed context)
+- [x] EdgeRules Code Editor Cell (the same language tooling in a compact cell control for the Boxed Editor; commits on
+      Enter/blur, cancels on Escape, analyzes the cell in the scope of its surrounding model via an embed context)
 - [x] EdgeRules Boxed Editor ([spec and story](docs/boxed-editor-story.md); a single flat treegrid over every
       `BoxedRowKind` — fields, collections, `func`/`ruleset`/`optimise` — with inline editing, drag-and-drop,
       context-menu actions, and optional description/live-test-result overlay columns)
-- [x] [EdgeRules Decision Table Editor](docs/decision-table-story.md) (DMN-style grid over a `ruleset`: decision tables,
-      boolean-expression rules, and scorecards; statically highlighted display cells with a single CodeEditorCell on the
-      active cell)
 - [x] EdgeRules Flow Editor (ReactFlow-based)
   - [x] FlowEditor canvas ([spec](docs/stories/completed/flow-editor-story.md#flow-editor-canvas)): node palette with
         drag or click to add, wires from the model, automatic layout, zoom, minimap. The host imports
@@ -158,9 +154,8 @@ they actually import — a project that only uses the Code Editor never has to i
 │   │   │   └── *.tsx              # Implementation, co-located unit tests (*.test.tsx)
 │   │   ├── code-editor/           # Code Editor (CodeMirror) + shared EdgeRules language modules (language/)
 │   │   ├── code-editor-cell/      # Compact cell editor sharing the code-editor language modules
-│   │   ├── decision-table/        # Decision Table Editor
 │   │   ├── documentation-service/ # Persistence for path-keyed free-text descriptions (no engine, no GUI) — see
-│   │   │                          #   documentation-service-story.md; shared by boxed-editor, decision-table, etc.
+│   │   │                          #   documentation-service-story.md; shared by boxed-editor, etc.
 │   │   ├── flow-editor/           # Flow Editor (ReactFlow-based)
 │   │   ├── example-library/       # Read-only examples Library: client, gallery, details, industries
 │   │   ├── local-workspace/       # Local Workspace over IndexedDB, recent projects

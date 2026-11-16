@@ -111,7 +111,6 @@ module.exports = {
     componentAllowlist('drd-view', [], 'Main React components'),
     componentAllowlist('documentation-service', [], 'Main React components'),
     componentAllowlist('test-cases-service', [], 'Main React components'),
-    componentAllowlist('decision-table', ['code-editor', 'code-editor-cell'], 'Main React components'),
     componentAllowlist(
       'tests-manager',
       ['code-editor', 'code-editor-cell', 'test-cases-service'],
