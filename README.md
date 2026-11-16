@@ -93,9 +93,8 @@ The other three:
 | Components | Each component with a few scenario stories; a prop that only changes one aspect (`readOnly`) is a control | `stories/components/<component>/*.stories.tsx` |
 | Services   | Components without their own GUI: Documentation Service, Project Session                                  | `stories/components/<component>/*.stories.tsx` |
 
-A story with `tags: ['fixture']` is a starting state rather than a showcase. The sidebar hides it by default (the tag
-filter shows it); its URL always opens it. No Playwright spec opens a story: the e2e tests drive the app only (see
-[End-to-end tests](#end-to-end-tests)). The order of the sidebar is `storySort` in `.storybook/preview.tsx`.
+No Playwright spec opens a story: the e2e tests drive the app only (see [End-to-end tests](#end-to-end-tests)). The
+order of the sidebar is `storySort` in `.storybook/preview.tsx`.
 
 ## Opening a project in a story
 
