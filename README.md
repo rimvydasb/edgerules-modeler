@@ -93,8 +93,9 @@ The other three:
 | Components | Each component with a few scenario stories; a prop that only changes one aspect (`readOnly`) is a control | `stories/components/<component>/*.stories.tsx` |
 | Services   | Components without their own GUI: Documentation Service, Project Session                                  | `stories/components/<component>/*.stories.tsx` |
 
-A story that only gives an e2e spec its starting state has `tags: ['fixture']`. The sidebar hides it by default (the tag
-filter shows it); its URL always opens it. The order of the sidebar is `storySort` in `.storybook/preview.tsx`.
+A story with `tags: ['fixture']` is a starting state rather than a showcase. The sidebar hides it by default (the tag
+filter shows it); its URL always opens it. No Playwright spec opens a story: the e2e tests drive the app only (see
+[End-to-end tests](#end-to-end-tests)). The order of the sidebar is `storySort` in `.storybook/preview.tsx`.
 
 ## Opening a project in a story
 
@@ -112,8 +113,8 @@ export const Default: Story = {
 
 Pass a `ProjectBundleInput` instead of a DSL string to seed documentation, tests, a flow layout or a README.
 `openStoredStoryProject(key, input)` reopens the stored project of `key` instead, so a reload of the story keeps what
-the last save stored; an e2e spec passes a fresh `key` through the story args (`&args=projectKey:<key>`). Wrap the story
-in `<ProjectProvider session={…}>` when it reads the session through `useProjectSession`, `useProjectSnapshot` or
+the last save stored (pass a fresh `key` through the story args, `&args=projectKey:<key>`). Wrap the story in
+`<ProjectProvider session={…}>` when it reads the session through `useProjectSession`, `useProjectSnapshot` or
 `useProjectSlice`.
 
 ## Other Links
@@ -124,7 +125,8 @@ in `<ProjectProvider session={…}>` when it reads the session through `useProje
 
 - All components are built with React and TypeScript.
 - All components can be rendered in isolation or integrated into a larger application.
-- All components are tested with React Testing Library and Playwright.
+- All components are tested with React Testing Library and Storybook play functions; the app is tested end to end with
+  Playwright.
 
 ## Technical Stack
 
@@ -137,7 +139,7 @@ in `<ProjectProvider session={…}>` when it reads the session through `useProje
 - ReactFlow for flow-based visual programming.
 - CodeMirror for code editing.
 - TypeScript, React
-- Vitest and React Testing Library for unit/component testing; Playwright for end-to-end and visual testing.
+- Vitest and React Testing Library for unit/component testing; Playwright for end-to-end testing of the app.
 - tsdown for building the published npm package (dual ESM/CJS output with generated type declarations).
 - Storybook for isolated component development and documentation.
 
@@ -177,7 +179,7 @@ they actually import — a project that only uses the Code Editor never has to i
 │   ├── lib/                       # Core logic and utilities shared across components
 │   └── index.ts                   # Root barrel re-exporting the full public API
 ├── stories/                        # Storybook stories: components/ mirrors src/components, models/ shows models/; support/ holds helpers
-├── e2e/                            # Playwright end-to-end/visual tests
+├── e2e/                            # Playwright end-to-end tests of the app (http://localhost:5173)
 ├── docs/                           # Design notes and feature specs (e.g. stories/completed/project-explorer-story.md)
 ├── dist/                           # Build output (ESM + CJS + .d.ts), git-ignored, published to npm
 ├── package.json
@@ -189,7 +191,33 @@ they actually import — a project that only uses the Code Editor never has to i
 ```
 
 Unit tests (React Testing Library) live next to the code they cover as `*.test.tsx`; Playwright specs live under `e2e/`
-since they exercise built, running instances of the components rather than isolated units.
+since they exercise the running app rather than isolated units.
+
+### End-to-end tests
+
+The tests and Storybook are separate:
+
+- **Storybook**: the stories and their own tests (play functions). No Playwright spec opens Storybook.
+- **Playwright** (`npm run e2e`): only `e2e/`, only against the app at http://localhost:5173. A running `npm run dev` is
+  used; otherwise Playwright starts one. Set `APP_URL` to test another instance.
+
+Every test is the first visit of a new user (`e2e/support/fixtures.ts`): a new browser context with no cookies, no
+storage, no IndexedDB and a cold HTTP cache (`e2e/first-visit.spec.ts` proves it). Requests to any host but the app and
+the published example library are aborted, and a test fails when the app sends one, so no analytics leave a test.
+
+The specs work with the published examples, copied from the library as a user does and pinned to a released version
+(`e2e/support/app.ts`): Loan Origination, Loan Repayment and Client Outreach. The library files are read from the
+network once and cached in `node_modules/.cache/e2e-example-library`. Edge-case models are built in a blank project only
+where an edge case needs one.
+
+| Spec                    | Covers                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `first-visit.spec.ts`   | No cookies, storage or cache on a first visit; the app stores only its IndexedDB          |
+| `routing.spec.ts`       | Every page and project element has its URL; Back, Forward, reload, typed and broken links |
+| `examples.spec.ts`      | Gallery, details, copy; every published example copies and opens                          |
+| `workspace.spec.ts`     | New, rename, duplicate, delete; persistence across reloads and tabs                       |
+| `project/*.spec.ts`     | Shell, Boxed, Code, Flow and Tests views over the published examples; autosave            |
+| `webmcp/webmcp.spec.ts` | The WebMCP tools of a project (Chromium with the WebMCP feature flag)                     |
 
 ### Package & distribution conventions
 

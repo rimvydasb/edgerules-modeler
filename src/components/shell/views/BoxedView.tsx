@@ -11,6 +11,7 @@ export interface BoxedViewProps {
     languageService: CodeEditorService;
     readOnly?: boolean;
     onOpenNode: (target: BoxedEditorOpenTarget) => void;
+    onPathRename: (from: string, to: string) => void; // a row was renamed or moved
     showDescription: boolean; // the description column toggle of this root path
     onShowDescriptionChange: (show: boolean) => void;
     showTestResults: boolean; // the test column toggle of this root path
@@ -29,6 +30,7 @@ export function BoxedView({
     languageService,
     readOnly,
     onOpenNode,
+    onPathRename,
     showDescription,
     onShowDescriptionChange,
     showTestResults,
@@ -61,6 +63,7 @@ export function BoxedView({
             revision={version}
             readOnly={readOnly}
             onOpenNode={onOpenNode}
+            onPathRename={onPathRename}
             languageService={languageService}
             documentationService={session.documentation}
             testCasesService={testCases}

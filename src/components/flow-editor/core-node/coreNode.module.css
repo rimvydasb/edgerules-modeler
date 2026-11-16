@@ -429,3 +429,8 @@
 .descEditing {
   padding-inline: 6px;
 }
+
+/* The wrapper of a node menu: no box of its own, so the kebab lays out as before. */
+.menuAnchor {
+    display: contents;
+}

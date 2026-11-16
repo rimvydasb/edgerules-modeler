@@ -454,48 +454,83 @@ function rewriteIdentifier(node: PortableNode, from: string, to: string, parentK
     ) as unknown as PortableNode;
 }
 
-function renameWithLinkCheck(mutable: MutableDecisionService, path: string, newName: string): void | PortableError {
-    const previousRoot = mutable.toPortable();
-    const oldName = lastPathName(path);
-    let previousLinkError: PortableError | undefined;
-    try {
-        mutable.link();
-    } catch (error) {
-        previousLinkError = error as PortableError;
+/**
+ * Writes the root fields that differ between `before` and `after`, one by one. The engine rejects `set('*', …)` of a
+ * model with a workbook ("workbook declarations are allowed only at the model root"), but takes each root field.
+ * Anything else that differs at the root goes through `set('*', …)`.
+ */
+function setChangedRootFields(
+    mutable: MutableDecisionService,
+    before: PortableContext,
+    after: PortableContext,
+): PortableNode | PortableError | void {
+    const {fields: beforeFields = {}, ...beforeRest} = before as unknown as {fields?: Record<string, unknown>};
+    const {fields: afterFields = {}, ...afterRest} = after as unknown as {fields?: Record<string, unknown>};
+    if (
+        JSON.stringify(beforeRest) !== JSON.stringify(afterRest) ||
+        JSON.stringify(Object.keys(beforeFields)) !== JSON.stringify(Object.keys(afterFields))
+    ) {
+        return mutable.set('*', after);
     }
+    for (const [name, field] of Object.entries(afterFields)) {
+        if (JSON.stringify(field) === JSON.stringify(beforeFields[name])) continue;
+        const result = mutable.set(name, field as PortableSetValue);
+        if (isPortableError(result)) return result;
+    }
+    return undefined;
+}
+
+/**
+ * Renames `path` and keeps the model linkable. The engine's `rename` migrates the references itself; only when the
+ * model no longer links does the textual rewrite of `rewriteIdentifier` run as a fallback, because it renames every
+ * identifier of that name, also unrelated fields. A rejected rename is undone by renaming the row back: the engine
+ * rejects `set('*', …)` of a model with a workbook, so the root cannot be restored by a `set`.
+ */
+function renameWithLinkCheck(mutable: MutableDecisionService, path: string, newName: string): void | PortableError {
+    const oldName = lastPathName(path);
+    const linkError = (): PortableError | undefined => {
+        try {
+            mutable.link();
+            return undefined;
+        } catch (error) {
+            return error as PortableError;
+        }
+    };
+    const sameError = (a: PortableError | undefined, b: PortableError | undefined) =>
+        a !== undefined && b !== undefined && a.type === b.type && a.path === b.path && a.message === b.message;
+    const previousRoot = mutable.toPortable();
+    const previousLinkError = linkError();
     const result = mutable.rename(path, newName);
     if (isPortableError(result)) return result;
+    let nextLinkError = linkError();
+    if (nextLinkError === undefined || sameError(previousLinkError, nextLinkError)) return undefined;
+
+    const renamedPath = oldName ? path.slice(0, path.length - oldName.length) + newName : path;
+    const undo = (rewritten = false): void => {
+        // The rewrite touched other rows too: restore them first, then the renamed row.
+        if (rewritten) setChangedRootFields(mutable, mutable.toPortable(), previousRoot);
+        if (oldName && oldName !== newName && !(rewritten && portableAtPath(mutable.toPortable(), path))) {
+            mutable.rename(renamedPath, oldName);
+        }
+        linkError();
+    };
     if (oldName && oldName !== newName) {
         const renamedRoot = mutable.toPortable();
-        const migrated = rewriteIdentifier(
-            renamedRoot as unknown as PortableNode,
-            oldName,
-            newName,
-        ) as unknown as PortableContext;
+        const migrated = rewriteIdentifier(renamedRoot as unknown as PortableNode, oldName, newName);
         if (JSON.stringify(migrated) !== JSON.stringify(renamedRoot)) {
-            const setResult = mutable.set('*', migrated);
+            const setResult = setChangedRootFields(mutable, renamedRoot, migrated as unknown as PortableContext);
             if (isPortableError(setResult)) {
-                mutable.set('*', previousRoot);
+                undo(true);
                 return setResult;
             }
+            nextLinkError = linkError();
+            if (nextLinkError === undefined || sameError(previousLinkError, nextLinkError)) return undefined;
+            undo(true);
+            return nextLinkError;
         }
     }
-    try {
-        mutable.link();
-        return undefined;
-    } catch (error) {
-        const nextLinkError = error as PortableError;
-        if (
-            previousLinkError &&
-            previousLinkError.type === nextLinkError.type &&
-            previousLinkError.path === nextLinkError.path &&
-            previousLinkError.message === nextLinkError.message
-        ) {
-            return undefined;
-        }
-        mutable.set('*', previousRoot);
-        return nextLinkError;
-    }
+    undo();
+    return nextLinkError;
 }
 
 type CallableParameterChange =

@@ -27,6 +27,7 @@ import {SheetProjectMark, sheetClasses} from '../../../src/ui/sheet';
 import {registerHighsSolver} from '../highsSolver';
 import {
     createProjectSessionManager,
+    isProjectError,
     ProjectProvider,
     type LocalProjectRepository,
     type ProjectDescriptor,
@@ -99,7 +100,7 @@ export function ModelerProvider({
     route,
     children,
 }: ModelerWorkspace & ModelerNavigator & {route: ModelerRoute; children: ReactNode}): ReactElement {
-    const [projects, setProjects] = useState<ProjectDescriptor[]>([]);
+    const [projects, setProjects] = useState<ProjectDescriptor[]>();
     const [index, setIndex] = useState<LibraryIndex>();
     const [opened, setOpened] = useState<ProjectRoute[]>([]);
     const manager = useMemo(
@@ -129,31 +130,60 @@ export function ModelerProvider({
         client.loadIndex().then(setIndex, () => undefined); // the pages show the index failure themselves
     }, []);
 
-    const value = useMemo<ModelerContextValue>(() => {
-        const origins = projects.flatMap((project) => (project.origin ? [project.origin] : []));
-        const names = new Map(projects.map((project) => [project.locator.projectPath, project.name]));
+    // The pages edit the workspace (a rename, a duplicate, a delete on the Workspace page): the project list, and with it
+    // the names of the project tabs, follows every change. The sessions of the Shell save through `repository` itself,
+    // so an autosave does not list the workspace again.
+    const workspace = useMemo<LocalProjectRepository>(() => {
+        const after =
+            <A extends unknown[], R>(write: (...args: A) => Promise<R>) =>
+            async (...args: A): Promise<R> => {
+                const result = await write(...args);
+                await refresh();
+                return result;
+            };
         return {
-            tabs: opened.map((tab) => ({route: tab, name: names.get(tab.projectPath) ?? tab.projectPath})),
+            resource: repository.resource,
+            locatorFor: (projectPath) => repository.locatorFor(projectPath),
+            list: () => repository.list(),
+            findByName: (name) => repository.findByName(name),
+            load: (locator, revision) => repository.load(locator, revision),
+            create: after((target, bundle) => repository.create(target, bundle)),
+            save: after((locator, bundle, expected) => repository.save(locator, bundle, expected)),
+            remove: after((locator) => repository.remove(locator)),
+        };
+    }, [repository, refresh]);
+
+    const value = useMemo<ModelerContextValue>(() => {
+        const listed = projects ?? [];
+        const origins = listed.flatMap((project) => (project.origin ? [project.origin] : []));
+        const names = new Map(listed.map((project) => [project.locator.projectPath, project.name]));
+        // A tab of a project that is no longer in the workspace (deleted on the Workspace page) goes away. The tab of
+        // the shown project stays, so a link to a missing project still shows where the user is.
+        const shown = route.page === 'project' ? route.projectPath : undefined;
+        const tabs = projects
+            ? opened.filter((tab) => names.has(tab.projectPath) || tab.projectPath === shown)
+            : opened;
+        return {
+            tabs: tabs.map((tab) => ({route: tab, name: names.get(tab.projectPath) ?? tab.projectPath})),
             closeTab: (projectPath) => {
                 setOpened((tabs) => tabs.filter((tab) => tab.projectPath !== projectPath));
                 if (route.page === 'project' && route.projectPath === projectPath) navigate({page: 'workspace'});
             },
-            repository,
+            repository: workspace,
             factory,
             navigate,
             href,
             shareUrl,
             manager,
-            projects,
+            projects: listed,
             origins,
             index,
             copy: async (example, open) => {
-                const added = await addWorkspaceProject({repository, factory}, example.project);
-                await refresh();
+                const added = await addWorkspaceProject({repository: workspace, factory}, example.project);
                 if (open) navigate({page: 'project', projectPath: added.locator.projectPath});
             },
             openCopy: (exampleId) => {
-                const newest = projects.find((project) => project.origin?.id === exampleId);
+                const newest = listed.find((project) => project.origin?.id === exampleId);
                 if (newest) navigate({page: 'project', projectPath: newest.locator.projectPath});
             },
             showDetails: (example) =>
@@ -163,7 +193,7 @@ export function ModelerProvider({
                     industry: index?.examples.find((entry) => entry.id === example.id)?.industry,
                 }),
         };
-    }, [repository, factory, navigate, href, shareUrl, manager, projects, opened, route, index, refresh]);
+    }, [workspace, factory, navigate, href, shareUrl, manager, projects, opened, route, index, refresh]);
 
     return <ModelerContext.Provider value={value}>{children}</ModelerContext.Provider>;
 }
@@ -430,6 +460,49 @@ function release(manager: SessionManager, session: ProjectSession): void {
     }, 0);
 }
 
+// The workspace is the store of the projects: every change is saved, a moment after the last one, so a reload or a
+// closed tab never loses work. The changes of a page that is hidden or closed are saved at once.
+const AUTOSAVE_DELAY_MS = 400;
+
+function useAutosave(session: ProjectSession | undefined): void {
+    useEffect(() => {
+        if (!session) return undefined;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        // An invalid DSL draft blocks a save, and a save in flight is followed by the next one when it ends.
+        const unsaved = () => {
+            const snapshot = session.getSnapshot();
+            return (
+                snapshot.phase === 'ready' && snapshot.dirtySlices.length > 0 && snapshot.dslValidity.status === 'valid'
+            );
+        };
+        const flush = () => {
+            clearTimeout(timer);
+            timer = undefined;
+            if (!unsaved()) return;
+            // A conflict (another tab saved first) shows in the session phase; it is never overwritten silently.
+            session.save().catch((failure: unknown) => {
+                if (!isProjectError(failure, 'conflict')) console.error('The project was not saved', failure);
+            });
+        };
+        const schedule = () => {
+            if (!unsaved()) return;
+            clearTimeout(timer);
+            timer = setTimeout(flush, AUTOSAVE_DELAY_MS);
+        };
+        const hidden = () => document.visibilityState === 'hidden' && flush();
+        const unsubscribe = session.subscribe(schedule);
+        window.addEventListener('pagehide', flush);
+        document.addEventListener('visibilitychange', hidden);
+        schedule();
+        return () => {
+            unsubscribe();
+            window.removeEventListener('pagehide', flush);
+            document.removeEventListener('visibilitychange', hidden);
+            flush();
+        };
+    }, [session]);
+}
+
 // A path or view change that follows a user input within this time adds a history entry; a change without one (the
 // Shell falls back from a removed or invalid path) replaces the entry, so Back never returns to a dead URL.
 const USER_INPUT_WINDOW_MS = 1500;
@@ -476,11 +549,15 @@ export function ProjectPage({
         };
     }, [manager, locator]);
 
+    useAutosave(opened.session);
+
     // The Shell reports a path and a view change of one click separately: merge them into one navigation.
     const current = useRef({path, view});
     current.current = {path, view};
     const pending = useRef<{path?: string; view?: ShellView} | undefined>(undefined);
-    const lastInput = useRef(0);
+    // No input yet: a change right after the page loads (a typed link to a removed path) is not the user's and must not
+    // add a history entry. `performance.now()` starts at 0 on every page load, so 0 would read as a fresh input.
+    const lastInput = useRef(Number.NEGATIVE_INFINITY);
     const change = (next: {path?: string; view?: ShellView}) => {
         const first = pending.current === undefined;
         pending.current = {...pending.current, ...next};

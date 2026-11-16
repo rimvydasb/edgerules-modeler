@@ -9,7 +9,7 @@ const config: StorybookConfig = {
     framework: '@storybook/react-vite',
     stories,
     addons: [],
-    // A `fixture` story is a starting state of an e2e spec, not a showcase: the sidebar hides it by default, the tag
+    // A `fixture` story is a starting state, not a showcase: the sidebar hides it by default, the tag
     // filter shows it, and its URL always opens it.
     tags: {fixture: {defaultFilterSelection: 'exclude'}},
     async viteFinal(viteConfig) {

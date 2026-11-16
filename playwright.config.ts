@@ -1,49 +1,48 @@
 import {defineConfig, devices} from '@playwright/test';
 
-const storybookPort = Number(process.env.STORYBOOK_PORT ?? 6006);
-const appPort = Number(process.env.APP_PORT ?? 5180);
+// The e2e tests drive the Modeler app only, as a user does: http://localhost:5173 (`npm run dev`). Storybook has its
+// own tests (the play functions of the stories); no spec here opens a story.
+const APP_URL = process.env.APP_URL ?? 'http://localhost:5173';
+const appPort = Number(new URL(APP_URL).port || 80);
 
 export default defineConfig({
     testDir: './e2e',
-    // Tests share no state (every test has its own browser context), so tests of one file run on idle workers too.
+    // Every test has its own browser context and its own projects (see e2e/support/fixtures.ts): the tests of one file
+    // run on idle workers too. One dev server serves every worker.
     fullyParallel: true,
     workers: process.env.CI ? 2 : '70%',
-    // Fonts and engine start slowly while most cores are busy: assertions (and screenshots) wait longer than 5 s.
+    retries: process.env.CI ? 1 : 0,
+    // The engine (WASM) loads and the example library is read before most pages show; on busy cores that takes longer
+    // than the 5 s default.
     expect: {timeout: 15_000},
+    timeout: 60_000,
     reporter: process.env.CI ? 'github' : 'list',
-    webServer: [
-        {
-            command: `node scripts/serve-storybook-static.mjs ${storybookPort}`,
-            port: storybookPort,
-            reuseExistingServer: !process.env.CI,
-            timeout: 120_000,
-        },
-        // The local Modeler (`npm run dev`) on its own port. It is a development build in `StrictMode`: React mounts,
-        // unmounts and mounts every effect again, which the production Storybook build never does.
-        {
-            command: `npx vite --config app/vite.config.ts --port ${appPort} --strictPort --open false`,
-            port: appPort,
-            reuseExistingServer: !process.env.CI,
-            timeout: 120_000,
-        },
-    ],
+    // The local Modeler. A running `npm run dev` is used as is; otherwise this starts one on the same port. It is a
+    // development build in `StrictMode`: React mounts, unmounts and mounts every effect again.
+    // Every test is a first visit with a cold HTTP cache, so every test downloads the whole development bundle (one
+    // module of it is 15 MB with its source map): the server gets a larger heap than the Node default.
+    webServer: {
+        command: `npx vite --config app/vite.config.ts --port ${appPort} --strictPort --open false`,
+        url: APP_URL,
+        reuseExistingServer: true,
+        timeout: 120_000,
+        env: {NODE_OPTIONS: '--max-old-space-size=8192'},
+    },
     use: {
-        baseURL: `http://localhost:${storybookPort}`,
+        ...devices['Desktop Chrome'],
+        baseURL: APP_URL,
+        // A first visit: no stored state and no service worker that could serve a cached page.
+        storageState: undefined,
+        serviceWorkers: 'block',
+        trace: 'retain-on-failure',
     },
     projects: [
-        {testIgnore: ['webmcp/**', 'app/**']},
-        // WebMCP is behind a Chromium feature flag; `page.webmcp` reads `document.modelContext` of the page.
+        {name: 'app', testIgnore: ['webmcp/**']},
+        // WebMCP is behind a Chromium feature flag; `document.modelContext` of the page exists only with it.
         {
             name: 'webmcp',
             testMatch: 'webmcp/**',
-            use: {...devices['Desktop Chrome'], launchOptions: {args: ['--enable-features=WebMCP']}},
-        },
-        // The authoring flows of the local Modeler app, in Chromium: Chrome fires `blur` when a focused element is
-        // removed, the browser behaviour behind the StrictMode bugs these specs guard against.
-        {
-            name: 'app',
-            testMatch: 'app/**',
-            use: {...devices['Desktop Chrome'], baseURL: `http://localhost:${appPort}`},
+            use: {launchOptions: {args: ['--enable-features=WebMCP']}},
         },
     ],
 });

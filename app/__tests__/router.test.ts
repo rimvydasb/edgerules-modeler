@@ -53,8 +53,9 @@ describe('Modeler URLs', () => {
         expect(routePath({...home, path: 'applicant'})).toBe('/project/loan-origination/applicant');
     });
 
-    it('ignores an unknown view', async () => {
-        expect(await routeOf('/project/p?view=nope')).toEqual({page: 'project', projectPath: 'p'});
+    it('redirects an unknown view to the default view of the path', async () => {
+        expect(await routeOf('/project/p?view=nope')).toEqual({page: 'project', projectPath: 'p', view: 'flow'});
+        expect(await routeOf('/project/p/rate?view=nope')).toEqual({page: 'project', projectPath: 'p', path: 'rate'});
     });
 
     it('has no page for an unknown URL or an example without a version', async () => {

@@ -276,7 +276,7 @@ const meta: Meta<typeof BoxedEditor> = {
 export default meta;
 type Story = StoryObj<typeof BoxedEditor>;
 
-// A story tagged `fixture` is a starting state of the e2e/boxed-editor specs. The sidebar hides it by default; the
+// A story tagged `fixture` is a starting state (a CRUD playground), not a showcase. The sidebar hides it by default; the
 // tag filter shows it.
 
 export const EditableExpression: Story = {
