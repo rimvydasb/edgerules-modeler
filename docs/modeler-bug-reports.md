@@ -8,6 +8,8 @@ Each entry has a label:
 
 - **[VALID]** — still open on the version of the Modeler it was found on.
 - **[FIXED]** — fixed; the entry stays for the history.
+- **[ENGINE]** - additional label for bugs that are related to the EdgeRules WASM engine.
+- **[FEATURE]** - additional label for bugs that are classified as a features rather than modeler problem.
 
 Entry format: a heading with the label and the problem, then **What the user sees**, **Expected behaviour** and
 **Workaround** (the way the e2e flow goes on).

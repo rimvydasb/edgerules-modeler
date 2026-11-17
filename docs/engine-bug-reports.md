@@ -7,8 +7,8 @@ Each entry has a label:
 
 Delete a [VALID] entry when the engine fixes it.
 
-All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.8-alpha.202611121551`** on
-**2026-11-12** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
+All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.9-alpha.202611161953`** on
+**2026-11-17** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
 
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
 [VALID]) or **Why it is not a bug** (for [NOT A BUG]).
@@ -36,7 +36,7 @@ MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
 //  'coalesce | (any) -> any', ...]
 ```
 
-Still reproduces on `0.2.8-alpha.202611121551` (and `0.2.7-alpha.202611081915`): the statics are still only `fromCode`,
+Still reproduces on `0.2.9-alpha.202611161953` (and `0.2.8-alpha.202611121551`): the statics are still only `fromCode`,
 `fromPortable`, `diagnostics` and `completions`, with the same `detail` strings.
 
 **Expected behaviour:** a structured built-in catalog, for example a static `builtins()`. It returns
@@ -49,7 +49,7 @@ per overload), and `return`. `get('*', Kinds.INVOCABLE_INTERFACES)` already cove
 model, but the caller cannot learn which entries changed. A host must compare `getCode` of every entry before and after.
 This is a missing capability: `api-spec.md` specifies the `void` return.
 
-Still returns `undefined` on `0.2.8-alpha.202611121551`.
+Still returns `undefined` on `0.2.9-alpha.202611161953`.
 
 **Expected behaviour:** `rename()` returns the paths of the entries whose code it rewrote, and an empty list when it
 rewrote nothing. `edit-model` of the WebMCP story reports these paths in `changed`
@@ -69,7 +69,7 @@ service.getCode('*'); // "{\n    x y: 1\n    b: a + 1\n}"
 MutableDecisionService.fromCode(service.getCode('*')); // throws: "parse error: Parse errors: UnexpectedToken at 6"
 ```
 
-Found on `0.2.7-alpha.202611081915` (2026-11-11); still reproduces on `0.2.8-alpha.202611121551`. The `edit-model`
+Found on `0.2.7-alpha.202611081915` (2026-11-11); still reproduces on `0.2.9-alpha.202611161953`. The `edit-model`
 WebMCP tool validates `newName` itself, so it does not reach this path.
 
 **Expected behaviour:** `rename` returns a `PortableError` and changes nothing when `newName` is not one identifier
@@ -125,7 +125,7 @@ service.set('*', service.toPortable());
 ```
 
 The same model without the workbook round-trips. `set('book', toPortable().fields.book)` and `set` of any other root
-field succeed. Reproduces on `0.2.8-alpha.202611121551` (2026-11-16).
+field succeed. Still reproduces on `0.2.9-alpha.202611161953` (2026-11-17).
 
 **Impact in this package:** the Boxed Editor migrates the references of a renamed field (the engine migrates them for
 callables only, see below) by writing the rewritten root back. In every published example with a workbook that write
@@ -134,22 +134,3 @@ the editor reported an error. `createBoxedEditorService` now writes only the cha
 
 **Expected behaviour:** `set('*', root)` accepts a root context that holds workbook declarations, as `fromPortable`
 does.
-
-## [VALID] A `type` accepts two fields with the same name; an object rejects them
-
-**What is wrong:** a `type` declaration with a repeated field name loads and links without any diagnostic. The same
-repetition in an object is rejected with `DuplicateEntryName`:
-
-```ts
-const {MutableDecisionService} = await import('@edgerules/node/mutable');
-MutableDecisionService.fromCode('{ type A: { x: <number>\n x: <string> } }'); // loads, diagnostics() is []
-MutableDecisionService.fromCode('{ a: 1\n a: 2 }'); // throws "parse error: Parse errors: DuplicateEntryName at 8"
-```
-
-An `owner` field repeated in a child type is accepted the same way (`owner p: <P>` twice in `type C`). Found while
-re-entering the Loan Origination model through the GUI: the Code view applied a type with two `owner application` lines
-and the saved model kept both.
-
-**Reproduces on:** `@edgerules/node` `0.2.8-alpha.202611121551` (the latest published, 2026-11-16).
-
-**Expected behaviour:** a duplicate field name in a `type` is a parse error like it is in an object.
