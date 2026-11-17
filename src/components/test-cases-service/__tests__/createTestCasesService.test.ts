@@ -346,6 +346,20 @@ describe('createTestCasesService — user-authored rows', () => {
         service.dispose();
     });
 
+    it('duplicates a row without its expected values: the next element has its own', async () => {
+        const service = createTestCasesService('model', '*', {dbName: uniqueDbName()});
+        await waitForHydration(service);
+        service.syncRows([{...ELEMENT_ROW, section: 'assertions'}]);
+        const testCase = service.addTestCase();
+        service.setCell(testCase.id, 'applicant[0].name', 'assertion', 'Ann');
+
+        service.duplicateRow('applicant[0].name', 'applicant[1].name');
+
+        expect(service.listRows().map((r) => r.path)).toEqual(['applicant[0].name', 'applicant[1].name']);
+        expect(service.getCell(testCase.id, 'applicant[1].name', 'assertion')).toBeUndefined();
+        service.dispose();
+    });
+
     it('refuses to duplicate onto a path that already has a row', async () => {
         const service = createTestCasesService('model', '*', {dbName: uniqueDbName()});
         await waitForHydration(service);

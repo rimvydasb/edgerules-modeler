@@ -359,3 +359,55 @@ test('deleting a row that others read names the broken reference until it is rep
     );
     await expect(page.getByRole('alert').filter({hasText: 'sampleRequest'})).toHaveCount(0);
 });
+
+test.describe('a new decision table', () => {
+    test.beforeEach(async ({page}) => {
+        await createBlankProject(page, 'Rules');
+        await explorer(page).getByRole('button', {name: 'Add to Methods'}).click();
+        await page.getByRole('menuitem', {name: 'Ruleset', exact: true}).click();
+        const form = page.getByRole('dialog', {name: 'New ruleset'});
+        await form.getByRole('textbox', {name: 'Name'}).fill('scorecard');
+        await form.getByRole('button', {name: 'Create'}).click();
+        await expect(form).toHaveCount(0);
+        await view(page, 'Boxed').click();
+        await expect(page.getByTestId('row-scorecard.default')).toBeVisible(SLOW);
+    });
+
+    test('collect-matches on a table without rules keeps the default result as its first rule', async ({page}) => {
+        await expect(page.getByTestId('row-scorecard.rules[0]')).toHaveCount(0);
+        await page.getByTestId('row-scorecard.hitPolicy').getByLabel('Change hit policy').click();
+        await page.getByRole('menuitem', {name: 'collect-matches'}).click();
+        // The engine refuses a ruleset with no rules and no default (E308): the default becomes a rule that matches
+        // every value.
+        await expect(page.getByRole('alert')).toHaveCount(0);
+        await expect(page.getByTestId('row-scorecard.default')).toHaveCount(0);
+        await expect(page.getByTestId('row-scorecard.rules[0]')).toBeVisible();
+        await expect(page.getByTestId('row-scorecard.hitPolicy')).toContainText('collect-matches');
+        expect(await modelCode(page)).toContain('hitPolicy: "collect-matches"');
+    });
+
+    test('a rejected cell is checked again when the model changes, and applies once the cause is gone', async ({
+        page,
+    }) => {
+        await page.getByTestId('append-scorecard').click();
+        await page.getByTestId('append-scorecard').click();
+        await expect(page.getByTestId('row-scorecard.rules[1]')).toBeVisible();
+        // The other rule and the default hold a number: a string in one rule is rejected.
+        await editTableCell(page, 'scorecard.rules[0]', 1, '"AGE"');
+        await expect(page.getByRole('alert')).toContainText('E307');
+        await expect(page.locator('.cm-editor')).toHaveCount(1);
+
+        // One cause of the error goes; the default still holds a number: the error stays.
+        await chooseRowAction(page, 'scorecard.rules[1]', 'Delete');
+        await expect(page.getByTestId('row-scorecard.rules[1]')).toHaveCount(0);
+        await expect(page.getByRole('alert')).toContainText('E307');
+
+        // "collect-matches" drops the default: the cell is consistent with the model now and applies.
+        await page.getByTestId('row-scorecard.hitPolicy').getByLabel('Change hit policy').click();
+        await page.getByRole('menuitem', {name: 'collect-matches'}).click();
+        await expect(page.getByRole('alert')).toHaveCount(0);
+        await expect(page.locator('.cm-editor')).toHaveCount(0);
+        await expect(valueCell(page, 'scorecard.rules[0]')).toContainText('"AGE"');
+        expect(await modelCode(page)).toContain('"AGE"');
+    });
+});

@@ -298,6 +298,8 @@ function FlowCanvas({
     // Positions of nodes about to appear: a drop or a click on the palette, then the saved layout.
     const pending = useRef(new Map<string, XYPosition>(Object.entries(defaultLayout?.positions ?? {})));
     const select = useRef<string | undefined>(undefined);
+    // Nodes dropped from the palette: they land at the drop point, or below the nodes there.
+    const dropped = useRef(new Set<string>());
     const autoPlaced = useRef(false);
 
     const refs = useMemo(() => service.listNodes(), [service, version]);
@@ -368,6 +370,16 @@ function FlowCanvas({
                 );
             if (outputs.some((output) => output.source?.node === from)) setOutputs(follow(outputs));
             if (charts.some((chart) => chart.source?.node === from)) setCharts(follow(charts));
+        }
+        // A node dropped over other nodes would cover their pins: it moves down to the first free place.
+        const taken = current.map((node) => ({...node.position, ...sizeOf(node, service)}));
+        for (const node of added) {
+            const at = pending.current.get(node.id);
+            if (!dropped.current.delete(node.id) || !at) continue;
+            const size = node.size ?? estimateSize(service, node.id, node.kind);
+            const spot = findFreeSpot(at, size, taken);
+            pending.current.set(node.id, spot);
+            taken.push({...spot, ...size});
         }
         const unplaced = added.filter((node) => !pending.current.has(node.id));
         if (unplaced.length > 0) {
@@ -488,7 +500,10 @@ function FlowCanvas({
 
     const addNode = (item: PaletteItem, at?: XYPosition) => {
         const place = (id: string) => {
-            if (at) pending.current.set(id, at);
+            if (at) {
+                pending.current.set(id, at);
+                dropped.current.add(id);
+            }
             select.current = id;
         };
         const {action} = item;

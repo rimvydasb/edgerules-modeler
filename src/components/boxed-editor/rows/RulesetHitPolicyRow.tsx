@@ -1,6 +1,6 @@
 import type {ReactElement} from 'react';
 import type {BoxedRowData, BoxedTableRowData} from '../boxed-editor-types';
-import {compatibleLiteralDefault} from '../commands/rowFactories';
+import {appendRule, compatibleLiteralDefault} from '../commands/rowFactories';
 import {useRowCommands} from '../commands/useRowCommands';
 import {useBoxedEditorContext} from '../context/BoxedEditorContext';
 import {DropdownChip, SettingRow} from '../primitives';
@@ -40,6 +40,11 @@ export function RulesetHitPolicyRow({row}: RulesetHitPolicyRowProps): ReactEleme
                         return child;
                     });
                     if (value === 'collect-matches') {
+                        // `collect-matches` forbids a default, and a ruleset with neither rules nor a default is
+                        // rejected (E308): a table without rules keeps the default result as a rule that matches all.
+                        if (!children.some((child) => child.kind === 'rule')) {
+                            children = appendRule({...ruleset, children}).children ?? children;
+                        }
                         children = children.filter((child) => child.kind !== 'ruleset-default');
                     } else if (!children.some((child) => child.kind === 'ruleset-default')) {
                         const reference = [...children].reverse().find((child) => child.kind === 'rule') as

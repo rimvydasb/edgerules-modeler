@@ -1,6 +1,16 @@
 import {test, expect} from '../support/fixtures';
-import {entry, expectLocation, LOAN_REPAYMENT, openExample, SLOW, view} from '../support/app';
-import {valueCell} from '../support/boxed';
+import {
+    createBlankProject,
+    entry,
+    expectLocation,
+    explorer,
+    LOAN_REPAYMENT,
+    openExample,
+    replaceCode,
+    SLOW,
+    view,
+} from '../support/app';
+import {commitExpression, renameRow, valueCell} from '../support/boxed';
 
 // The code editors of the app over the published Loan Repayment example: the Code view of the model and of an element
 // (CodeEditor), and the expression cells of the Boxed view (CodeEditorCell), each backed by the language service of
@@ -76,6 +86,38 @@ test.describe('the Code view', () => {
         await expect(page.locator(ERROR_MARK)).toHaveCount(0, SLOW);
         await view(page, 'Boxed').click();
         await expect(page.getByRole('treegrid')).toContainText(', 2) + 1', SLOW);
+    });
+    test('a rejected draft of a type applies once another type fixes its cause', async ({page}) => {
+        await createBlankProject(page, 'Owners');
+        for (const name of ['Application', 'Applicant']) {
+            await explorer(page).getByRole('button', {name: 'Add to Types'}).click();
+            const form = page.getByRole('dialog', {name: 'New type'});
+            await form.getByRole('textbox', {name: 'Name'}).fill(name);
+            await form.getByRole('button', {name: 'Create'}).click();
+            await expect(form).toHaveCount(0);
+        }
+        // The owner needs a parent that holds the applicants, and Application does not hold them yet (E356).
+        await view(page, 'Code').click();
+        const code = page.locator('.cm-content').first();
+        await expect(code).toContainText('value');
+        const text = await code.evaluate((element) => (element as HTMLElement).innerText);
+        await replaceCode(page, text.replace('{', '{\n    owner application: <Application>'));
+        await expect(page.getByTestId('shell-status')).toContainText('E356', SLOW);
+
+        // Application gets the applicants in the Boxed view.
+        await explorer(page).getByText('Application', {exact: true}).click();
+        await view(page, 'Boxed').click();
+        await renameRow(page, 'Application.value', 'applicants');
+        await commitExpression(page, 'Application.applicants', '<Applicant[]>');
+        await expect(valueCell(page, 'Application.applicants')).toContainText('Applicant[]');
+
+        // Back in Applicant, the draft is applied: no error, and the owner field is in the model.
+        await explorer(page).getByText('Applicant', {exact: true}).click();
+        await view(page, 'Code').click();
+        await expect(page.locator('.cm-content').first()).toContainText('owner application');
+        await expect(page.getByTestId('shell-status')).toHaveCount(0, SLOW);
+        await view(page, 'Boxed').click();
+        await expect(page.getByTestId('row-Applicant.application')).toBeVisible(SLOW);
     });
 });
 

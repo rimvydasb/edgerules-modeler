@@ -157,6 +157,17 @@ export function CodeView({
         setText(committed);
     }, [dsl, session, root]);
 
+    // A draft the engine rejected (E356: a type that another type must fix first) is applied again when the view opens
+    // and when the model changes: the cause may be gone. A draft of the whole model stays with the session.
+    useEffect(() => {
+        if (root === '*' || stateRef.current !== 'editing' || pending.current !== undefined) return;
+        if (!drafts.has(root)) return;
+        pending.current = text;
+        commit.current();
+        // `text` is the draft itself while nothing is pending.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dsl, session, root]);
+
     const onChange = (code: string) => {
         setText(code);
         remember(code);

@@ -13,6 +13,34 @@ All entries were last re-verified against `@edgerules/node` and `@edgerules/web`
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
 [VALID]) or **Why it is not a bug** (for [NOT A BUG]).
 
+## [VALID] A type mismatch error names an internal node and prints the whole structure of a named type
+
+**What is wrong:** a condition cell of a ruleset column typed with a named type (`Applicant`) is a unary test of the
+column value. A boolean expression there fails to link with a message that has an internal node id instead of the
+location, and the expanded structure of the type instead of its name. For a type with an `owner` field the structure
+also repeats the owner type in full:
+
+```ts
+import {MutableDecisionService} from '@edgerules/node/mutable';
+MutableDecisionService.fromCode(`{
+    type Application: { applicants: <Applicant[]>; amount: <number> }
+    type Applicant: { owner application: <Application>; name: <string>; income: <number> }
+    ruleset eligibilityRules(applicant: Applicant): {
+        hitPolicy: "collect-matches"
+        rules: [ { when: { applicant: applicant.income <= 1000 }, then: { reason: "INC" } } ]
+    }
+}`);
+// throws {type: 'Execution', message: 'execution error: linker error: type mismatch in node NodeId(4): expected
+//   {application: {amount: number; applicants: {income: number; name: string}[]}; income: number; name: string},
+//   found boolean'}
+```
+
+Reproduces on `0.2.9-alpha.202611161953` (2026-11-17).
+
+**Expected behaviour:** the message names the type and the place: `expected Applicant, found boolean` with the path of
+the rule cell (`eligibilityRules.rules[0].when.applicant`), and an error code. The Modeler shows the engine text as is;
+it cannot map `NodeId(4)` back to a cell or the structure back to a type name.
+
 ## [VALID] Built-in function signatures are only available as lossy completion `detail` strings
 
 **What is wrong:** the only API that lists built-in functions is the static

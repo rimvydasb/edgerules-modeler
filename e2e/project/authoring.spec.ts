@@ -97,6 +97,9 @@ test('a model is written in Code, edited in Boxed and Code, and gets a new test 
 
     // A new assertion: the duplicate of an indexed row is the next element of the list.
     await chooseRowMenu(page, 'result[0].maxLoan', 'Duplicate');
+    // The expected value of `[0]` is not the one of `[1]`: the new row starts empty, and nothing is flagged.
+    await expect(assertion(page, 'result[1].maxLoan')).toHaveValue('');
+    await expect(page.locator('[data-mismatch="true"]')).toHaveCount(0);
     await fillCell(assertion(page, 'result[1].maxLoan'), '411917');
     await expect(summary).toHaveText('3/3');
 

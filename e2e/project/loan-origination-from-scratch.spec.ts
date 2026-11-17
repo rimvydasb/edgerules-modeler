@@ -184,13 +184,8 @@ test('Loan Origination is entered from scratch', async ({page}) => {
         await page.getByRole('radio', {name: 'Code'}).click();
         const code = page.locator('.cm-content').first();
         await expect(code).toContainText('birthDate');
-        const text = await code.evaluate((element) => (element as HTMLElement).innerText);
-        // The draft of the first attempt is still in the Code view, with the old error, although the cause is fixed.
+        // The draft of the first attempt is applied again when the Code view opens: its cause is fixed.
         await expect(code).toContainText('owner application');
-        await expect(page.getByRole('alert')).toContainText('E356');
-        await expect(page.getByTestId('row-Applicant.application')).toHaveCount(0);
-        // Any edit applies it again.
-        await replaceCode(page, text + '\n');
         await expect(page.getByRole('alert')).toHaveCount(0, SLOW);
         await page.getByRole('radio', {name: 'Boxed'}).click();
         await expect(page.getByTestId('row-Applicant.application')).toBeVisible(SLOW);
@@ -421,7 +416,7 @@ test('Loan Origination is entered from scratch', async ({page}) => {
         for (const [id, from, pin, x, y] of outputs) {
             await palette.getByRole('button', {name: 'Add output', exact: true}).dragTo(pane, {targetPosition: {x, y}});
             await expect(flowNode(page, id)).toBeVisible(SLOW);
-            // A dropped node lands where it is dropped, over any node there: "Arrange nodes" lays out the canvas again.
+            // A dropped node moves below the nodes at the drop point; "Arrange nodes" lays the canvas out in columns.
             await page.getByRole('button', {name: 'Arrange nodes'}).click();
             await handle(from, pin).dragTo(handle(id, 'in:value'));
         }
@@ -523,11 +518,8 @@ test('Loan Origination is entered from scratch', async ({page}) => {
             await page.getByRole('menuitem', {name: 'Duplicate'}).click();
         }
         await expect(page.getByTestId('row-[1].points')).toBeVisible();
-        // The duplicates copy the expected values of case 1, which has no second row: its cells are flagged. They are
-        // cleared.
-        await expect(page.locator('[data-mismatch="true"]')).toHaveCount(2, SLOW);
-        await fillCell(assertion('[1].characteristic', 0), '');
-        await fillCell(assertion('[1].points', 0), '');
+        // The duplicates start with no expected value: case 1, which has no second row, is not flagged.
+        await expect(assertion('[1].points', 0)).toHaveValue('');
         await expect(page.locator('[data-mismatch="true"]')).toHaveCount(0, SLOW);
         // Mistake: the points of the age rule for 20 years are typed with the wrong number.
         await fillCell(assertion('[0].points', 1), '200');

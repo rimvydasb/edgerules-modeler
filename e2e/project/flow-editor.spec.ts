@@ -297,4 +297,47 @@ test.describe('a new workbook', () => {
         const list = page.locator('[data-testid^="list-input-node-"]');
         await expect(list.getByTestId('list-input-table')).toContainText('#value112233', SLOW);
     });
+    test('a node dropped on another node moves to a free place and leaves its pins reachable', async ({page}) => {
+        const pane = page.locator('.react-flow__pane');
+        await paletteItem(page, 'Add invocation').dragTo(pane, {targetPosition: {x: 300, y: 100}});
+        const invocation = page.locator('[data-testid^="function-node-"]');
+        await expect(invocation).toContainText('Pick a function or ruleset', SLOW);
+        const under = await box(invocation);
+        const canvas = await box(pane);
+        await paletteItem(page, 'Add output').dragTo(pane, {
+            targetPosition: {x: under.x - canvas.x + 20, y: under.y - canvas.y + 20},
+        });
+        const output = page.locator('[data-testid^="output-node-"]');
+        await expect(output).toHaveCount(1, SLOW);
+        expect(overlaps(await box(output), await box(invocation))).toBe(false);
+    });
+
+    test('the error of a value input has its own wrapped line below the field', async ({page}) => {
+        const pane = page.locator('.react-flow__pane');
+        await paletteItem(page, 'Add value input').dragTo(pane, {targetPosition: {x: 40, y: 60}});
+        const value = page.locator('[data-testid^="value-input-node-"]');
+        await expect(value).toHaveCount(1, SLOW);
+        await paletteItem(page, 'Add invocation').dragTo(pane, {targetPosition: {x: 480, y: 60}});
+        const invocation = page.locator('[data-testid^="function-node-"]');
+        await invocation.getByRole('button', {name: 'Select callee'}).click();
+        await page.getByRole('option', {name: /^monthlyPayment\(/}).click();
+        const valueId = (await value.getAttribute('data-testid'))!.replace('value-input-node-', '');
+        const invocationId = (await invocation.getAttribute('data-testid'))!.replace('function-node-', '');
+        for (const argument of ['amount', 'annualRate', 'years']) {
+            await handle(page, valueId, 'out:*').dragTo(handle(page, invocationId, `in:${argument}`));
+        }
+        await expect(invocation.getByText('draft', {exact: true})).toHaveCount(0);
+
+        await page.getByRole('button', {name: /^Value of /}).click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.type('"rich"');
+        await page.keyboard.press('Enter');
+        const alert = value.getByRole('alert');
+        await expect(alert).toBeVisible(SLOW);
+        // Below the field, not over it, and the whole text is shown.
+        const field = await box(page.getByTestId(`value-editor-${valueId}`));
+        expect((await box(alert)).y).toBeGreaterThanOrEqual(field.y + field.height - 1);
+        expect(await alert.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+        expect(await alert.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
+    });
 });

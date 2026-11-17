@@ -343,11 +343,11 @@ export function createTestCasesCore(options: TestCasesCoreOptions = {}): TestCas
             });
             rows.push(copy);
 
+            // An input is copied: a new element of an input list needs a value. An expected value is not: the
+            // expected value of one element is not the one of the next, and a case without that element would fail.
             for (const testCase of cases) {
                 const input = testCase.inputs[fromPath];
                 if (input !== undefined) testCase.inputs[toPath] = input;
-                const assertion = testCase.assertions[fromPath];
-                if (assertion !== undefined) testCase.assertions[toPath] = assertion;
             }
 
             suiteChanged();
