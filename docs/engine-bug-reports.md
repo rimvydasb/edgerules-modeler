@@ -7,101 +7,11 @@ Each entry has a label:
 
 Delete a [VALID] entry when the engine fixes it.
 
-All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.9-alpha.202611161953`** on
+All entries were last re-verified against `@edgerules/node` and `@edgerules/web` **`0.2.10-alpha.202611171702`** on
 **2026-11-17** with throwaway Node scripts — no React, no mocks. Every [VALID] entry still reproduces on that version.
 
 Entry format: a heading with the label and the problem name, then **What is wrong**, then **Expected behaviour** (for
 [VALID]) or **Why it is not a bug** (for [NOT A BUG]).
-
-## [VALID] A type mismatch error names an internal node and prints the whole structure of a named type
-
-**What is wrong:** a condition cell of a ruleset column typed with a named type (`Applicant`) is a unary test of the
-column value. A boolean expression there fails to link with a message that has an internal node id instead of the
-location, and the expanded structure of the type instead of its name. For a type with an `owner` field the structure
-also repeats the owner type in full:
-
-```ts
-import {MutableDecisionService} from '@edgerules/node/mutable';
-MutableDecisionService.fromCode(`{
-    type Application: { applicants: <Applicant[]>; amount: <number> }
-    type Applicant: { owner application: <Application>; name: <string>; income: <number> }
-    ruleset eligibilityRules(applicant: Applicant): {
-        hitPolicy: "collect-matches"
-        rules: [ { when: { applicant: applicant.income <= 1000 }, then: { reason: "INC" } } ]
-    }
-}`);
-// throws {type: 'Execution', message: 'execution error: linker error: type mismatch in node NodeId(4): expected
-//   {application: {amount: number; applicants: {income: number; name: string}[]}; income: number; name: string},
-//   found boolean'}
-```
-
-Reproduces on `0.2.9-alpha.202611161953` (2026-11-17).
-
-**Expected behaviour:** the message names the type and the place: `expected Applicant, found boolean` with the path of
-the rule cell (`eligibilityRules.rules[0].when.applicant`), and an error code. The Modeler shows the engine text as is;
-it cannot map `NodeId(4)` back to a cell or the structure back to a type name.
-
-## [VALID] Built-in function signatures are only available as lossy completion `detail` strings
-
-**What is wrong:** the only API that lists built-in functions is the static
-`MutableDecisionService.completions(code, pos)`. Options with `type: 'function'` carry the signature as a free-text
-`detail` string. There is no structured built-in catalog. The `detail` string loses information that a GUI needs:
-
-1. **No parameter names.** `round | (number, number) -> number` — the Flow Editor `FunctionNode` cannot label its input
-   pins and shows `#1`, `#2`.
-2. **Overloads collapse to one signature.** `substring` has a 2-argument form and a 3-argument form (`doc/reference`),
-   but completions report only `(string, number, number) -> string`. The GUI cannot tell that the third argument is
-   optional.
-3. **Variadic functions look unary.** `coalesce | (any) -> any`.
-4. **User callables report no return type.** `monthly | (amount: number)` — no `-> …` part.
-
-```ts
-const doc = '{\n  x: \n}';
-MutableDecisionService.completions(doc, doc.indexOf('x: ') + 3)
-  .options.filter((o) => o.type === 'function')
-  .map((o) => `${o.label} | ${o.detail}`);
-// [..., 'round | (number, number) -> number', 'substring | (string, number, number) -> string',
-//  'coalesce | (any) -> any', ...]
-```
-
-Still reproduces on `0.2.9-alpha.202611161953` (and `0.2.8-alpha.202611121551`): the statics are still only `fromCode`,
-`fromPortable`, `diagnostics` and `completions`, with the same `detail` strings.
-
-**Expected behaviour:** a structured built-in catalog, for example a static `builtins()`. It returns
-`PortableMethodInterface`-shaped entries with named `parameters`, optional/variadic markers per parameter (or one entry
-per overload), and `return`. `get('*', Kinds.INVOCABLE_INTERFACES)` already covers user callables.
-
-## [VALID] `rename()` does not return the paths whose references it rewrote
-
-**What is wrong:** `rename(oldPath, newPath)` returns `void`. A callable rename also rewrites every call site in the
-model, but the caller cannot learn which entries changed. A host must compare `getCode` of every entry before and after.
-This is a missing capability: `api-spec.md` specifies the `void` return.
-
-Still returns `undefined` on `0.2.9-alpha.202611161953`.
-
-**Expected behaviour:** `rename()` returns the paths of the entries whose code it rewrote, and an empty list when it
-rewrote nothing. `edit-model` of the WebMCP story reports these paths in `changed`
-([webmcp-story.md](stories/webmcp-story.md)).
-
-**Issue:** https://github.com/rimvydasb/edgerules/issues/68
-
-## [VALID] `rename()` accepts a new name that is not an identifier
-
-**What is wrong:** `rename(path, newName)` does not validate `newName`. A name with a space or a dot is accepted, and
-`getCode('*')` then returns DSL that does not parse. The model can no longer be saved and loaded again.
-
-```ts
-const service = MutableDecisionService.fromCode('{ a: 1 \n b: a + 1 }');
-service.rename('a', 'x y'); // undefined: no error
-service.getCode('*'); // "{\n    x y: 1\n    b: a + 1\n}"
-MutableDecisionService.fromCode(service.getCode('*')); // throws: "parse error: Parse errors: UnexpectedToken at 6"
-```
-
-Found on `0.2.7-alpha.202611081915` (2026-11-11); still reproduces on `0.2.9-alpha.202611161953`. The `edit-model`
-WebMCP tool validates `newName` itself, so it does not reach this path.
-
-**Expected behaviour:** `rename` returns a `PortableError` and changes nothing when `newName` is not one identifier
-segment (`[A-Za-z_][A-Za-z0-9_]*`).
 
 ## [NOT A BUG] `getCode('*')` drops source comments
 
@@ -153,7 +63,7 @@ service.set('*', service.toPortable());
 ```
 
 The same model without the workbook round-trips. `set('book', toPortable().fields.book)` and `set` of any other root
-field succeed. Still reproduces on `0.2.9-alpha.202611161953` (2026-11-17).
+field succeed. Still reproduces on `0.2.9-alpha.202611161953` and `0.2.10-alpha.202611171702` (2026-11-17).
 
 **Impact in this package:** the Boxed Editor migrates the references of a renamed field (the engine migrates them for
 callables only, see below) by writing the rewritten root back. In every published example with a workbook that write

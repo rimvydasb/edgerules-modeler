@@ -24,7 +24,7 @@ interface MutableDecisionService {
     get(path: string, kinds?: readonly Kind[]): PortableNode | PortableError;
     set(path: string, node: PortableSetValue): PortableNode | PortableError;
     remove(path: string): void | PortableError;
-    rename(path: string, newName: string): void | PortableError;
+    rename(path: string, newName: string): string[] | PortableError;
     toPortable(): PortableContext;
     link(): void;
 }

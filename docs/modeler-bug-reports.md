@@ -56,17 +56,15 @@ the default.
 **Workaround:** a ruleset with one rule is consistent with itself: add one rule, choose the hit policy `collect-matches`
 (it drops the default), edit the rule, then add the other rules (a new rule copies the actions of the first one).
 
-## [VALID] [ENGINE] A type mismatch error prints the whole structure of the expected type
+## [FIXED] [ENGINE] A type mismatch error prints the whole structure of the expected type
 
-**What the user sees:** an expression typed in the condition cell of an `Applicant` column is a unary test of the column
-value. Writing a boolean there gives `type mismatch in node NodeId(110): expected {application: {applicants: …` and the
+**What the user saw:** an expression typed in the condition cell of an `Applicant` column is a unary test of the column
+value. Writing a boolean there gave `type mismatch in node NodeId(110): expected {application: {applicants: …` and the
 whole nested structure of `Applicant`, then `found boolean`.
 
-**Expected behaviour:** the type name and the cell: "expected Applicant, found boolean". The way out is the rule menu
-item "Switch to expression condition", which the message does not mention.
-
-**Engine:** the text is the engine's (`engine-bug-reports.md`, "A type mismatch error names an internal node"). The
-Modeler shows it as is.
+**Fix:** engine `0.2.10-alpha.202611171702` reports E309 with the cell path and the type name
+(`ruleset condition 'eligibilityRules.rules[0].when.applicant' expected Applicant, found boolean`) and says to write the
+whole `when` as one boolean expression. The Modeler shows it as is.
 
 ## [FIXED] "Add argument" on a service made an untyped parameter that the engine refused, and no header showed
 

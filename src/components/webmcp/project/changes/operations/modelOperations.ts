@@ -1,5 +1,4 @@
 import {isPortableError} from '#lib/portable';
-import {isContextNode, authoredEntries} from '#lib/portableUtils';
 import type {ProjectSession} from '../../../../project-session';
 import type {ModelPath} from '../../../core/paths';
 import {toToolError} from '../../../core/portableErrors';
@@ -42,25 +41,6 @@ export function createModelOperations(session: ProjectSession): OperationApplier
         return typeof code === 'string' ? code : null;
     }
 
-    // The code of each entry that is not a context, by path: what a rename can rewrite. A context is left out, so the
-    // parent of a renamed field does not count as rewritten. Replace with the paths the engine returns once
-    // rimvydasb/edgerules#68 ships.
-    function codeIndex(): Map<string, string> {
-        const index = new Map<string, string>();
-        const visit = (node: unknown, prefix: string) => {
-            for (const [name, child] of authoredEntries(node)) {
-                const path = prefix + name;
-                if (isContextNode(child)) visit(child, `${path}.`);
-                else {
-                    const code = readCode(path);
-                    if (code !== null) index.set(path, code);
-                }
-            }
-        };
-        visit(engine.toPortable(), '');
-        return index;
-    }
-
     function set(path: string, code: string): AppliedOperation {
         const before = readCode(path);
         const result = engine.setCode(path, code);
@@ -85,14 +65,10 @@ export function createModelOperations(session: ProjectSession): OperationApplier
                 fail('DuplicateName', `The model already has an entry '${newPath}'.`, {path: newPath}).error,
             );
         }
-        const before = codeIndex();
         const result = session.execute({type: 'renamePath', path, newName});
         if (!result.ok) throw result.error; // outside a transaction only; inside one the command throws
-        const rewritten: string[] = [];
-        for (const [entry, code] of codeIndex()) {
-            if (isAtOrUnder(entry, newPath)) continue;
-            if (before.get(entry) !== code) rewritten.push(entry);
-        }
+        // The engine reports the entries whose code it rewrote; a parameter rename reports its own callable.
+        const rewritten = (result.rewritten ?? []).filter((entry) => !isAtOrUnder(entry, newPath));
         const oldName = path.slice(parentPrefix(path).length);
         return {
             target: newPath,

@@ -233,13 +233,17 @@ export function createProjectSession({loaded, repository, engine: engineClass}: 
 
     function renamePath(path: string, newName: string): CommandResult {
         const to = parentOf(path) + newName;
-        return transaction(() => {
-            check(engineHandle.facade.rename(path, newName));
+        let rewritten: string[] = [];
+        const result = transaction(() => {
+            const renamed = engineHandle.facade.rename(path, newName);
+            check(renamed);
+            rewritten = renamed as string[];
             engineHandle.facade.link();
             documentation.renamePath(path, to);
             tests.renamePath(path, to);
             flow.renamePath(path, to);
         });
+        return result.ok ? {ok: true, rewritten} : result;
     }
 
     function setModelMetadata(next: ModelMetadata): CommandResult {

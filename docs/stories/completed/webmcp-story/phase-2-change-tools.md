@@ -293,7 +293,8 @@ interface EngineService {
 - [x] Implement `AgentActivityLog` with target checks and a limit of 50 changes
 - [x] Implement `edit-model`, `edit-tests`, `set-documentation` and `undo-agent-change`
 - [x] File the engine feature request: [rimvydasb/edgerules#68](https://github.com/rimvydasb/edgerules/issues/68)
-- [ ] Update `EngineService`, `renamePath` and `CommandResult` when the engine ships rimvydasb/edgerules#68
+- [x] Update `EngineService`, `renamePath` and `CommandResult` when the engine ships rimvydasb/edgerules#68 (shipped in
+      `0.2.10-alpha.202611171702`; `codeIndex` is removed)
 - [x] Add tests for the code of this phase
 
 Acceptance criteria:

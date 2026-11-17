@@ -298,7 +298,9 @@ test('Loan Origination is entered from scratch', async ({page}) => {
         await editTableCell(page, 'eligibilityRules.rules[0]', 2, '"INC_CHECK"');
         await editTableCell(page, 'eligibilityRules.rules[0]', 0, 'applicant.disposableIncome <= applicant.expense');
         // Mistake: the condition cell of an `Applicant` column is a test of the value of the column, not an expression.
-        await expect(page.getByRole('alert')).toContainText('type mismatch');
+        await expect(page.getByRole('alert')).toContainText(
+            "ruleset condition 'eligibilityRules.rules[0].when.applicant' expected Applicant, found boolean",
+        );
         await page.keyboard.press('Escape');
         await expect(page.getByRole('alert')).toHaveCount(0);
         // Three of the four rules test an expression; the fourth tests one argument.
