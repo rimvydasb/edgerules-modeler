@@ -23,59 +23,6 @@ const LOAN_ORIGINATION_MODEL = `{
   payment: application.loanAmount / 12
 }`;
 
-// A scalar `list`, homogeneous relations, and a relation whose cell holds a complex object
-// (a drill-down, rendered as nested rows rather than JSON text).
-const COLLECTIONS_MODEL = `{
-  reviewStages: ["Application", "Underwriting", "Credit review", "Closing"]
-  applicants: [
-    { reference: "LOAN-001", applicant: "Ada L.", amount: 320000 }
-    { reference: "LOAN-002", applicant: "Grace H.", amount: 0 }
-  ]
-  offices: [
-    { id: 1, address: { city: "Vilnius", zip: "01001" } }
-    { id: 2, address: { city: "Kaunas", zip: "44001" } }
-  ]
-}`;
-
-const LARGE_MODEL = `{ ${Array.from({length: 200}, (_, index) => `value${index}: ${index}`).join(' ')} }`;
-
-async function buildService(code: string) {
-    return createBoxedEditorService((await openStoryProject(code)).engine);
-}
-
-/** Renders the editor plus a caption reflecting the live committed model, so a story can show
- * `onChange` actually firing once per successful edit (never on a rejected one). */
-function EditableHarness({
-    service,
-    path,
-    readOnly = false,
-}: {
-    service: BoxedEditorService;
-    path: string;
-    readOnly?: boolean;
-}): ReactElement {
-    const [changeCount, setChangeCount] = useState(0);
-    const payment = service.getBoxedRowData('payment')?.value ?? '(not in this model)';
-
-    return (
-        <Box w="fit-content">
-            <BoxedEditor
-                service={service}
-                path={path}
-                languageService={MutableDecisionService}
-                readOnly={readOnly}
-                onChange={() => setChangeCount((current) => current + 1)}
-            />
-            <Text size="xs" data-testid="live-payment" mt="xs">
-                payment (committed): {payment}
-            </Text>
-            <Text size="xs" data-testid="boxed-change-count">
-                Changes: {changeCount}
-            </Text>
-        </Box>
-    );
-}
-
 interface EngineFixture {
     service: BoxedEditorService;
     mutable: ProjectEngine; // the session's engine facade
@@ -84,6 +31,10 @@ interface EngineFixture {
 // The project session also supplies documentation and test cases.
 interface ExecutingFixture extends EngineFixture {
     session: ProjectSession;
+}
+
+async function buildService(code: string) {
+    return createBoxedEditorService((await openStoryProject(code)).engine);
 }
 
 async function buildServiceWithMutable(code: string): Promise<ExecutingFixture> {
@@ -104,8 +55,7 @@ function errorText(error: unknown): string {
 }
 
 /**
- * Renders the real mutable engine alongside the editor. `execute()` is async, so browser tests
- * must assert `live-result` with Playwright's auto-retrying `toHaveText`, never a one-shot read.
+ * Renders the real mutable engine alongside the editor, with the live result of the model under it.
  */
 function ExecutingHarness({
     service,
@@ -276,27 +226,10 @@ const meta: Meta<typeof BoxedEditor> = {
 export default meta;
 type Story = StoryObj<typeof BoxedEditor>;
 
-// A story tagged `fixture` is a starting state of the e2e/boxed-editor specs. The sidebar hides it by default; the
-// tag filter shows it.
-
-export const EditableExpression: Story = {
-    tags: ['fixture'],
-    loaders: [async () => ({service: await buildService(LOAN_ORIGINATION_MODEL)})],
-    render: (_args, {loaded}) => <EditableHarness service={loaded.service} path="*" />,
-};
-
 export const BlankModel: Story = {
     loaders: [async () => buildExecutingService('{}')],
     render: (_args, {loaded}) => (
         <ExecutingHarness service={loaded.service} mutable={loaded.mutable} allowReadOnlyToggle />
-    ),
-};
-
-export const FocusedContext: Story = {
-    tags: ['fixture'],
-    loaders: [async () => ({service: await buildService(LOAN_ORIGINATION_MODEL)})],
-    render: (args, {loaded}) => (
-        <BoxedEditor {...args} service={loaded.service} path="application" languageService={MutableDecisionService} />
     ),
 };
 
@@ -305,39 +238,6 @@ export const ReadOnly: Story = {
     render: (args, {loaded}) => (
         <BoxedEditor {...args} service={loaded.service} path="*" languageService={MutableDecisionService} readOnly />
     ),
-};
-
-export const ColumnsHidden: Story = {
-    tags: ['fixture'],
-    loaders: [async () => ({service: await buildService(LOAN_ORIGINATION_MODEL)})],
-    render: (args, {loaded}) => (
-        <BoxedEditor
-            {...args}
-            service={loaded.service}
-            path="*"
-            languageService={MutableDecisionService}
-            showDescription={false}
-            showTestResults={false}
-        />
-    ),
-};
-
-export const CollectionsListAndRelation: Story = {
-    tags: ['fixture'],
-    loaders: [async () => buildExecutingService(COLLECTIONS_MODEL)],
-    render: (_args, {loaded}) => <ExecutingHarness service={loaded.service} mutable={loaded.mutable} />,
-};
-
-export const FatalError: Story = {
-    tags: ['fixture'],
-    loaders: [async () => ({service: await buildService(LOAN_ORIGINATION_MODEL)})],
-    render: (args, {loaded}) => <BoxedEditor {...args} service={loaded.service} path="does.not.exist" />,
-};
-
-export const LargeModel: Story = {
-    tags: ['fixture'],
-    loaders: [async () => ({service: await buildService(LARGE_MODEL)})],
-    render: (args, {loaded}) => <BoxedEditor {...args} service={loaded.service} path="*" readOnly />,
 };
 
 export const TestCasesAndTestRunner: Story = {
@@ -452,224 +352,4 @@ export const FullModel: Story = {
 
 // --- ruleset-bearing model: inline rule CRUD ---
 
-const DECISION_TABLE_CRUD_MODEL = `{
-  ruleset risk(age: number, segment: string, applied: date): {
-    hitPolicy: "first-match"
-    rules: [
-      { when: { age: 18..25, segment: "retail", applied: >= @"2024-01-01" }, then: { level: "high" } }
-      { when: age >= 26 and segment = "retail", then: { level: "medium" } }
-    ]
-    default: { level: "none" }
-  }
-  ruleset ranked(score: number): {
-    hitPolicy: "best-match"
-    rules: [
-      { priority: 10, when: { score: >= 700 }, then: { level: "low" } }
-      { priority: 1, when: { score: < 700 }, then: { level: "high" } }
-    ]
-    default: { level: "none" }
-  }
-  riskResult: risk(age: 30, segment: "retail", applied: @"2025-01-01")
-  rankedResult: ranked(score: 720)
-}`;
-
-export const DecisionTableCrudPlayground: Story = {
-    tags: ['fixture'],
-    loaders: [async () => buildExecutingService(DECISION_TABLE_CRUD_MODEL)],
-    render: (_args, {loaded}) => <ExecutingHarness service={loaded.service} mutable={loaded.mutable} />,
-};
-
-const SETTINGS_RULESET_MODEL = `{
-  ruleset collectable(x: number): {
-    hitPolicy: "first-match"
-    rules: [
-      { when: { x: >= 0 }, then: { value: 1 } }
-      { when: { x: <= 10 }, then: { value: 2 } }
-    ]
-    default: { value: 0 }
-  }
-  result: collectable(x: 5)
-}`;
-
-export const SettingsRuleFormsPlayground: Story = {
-    tags: ['fixture'],
-    loaders: [async () => buildExecutingService(SETTINGS_RULESET_MODEL)],
-    render: (_args, {loaded}) => <ExecutingHarness service={loaded.service} mutable={loaded.mutable} />,
-};
-
 // --- optimisation-bearing model: inline variable/objective/constraint CRUD ---
-
-const OPTIMISE_MODEL = `{
-  optimise factory(workers: number, sticks: number, plates: number): {
-    using: "highs"
-    bottlenecks: true
-    variables: {
-      chairs: <number, integer: true, min: 0>
-      tables: <number, integer: true, min: 0>
-    }
-    maximise: 15 * chairs + 40 * tables
-    constraints: {
-      workerCapacity: 1 * chairs + 3 * tables <= workers
-      stickSupply: 4 * chairs + 4 * tables <= sticks
-      plateSupply: 1 * chairs + 2 * tables <= plates
-    }
-    timeLimit: 1000
-  }
-  plan: factory(workers: 8, sticks: 40, plates: 12)
-}`;
-
-export const OptimisationCrud: Story = {
-    tags: ['fixture'],
-    parameters: {
-        docs: {
-            description: {
-                story:
-                    'An `optimise` block: `optimisation-setting` rows (`using`/`bottlenecks`/`timeLimit`), ' +
-                    'an `optimisation-variable-group`, the objective, and an `optimisation-constraint-group`. ' +
-                    'Use each group\'s three-dots menu for "Add Variable" / "Add Constraint" — a variable ' +
-                    'the objective/constraints never reference is rejected by the engine on commit (E339).',
-            },
-        },
-    },
-    loaders: [async () => buildExecutingService(OPTIMISE_MODEL, true)],
-    render: (_args, {loaded}) => <ExecutingHarness service={loaded.service} mutable={loaded.mutable} />,
-};
-
-const OPTIMISE_SETTINGS_MODEL = `{
-  optimise factory(workers: number): {
-    using: "highs"
-    variables: { chairs: <number, integer: true, min: 0> }
-    maximise: chairs
-    constraints: { capacity: chairs <= workers }
-  }
-  plan: factory(workers: 8)
-}`;
-
-export const OptimisationSettingsPlayground: Story = {
-    tags: ['fixture'],
-    loaders: [async () => buildExecutingService(OPTIMISE_SETTINGS_MODEL, true)],
-    render: (_args, {loaded}) => <ExecutingHarness service={loaded.service} mutable={loaded.mutable} />,
-};
-
-const FUNCTION_CRUD_MODEL = `{
-  principal: 1200
-  months: 12
-  func payment(amount: number, term: number): amount / term
-  group: { func nested(x: number): x + 1 }
-  result: payment(amount: principal, term: months)
-}`;
-
-export const FunctionCrudPlayground: Story = {
-    tags: ['fixture'],
-    loaders: [async () => buildExecutingService(FUNCTION_CRUD_MODEL)],
-    render: (_args, {loaded}) => <ExecutingHarness service={loaded.service} mutable={loaded.mutable} />,
-};
-
-const FUNCTION_SCOPE_MODEL = `{
-  base: 10
-  func sibling(x: number, baseValue: number): x + baseValue
-  siblingResult: sibling(x: 5, baseValue: base)
-  group: {
-    offset: 2
-    func nested(x: number, offsetValue: number): x + offsetValue
-    result: nested(x: 3, offsetValue: offset)
-  }
-}`;
-
-export const FunctionScopePlayground: Story = {
-    tags: ['fixture'],
-    loaders: [async () => buildExecutingService(FUNCTION_SCOPE_MODEL)],
-    render: (_args, {loaded}) => <ExecutingHarness service={loaded.service} mutable={loaded.mutable} />,
-};
-
-const RELATION_CRUD_MODEL = `{
-  properties: [
-    { reference: "P-001", value: 320000, address: { city: "Vilnius", zip: "01001" } }
-    { reference: "P-002", value: 180000, address: { city: "Kaunas", zip: "44001" } }
-    { reference: "P-003", value: 240000, address: { city: "Klaipėda", zip: "92001" } }
-  ]
-}`;
-
-export const RelationCrudPlayground: Story = {
-    tags: ['fixture'],
-    loaders: [
-        async () => {
-            const fixture = await buildExecutingService(RELATION_CRUD_MODEL);
-            const documentationService = fixture.session.documentation;
-            documentationService.setDescription('properties', 'Collateral properties');
-            return {...fixture, documentationService};
-        },
-    ],
-    render: (_args, {loaded}) => (
-        <ExecutingHarness
-            service={loaded.service}
-            mutable={loaded.mutable}
-            documentationService={loaded.documentationService}
-        />
-    ),
-};
-
-function RenameOverlayHarness({
-    service,
-    documentationService,
-    testCasesService,
-    testCaseId,
-}: {
-    service: BoxedEditorService;
-    documentationService: DocumentationService;
-    testCasesService: TestCasesService;
-    testCaseId: string;
-}): ReactElement {
-    const [revision, setRevision] = useState(0);
-    const paths = ['source', 'renamed', 'source.value', 'renamed.value', 'target.value'];
-    return (
-        <Box>
-            <BoxedEditor
-                service={service}
-                path="*"
-                languageService={MutableDecisionService}
-                documentationService={documentationService}
-                testCasesService={testCasesService}
-                testSubjectId="*"
-                onChange={() => setRevision((value) => value + 1)}
-            />
-            <Text size="xs" data-testid="overlay-descriptions">
-                {paths.map((path) => `${path}:${documentationService.getDescription(path) ?? ''}`).join('|')}
-            </Text>
-            <Text size="xs" data-testid="overlay-test-cell">
-                {paths.map((path) => `${path}:${testCasesService.getCell(testCaseId, path, 'input') ?? ''}`).join('|')}
-            </Text>
-            <Text size="xs" data-testid="live-model">
-                {JSON.stringify(service.toPortable())}
-            </Text>
-            <span hidden>{revision}</span>
-        </Box>
-    );
-}
-
-export const RenameOverlayPlayground: Story = {
-    tags: ['fixture'],
-    loaders: [
-        async () => {
-            const {service, session} = await buildServiceWithMutable(
-                '{ source: { value: 1; doubled: value * 2 }; sourceValue: source.value; target: { existing: 2 }; free: 3 }',
-            );
-            const documentationService = session.documentation;
-            documentationService.setDescription('source', 'Source context');
-            documentationService.setDescription('source.value', 'Nested value');
-            const testCasesService = session.tests.forSubject('*');
-            testCasesService.syncRows([{path: 'source.value', section: 'inputs', order: 0, present: true}]);
-            const testCase = testCasesService.addTestCase('Case 1');
-            testCasesService.setCell(testCase.id, 'source.value', 'input', '42');
-            return {service, documentationService, testCasesService, testCaseId: testCase.id};
-        },
-    ],
-    render: (_args, {loaded}) => (
-        <RenameOverlayHarness
-            service={loaded.service as BoxedEditorService}
-            documentationService={loaded.documentationService as DocumentationService}
-            testCasesService={loaded.testCasesService as TestCasesService}
-            testCaseId={loaded.testCaseId as string}
-        />
-    ),
-};

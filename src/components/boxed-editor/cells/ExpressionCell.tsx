@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState, type ReactElement} from 'react';
+import {useEffect, useMemo, useRef, useState, type ReactElement} from 'react';
 import type {PortableError} from '@edgerules/portable';
 import {CodeEditorCell} from '../../code-editor-cell';
 import {HighlightedCode} from '../../code-editor-cell/internal';
@@ -80,10 +80,36 @@ export function ExpressionCell({row, onCommit}: ExpressionCellProps): ReactEleme
         if (result) {
             setDraft(value);
             setError(expressionErrorMessage(result, value));
+            rejectedIn.current = {model: JSON.stringify(service.toPortable()), value: row.value ?? ''};
             return;
         }
         setActiveCellPath(null);
     };
+
+    // A rejected edit is checked again when the model changes: the cause may be gone (another rule deleted, the hit
+    // policy changed), and the draft then applies. A change of the value under the cell makes the draft stale: its
+    // error goes and the next Enter checks it. The host also notifies after a rejected edit, so the model the edit
+    // was rejected in is kept, and only another model is a change: a retry never loops.
+    const [modelVersion, setModelVersion] = useState(0);
+    const rejected = active && error !== undefined;
+    const rejectedIn = useRef<{model: string; value: string} | undefined>(undefined);
+    useEffect(() => {
+        if (!rejected) return;
+        return service.subscribe(() => setModelVersion((version) => version + 1));
+    }, [rejected, service]);
+    useEffect(() => {
+        const before = rejectedIn.current;
+        if (modelVersion === 0 || !rejected || !before) return;
+        if (JSON.stringify(service.toPortable()) === before.model) return;
+        if ((row.value ?? '') !== before.value) {
+            rejectedIn.current = undefined;
+            setError(undefined);
+            return;
+        }
+        commit(draft);
+        // Runs on a model change only, with the props of the render that followed it.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [modelVersion]);
 
     const cancel = (): void => {
         setDraft(row.value ?? '');

@@ -226,16 +226,22 @@
   outline-offset: -2px;
 }
 
+/* The error of a row opens below it, over the rows under it, wrapped: the field of the row stays readable. */
 .errorMessage {
   position: absolute;
-  right: 6px;
-  bottom: 2px;
-  left: 6px;
-  overflow: hidden;
+  top: 100%;
+  right: -1px;
+  left: -1px;
+  z-index: 4;
+  padding: 4px 10px;
+  border: 1px solid var(--mantine-color-error);
+  background: var(--mantine-color-body);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
   color: var(--mantine-color-error);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
   pointer-events: none;
 }
 
@@ -428,4 +434,9 @@
 
 .descEditing {
   padding-inline: 6px;
+}
+
+/* The wrapper of a node menu: no box of its own, so the kebab lays out as before. */
+.menuAnchor {
+  display: contents;
 }

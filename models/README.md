@@ -27,8 +27,8 @@ models/<model-name>/
 - A model MUST link and execute with the engine version of `package.json`. Its `__tests__` prove it: every authored test
   case passes through the Tests Manager runner, and every documentation path, output and chart source exists.
 - `stories/models/<Model>.stories.tsx` shows a model in the Shell (the Storybook group Models): it opens the model with
-  `openStoryProject(<MODEL>_PROJECT)`, one story per entity worth a look. Playwright specs of a model are in
-  `e2e/models/<model-name>.spec.ts`.
+  `openStoryProject(<MODEL>_PROJECT)`, one story per entity worth a look. The e2e tests do not use these models: they
+  copy the published examples into the app (`e2e/project/<example>.spec.ts`).
 - Give the model a `name` and a `version` in `index.ts`, a description of the model (`'*'`) and of every workbook in
   `documentation.ts`, and a `name` to every `workbook` (its `@Name`): the Shell shows them in the breadcrumb and in the
   workbook panels of the Flow view.

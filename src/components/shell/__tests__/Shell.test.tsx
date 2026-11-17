@@ -922,6 +922,7 @@ describe('Shell root path', () => {
         act(() => {
             expect(session.execute({type: 'renamePath', path: 'applicant.address', newName: 'home'})).toEqual({
                 ok: true,
+                rewritten: [],
             });
         });
         await waitFor(() => expect(onPathChange).toHaveBeenCalledWith('applicant'));

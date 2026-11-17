@@ -88,7 +88,6 @@ export default defineConfig({
         'components/code-editor-cell/index': 'src/components/code-editor-cell/index.ts',
         'components/markdown-view/index': 'src/components/markdown-view/index.ts',
         'components/project-explorer/index': 'src/components/project-explorer/index.ts',
-        'components/decision-table/index': 'src/components/decision-table/index.ts',
         'components/boxed-editor/index': 'src/components/boxed-editor/index.ts',
         'components/test-cases-service/index': 'src/components/test-cases-service/index.ts',
         'components/documentation-service/index': 'src/components/documentation-service/index.ts',

@@ -294,7 +294,10 @@ export function useRowActions(row: BoxedRowData): RowMenuItem[] {
                 const table = row as BoxedTableRowData;
                 const parameters = table.parameters ?? [];
                 push('add-argument', 'Add argument', () => {
-                    commit(row.path, addArgument(table));
+                    // A service and a decision take typed parameters only (E358): an untyped one is rejected and
+                    // never shows, so the user could not give it a type.
+                    const typed = table.keyword === 'service' || table.keyword === 'decision';
+                    commit(row.path, addArgument(table, typed ? 'string' : undefined));
                 });
                 for (const parameter of parameters) {
                     push(

@@ -31,7 +31,6 @@ Benchmark for 5000 grid cells (median ms, production build, headless Chromium):
 ### Consequences
 
 - Hosts MUST render a `MantineProvider`.
-- Screenshot baselines in `e2e/visual` depend on OS and browser build; create them in one environment.
 
 ## ADR-002: A FunctionNode with an unbound required argument stays an editor draft
 

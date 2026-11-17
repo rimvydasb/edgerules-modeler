@@ -7,6 +7,7 @@ import {
     notFound,
     Outlet,
     useMatches,
+    redirect,
     useRouter,
     type RouterHistory,
 } from '@tanstack/react-router';
@@ -69,10 +70,22 @@ function validateView(search: Record<string, unknown>): {view?: ShellView} {
     return SHELL_VIEWS.includes(search.view as ShellView) ? {view: search.view as ShellView} : {};
 }
 
+// A project link with a view that does not exist (`?view=bogus`) opens the default view: the address bar shows the URL
+// of that view instead, so it never keeps a view the page does not show.
+function dropUnknownView({location, params}: {location: {search: unknown}; params: Record<string, string>}): void {
+    const raw = (location.search as Record<string, unknown>).view;
+    if (raw === undefined || validateView({view: raw}).view) return;
+    throw redirect({
+        href: routePath({page: 'project', projectPath: params.projectPath, path: params._splat || undefined}),
+        replace: true,
+    });
+}
+
 const projectRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/project/$projectPath',
     validateSearch: validateView,
+    beforeLoad: dropUnknownView,
     component: RoutePage,
 });
 
@@ -81,6 +94,7 @@ const projectElementRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/project/$projectPath/$',
     validateSearch: validateView,
+    beforeLoad: dropUnknownView,
     component: RoutePage,
 });
 

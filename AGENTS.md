@@ -32,6 +32,10 @@ issue in `rimvydasb/edgerules`, use the `edgerules-bug-report` skill (`.claude/s
 
 - TypeScript + React function components only.
 - New components: `*.test.tsx`/`*.test.ts` (RTL) in a component-local `__tests__/` folder + a Storybook story.
+  `npm test` runs every story too (`@storybook/addon-vitest`, the `storybook` project of `vitest.config.ts`): a story
+  must render without an error, and its play function, when it has one, must pass.
+- `vitest.config.ts` is typechecked on its own (`tsconfig.vitest.json`): the types of the browser provider it imports
+  replace the jest-dom matchers of the unit tests.
 - Keep exported props/types minimal — they become the npm public API.
 - Format with Prettier (`.prettierrc.json`): `npm run format` to write, `npm run format:check` to verify (CI-style). A
   project `PostToolUse` hook (`.claude/settings.json`) runs `prettier --write` on every file you edit/write.

@@ -229,9 +229,13 @@ export function Shell({
         });
     }, []);
 
-    // An invalid or removed path falls back to the nearest valid ancestor.
+    // The path a rename in the Boxed view moved the shown path to, until the host shows it.
+    const renamedTo = useRef<string | undefined>(undefined);
+
+    // An invalid or removed path falls back to the nearest valid ancestor. A renamed path waits for its new path.
     useEffect(() => {
-        if (root === requested) return;
+        if (requested === renamedTo.current) renamedTo.current = undefined;
+        if (root === requested || renamedTo.current !== undefined) return;
         if (path === undefined) setOwnPath(root);
         onPathChange?.(root);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,6 +264,20 @@ export function Shell({
         if (next.view !== undefined && next.view !== requestedView) {
             if (viewProp === undefined) setOwnView(next.view);
             onViewChange?.(next.view);
+        }
+    };
+
+    // A row renamed or moved in the Boxed view: the test suites and the flow layouts kept under its path move with it,
+    // as the session's own `renamePath` command moves them, and a shown path under it follows it instead of falling
+    // back to the project home.
+    const followRename = (from: string, to: string) => {
+        session.tests.renamePath(from, to);
+        session.flow.renamePath(from, to);
+        if (root === from || root.startsWith(`${from}.`)) {
+            const next = to + root.slice(from.length);
+            renamedTo.current = next;
+            if (path === undefined) setOwnPath(next);
+            onPathChange?.(next);
         }
     };
 
@@ -486,6 +504,7 @@ export function Shell({
                                 languageService={languageService}
                                 readOnly={readOnly}
                                 onOpenNode={openNode}
+                                onPathRename={followRename}
                                 showDescription={boxedColumns[root]?.description ?? true}
                                 onShowDescriptionChange={(show) => setBoxedColumn('description', show)}
                                 showTestResults={boxedColumns[root]?.tests ?? false}

@@ -11,7 +11,8 @@ export interface EngineService {
     set(path: string, node: PortableSetValue): PortableNode | PortableError;
     setCode(path: string, code: string): PortableNode | PortableError;
     remove(path: string): void | PortableError;
-    rename(path: string, newName: string): void | PortableError;
+    // The paths of the other entries whose code the rename rewrote (call sites of a renamed callable).
+    rename(path: string, newName: string): string[] | PortableError;
     link(): void;
     toPortable(): PortableContext;
     execute(method: string, input?: Record<string, unknown>): Promise<unknown>;

@@ -28,6 +28,9 @@ export interface BoxedEditorProps {
     readOnly?: boolean;
     // Fired once per successful committed mutation.
     onChange?: (snapshot: PortableContext) => void;
+    // After a successful rename or move of a row: its old and its new path. The host moves what it keeps by path
+    // (the path it shows, test suites, flow layouts).
+    onPathRename?: (from: string, to: string) => void;
     // Routes specialized nodes (types, rulesets, loops, nested boxed editors, code view) to another host editor.
     onOpenNode?: (target: BoxedEditorOpenTarget) => void;
 

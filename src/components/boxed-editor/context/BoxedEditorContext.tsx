@@ -30,6 +30,8 @@ export interface BoxedEditorContextValue {
     revision?: string | number;
     /** Fired once per successful committed mutation, by `useRowCommands`. */
     onChange?: (snapshot: PortableContext) => void;
+    /** Fired by `useRowCommands` after a successful rename or move, with the old and the new path. */
+    onPathRename?: (from: string, to: string) => void;
     /** Routes `View as code` (and any future host-editor handoff) to the host. */
     onOpenNode?: (target: BoxedEditorOpenTarget) => void;
 }

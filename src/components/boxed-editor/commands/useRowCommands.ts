@@ -91,7 +91,8 @@ function computeMovedPath(service: BoxedEditorService, fromPath: string, toParen
  * `onChange` exactly once per successful commit — never on a rejected edit.
  */
 export function useRowCommands(): RowCommands {
-    const {service, onChange, documentationService, testCasesService, testSubjectId} = useBoxedEditorContext();
+    const {service, onChange, onPathRename, documentationService, testCasesService, testSubjectId} =
+        useBoxedEditorContext();
     const {scheduleTestRun} = useBoxedEditorTestContext();
     const ui = useOptionalBoxedEditorUi();
 
@@ -138,6 +139,7 @@ export function useRowCommands(): RowCommands {
                 return finish(path, isPortableError(result) ? result : undefined, () => {
                     const newPath = childPath(parentPath(path) ?? '*', newName);
                     migrate(oldPaths, path, newPath);
+                    onPathRename?.(path, newPath);
                 });
             },
             remove(path) {
@@ -148,10 +150,11 @@ export function useRowCommands(): RowCommands {
                 const oldPaths = collectSubtreePaths(service, fromPath);
                 const newPath = computeMovedPath(service, fromPath, toParentPath, index);
                 const result = service.move(fromPath, toParentPath, index);
-                return finish(fromPath, isPortableError(result) ? result : undefined, () =>
-                    migrate(oldPaths, fromPath, newPath),
-                );
+                return finish(fromPath, isPortableError(result) ? result : undefined, () => {
+                    migrate(oldPaths, fromPath, newPath);
+                    if (newPath !== fromPath) onPathRename?.(fromPath, newPath);
+                });
             },
         };
-    }, [service, onChange, documentationService, testCasesService, testSubjectId, scheduleTestRun, ui]);
+    }, [service, onChange, onPathRename, documentationService, testCasesService, testSubjectId, scheduleTestRun, ui]);
 }

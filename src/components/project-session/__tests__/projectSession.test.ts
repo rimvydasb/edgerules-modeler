@@ -196,7 +196,10 @@ describe('ProjectSession — commands', () => {
         const listener = vi.fn();
         session.subscribe(listener);
 
-        expect(session.execute({type: 'renamePath', path: 'risk', newName: 'score'})).toEqual({ok: true});
+        expect(session.execute({type: 'renamePath', path: 'risk', newName: 'score'})).toEqual({
+            ok: true,
+            rewritten: ['decision'],
+        });
 
         expect(listener).toHaveBeenCalledTimes(1);
         expect(session.engine.exportDsl()).toContain('decision: score(applicant.age)');
@@ -220,7 +223,10 @@ describe('ProjectSession — commands', () => {
             documentation: {schemaVersion: 1, byPath: {'applicant.income': 'Monthly'}},
             tests: RISK_TESTS,
         });
-        expect(session.execute({type: 'renamePath', path: 'applicant.income', newName: 'salary'})).toEqual({ok: true});
+        expect(session.execute({type: 'renamePath', path: 'applicant.income', newName: 'salary'})).toEqual({
+            ok: true,
+            rewritten: [],
+        });
         expect(session.engine.exportDsl()).toContain('salary: 5000');
         expect(session.documentation.getDescription('applicant.salary')).toBe('Monthly');
     });

@@ -8,10 +8,8 @@ const stories =
 const config: StorybookConfig = {
     framework: '@storybook/react-vite',
     stories,
-    addons: [],
-    // A `fixture` story is a starting state of an e2e spec, not a showcase: the sidebar hides it by default, the tag
-    // filter shows it, and its URL always opens it.
-    tags: {fixture: {defaultFilterSelection: 'exclude'}},
+    // Runs every story as a test, with its play function, in `npm test` (the `storybook` project of vitest.config.ts).
+    addons: ['@storybook/addon-vitest'],
     async viteFinal(viteConfig) {
         // `@edgerules/web`'s wasm loader resolves its binary via `new URL('edgerules_wasm_bg.wasm',
         // import.meta.url)`. Vite's dependency pre-bundling (esbuild) rewrites that `import.meta.url`

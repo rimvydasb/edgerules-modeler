@@ -59,7 +59,8 @@ export type ProjectCommand =
     // Replaces the model name and version. An omitted or blank value removes it.
     | {type: 'setModelMetadata'; metadata: ModelMetadata};
 
-export type CommandResult = {ok: true} | {ok: false; error: ProjectError};
+// `rewritten` (`renamePath` only): the paths of the other entries whose code the rename rewrote.
+export type CommandResult = {ok: true; rewritten?: string[]} | {ok: false; error: ProjectError};
 
 /**
  * One open project: its engine, its slice stores, and their save state. Editors get the facades (`engine`,

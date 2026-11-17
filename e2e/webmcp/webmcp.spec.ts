@@ -1,12 +1,10 @@
-import {test, expect, type Page} from '@playwright/test';
-import {openStory} from '../support/storybook';
+import {test, expect, type Page} from '../support/fixtures';
+import {expectLocation, LOAN_REPAYMENT, openExample, SLOW} from '../support/app';
 
-// The WebMCP tools of an open project in a real Chromium (docs/stories/webmcp-story.md). Playwright's `page.webmcp`
-// lists and calls the tools that the Modeler registers on `document.modelContext`; the `webmcp` project of
-// `playwright.config.ts` enables the browser feature.
-
-// The engine loads before the project shows: the first lookup waits longer.
-const SLOW = {timeout: 15_000};
+// The WebMCP tools of an open project of the app in a real Chromium (docs/stories/completed/webmcp-story.md).
+// Playwright's `page.webmcp` lists and calls the tools that the app registers on `document.modelContext`; the
+// `webmcp` project of `playwright.config.ts` enables the browser feature. The project is the published Loan Repayment
+// example, open on the tests of its service.
 
 const MODEL_TOOLS = ['edit-model', 'edit-tests', 'set-documentation', 'undo-agent-change'];
 const READ_TOOLS = [
@@ -33,7 +31,7 @@ interface EditResult {
 
 // The tools register after the project opens.
 async function openProject(page: Page): Promise<void> {
-    await openStory(page, 'modeler--loan-repayment-project-tests');
+    await openExample(page, LOAN_REPAYMENT, {path: 'loanRepayment', view: 'tests'});
     await expect(page.getByTestId('tests-grid')).toBeVisible(SLOW);
     await expect.poll(async () => (await page.webmcp.tools()).length, SLOW).toBeGreaterThan(0);
 }
@@ -86,11 +84,14 @@ test('edit-model breaks a test case, the Tests view shows it, and Undo in the to
 
     await page.getByRole('button', {name: 'Undo', exact: true}).click();
     await expect(page.locator('[data-mismatch="true"]')).toHaveCount(0, SLOW);
+    await expect(page.getByTestId(/^assertion-summary-/).first()).toHaveText('7/7');
 });
 
 test('edit-model on the entry open in the Code view with typed text shows the conflict bar', async ({page}) => {
     await openProject(page);
     await page.webmcp.callTool('open-in-editor', {path: 'pricingTier', view: 'code'});
+    // The tool navigates as an explorer click does: the address bar follows.
+    await expectLocation(page, '/project/loan-repayment/pricingTier?view=code');
     const editor = page.locator('.cm-content');
     await expect(editor).toContainText('ruleset pricingTier', SLOW);
     await editor.click();
@@ -104,19 +105,8 @@ test('edit-model on the entry open in the Code view with typed text shows the co
     await expect(page.getByTestId('code-conflict')).toBeVisible(SLOW);
 });
 
-test('a read-only project lists only the read tools and open-in-editor', async ({page}) => {
-    await openStory(page, 'services-webmcp-tools--read-only');
-    const select = page.getByTestId('tool-select');
-    await expect(select).toBeVisible(SLOW);
-    await select.click();
-    const options = page.getByRole('option');
-    await expect(options).toHaveCount(READ_TOOLS.length);
-    await expect(options).toHaveText(READ_TOOLS);
-});
-
-test('the tools are on by default, and the WebMCP switch in the top bar turns them off', async ({page}) => {
-    await openStory(page, 'modeler--loan-repayment-project-tests');
-    await expect(page.getByTestId('tests-grid')).toBeVisible(SLOW);
+test('the tools are on by default; the WebMCP switch turns them off, also after a reload', async ({page}) => {
+    await openProject(page);
     const webMcp = page.getByRole('switch', {name: 'WebMCP'});
     await expect(webMcp).toBeChecked();
     await expect.poll(async () => (await page.webmcp.tools()).length, SLOW).toBeGreaterThan(0);
@@ -124,12 +114,17 @@ test('the tools are on by default, and the WebMCP switch in the top bar turns th
     await webMcp.uncheck();
     await expect.poll(async () => (await page.webmcp.tools()).length).toBe(0);
     await expect(page.getByTestId('agent-tools-hint')).toHaveCount(0);
+    // The choice is kept in this browser.
+    await page.reload();
+    await expect(page.getByTestId('tests-grid')).toBeVisible(SLOW);
+    await expect(webMcp).not.toBeChecked();
+    expect((await page.webmcp.tools()).length).toBe(0);
     await webMcp.check();
     await expect.poll(async () => (await page.webmcp.tools()).length).toBeGreaterThan(0);
 });
 
 test('the help button explains WebMCP and says that it is experimental', async ({page}) => {
-    await openStory(page, 'modeler--loan-repayment-project-tests');
+    await openProject(page);
     await page.getByRole('button', {name: 'About WebMCP'}).click();
     const panel = page.getByTestId('webmcp-help-panel');
     await expect(panel).toContainText('experimental');
